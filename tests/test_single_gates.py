@@ -7,10 +7,11 @@ config.update("jax_enable_x64", True)  # you should really really do this
 
 import jax.numpy as jnp
 import pytest
+from qiskit import Aer, QuantumCircuit
+
 from horqrux.gates import *
 from horqrux.ops import apply_gate
 from horqrux.utils import prepare_state
-from qiskit import Aer, QuantumCircuit
 
 backend = Aer.get_backend("statevector_simulator")
 

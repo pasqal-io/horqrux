@@ -6,6 +6,7 @@ config.update("jax_enable_x64", True)  # you should really really do this
 
 
 import pytest
+
 from horqrux.gates import SWAP
 from horqrux.ops import apply_gate
 from horqrux.test_utils import equivalent_state

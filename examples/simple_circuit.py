@@ -6,6 +6,7 @@ config.update("jax_enable_x64", True)  # you should really really do this
 
 import jax
 import jax.numpy as jnp
+
 from horqrux.gates import *
 from horqrux.ops import apply_gate
 from horqrux.utils import prepare_state

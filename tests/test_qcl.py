@@ -9,9 +9,10 @@ import time
 import jax
 import jax.numpy as jnp
 import pytest
+from jax import random
+
 from horqrux.circuits import DQC
 from horqrux.utils import prepare_state
-from jax import random
 
 key = random.PRNGKey(42)
 

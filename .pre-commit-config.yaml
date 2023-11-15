@@ -23,4 +23,4 @@ repos:
     rev: v1.4.0
     hooks:
       - id: mypy
-        exclude: examples|docs
+        exclude: examples|docs|tests
