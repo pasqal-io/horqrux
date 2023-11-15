@@ -42,7 +42,9 @@ jobs:
         - name: Perform unit tests
           run: |
             python -m hatch -e tests run test
-            python -m hatch -e docs run test-docs
+        - name: Test doc building
+          run: |
+            python -m hatch -e docs run mkdocs build --clean --strict
 
   publish:
     name: Publish to PyPI
