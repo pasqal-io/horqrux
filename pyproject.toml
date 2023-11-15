@@ -9,7 +9,7 @@ authors = [
     { name = "Gert-Jan Both" , email = "gert-jan.both@pasqal.com" },
     { name = "Dominik Seitz", email = "dominik.seitz@pasqal.com" },
 ]
-requires-python = ">=3.8,<=3.11"
+requires-python = ">=3.8,<3.12"
 license = {text = "Apache 2.0"}
 
 version = "0.3.0"
