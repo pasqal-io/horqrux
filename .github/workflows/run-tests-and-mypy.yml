@@ -41,7 +41,7 @@ jobs:
             python -m hatch -e tests run pre-commit run --all-files
         - name: Perform unit tests
           run: |
-            python -m hatch -e tests run pytest -n auto
+            python -m hatch -e tests run test-all
 
   publish:
     name: Publish to PyPI

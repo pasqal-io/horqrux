@@ -45,6 +45,8 @@ features = [
 
 [tool.hatch.envs.tests.scripts]
 test = "pytest -n auto {args}"
+test-docs = "mkdocs build --clean --strict"
+test-all = "pytest -n auto {args}  && mkdocs build --clean --strict"
 
 
 [tool.hatch.envs.docs]
