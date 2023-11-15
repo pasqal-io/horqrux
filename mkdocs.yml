@@ -1,0 +1,68 @@
+site_name: horqrux
+repo_url: "https://github.com/pasqal-io/horqrux"
+repo_name: "horqrux"
+
+nav:
+  - index.md
+  - Getting started:
+      - Installing: install.md
+      - Quickstart: quickstart.md
+      - How do I ...: faq.md
+  - Examples:
+      - Quantum circuit learning: examples/qcl.ipynb
+  - API:
+      - Types: api/types.md
+      - Gates: api/gates.md
+      - Measurement: api/measurement.md
+      - Feature maps: api/feature_maps.md
+      - Ansatze: api/ansatze.md
+      - Circuits: api/circuits.md
+  - Notes:
+      - Design: design.md
+      - Contributing: contrib.md
+theme:
+  name: material
+  features:
+  - content.code.annotate
+  - navigation.indexes
+  - navigation.sections
+
+  palette:
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    primary: light green
+    accent: purple
+    toggle:
+      icon: material/weather-sunny
+      name: Switch to dark mode
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    primary: black
+    accent: light green
+    toggle:
+      icon: material/weather-night
+      name: Switch to light mode
+
+markdown_extensions:
+- admonition  # for notes
+- pymdownx.arithmatex: # for mathjax
+    generic: true
+
+plugins:
+- search
+- section-index
+- mkdocstrings:
+    watch:
+      - horqrux
+- mkdocs-jupyter:
+    theme: dark
+
+# To get nice tabs
+extra_css:
+- css/mkdocstrings.css
+
+# For mathjax
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
