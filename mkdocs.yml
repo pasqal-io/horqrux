@@ -4,6 +4,7 @@ repo_name: "horqrux"
 
 nav:
   - index.md
+  - CONTRIBUTING.md
 
 theme:
   name: material
