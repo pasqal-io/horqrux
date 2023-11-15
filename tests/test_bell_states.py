@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from jax.config import config
-
-config.update("jax_enable_x64", True)  # you should really really do this
-
 import jax.numpy as jnp
 import pytest
 
