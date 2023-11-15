@@ -4,22 +4,7 @@ repo_name: "horqrux"
 
 nav:
   - index.md
-  - Getting started:
-      - Installing: install.md
-      - Quickstart: quickstart.md
-      - How do I ...: faq.md
-  - Examples:
-      - Quantum circuit learning: examples/qcl.ipynb
-  - API:
-      - Types: api/types.md
-      - Gates: api/gates.md
-      - Measurement: api/measurement.md
-      - Feature maps: api/feature_maps.md
-      - Ansatze: api/ansatze.md
-      - Circuits: api/circuits.md
-  - Notes:
-      - Design: design.md
-      - Contributing: contrib.md
+
 theme:
   name: material
   features:

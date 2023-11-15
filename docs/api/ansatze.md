@@ -1,1 +1,0 @@
-:::horqrux.variational_ansatz
