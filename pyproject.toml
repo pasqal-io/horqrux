@@ -55,6 +55,7 @@ dependencies = [
   "mkdocs-jupyter",
   "mkdocs-exclude",
   "markdown-exec",
+  "mike",
 ]
 
 [tool.hatch.build.targets.wheel]
