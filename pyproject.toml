@@ -12,7 +12,7 @@ authors = [
 requires-python = ">=3.9,<3.12"
 license = {text = "Apache 2.0"}
 
-version = "0.3.0"
+version = "0.4.0"
 
 classifiers=[
     "License :: Other/Proprietary License",
@@ -35,7 +35,7 @@ dependencies = [
 
 
 [project.optional-dependencies]
-dev = ["black", "pytest", "pytest-xdist", "pytest-cov", "flake8", "mypy", "pre-commit", "ruff"]
+dev = ["black", "pytest", "pytest-xdist", "pytest-cov", "flake8", "mypy", "pre-commit", "ruff", "pulser"]
 
 [tool.hatch.envs.tests]
 features = [
