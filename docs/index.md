@@ -98,7 +98,7 @@ def circ(state) -> jax.Array:
     projection = apply_gate(state, gates.Z(0))
     return overlap(state, projection)
 
-# Lets compute both values and gradients for a set of parameters and compile the circuit.
+# Let's compute both values and gradients for a set of parameters and compile the circuit.
 circ = jax.jit(jax.value_and_grad(circ))
 # Run it on a state.
 expval_and_grads = circ(state)
