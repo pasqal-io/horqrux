@@ -1,7 +1,7 @@
 # horqrux
 
 **horqrux** is a [JAX](https://jax.readthedocs.io/en/latest/)-based state vector simulator designed for quantum machine learning.
-It acts as the a backend for [`Qadence`](https://github.com/pasqal-io/qadence), a digital-analog quantum programming interface.
+It acts as a backend for [`Qadence`](https://github.com/pasqal-io/qadence), a digital-analog quantum programming interface.
 
 ## Installation
 

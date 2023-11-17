@@ -72,3 +72,38 @@ state = prepare_state(2, '11')
 param_value = 1 / 4 * jnp.pi
 new_state = apply_gate(state, Rx(param_value, target_qubit, control_qubit))
 ```
+
+A fully differentiable variational circuit is simply a sequence of gates which are applied to a state.
+
+```python exec="on" source="material-block"
+import jax
+import jax.numpy as jnp
+from horqrux import gates
+from horqrux.utils import prepare_state, overlap
+from horqrux.ops import apply_gate
+
+n_qubits = 2
+state = prepare_state(2, '00')
+# Lets define a sequence of rotations
+ops = [gates.Rx, gates.Ry, gates.Rx]
+# Create random initial values for the parameters
+key = jax.random.PRNGKey(0)
+params = jax.random.uniform(key, shape=(n_qubits * len(ops),))
+
+def circ(state) -> jax.Array:
+    for qubit in range(n_qubits):
+        for gate,param in zip(ops, params):
+            state = apply_gate(state, gate(param, qubit))
+    state = apply_gate(state,gates.NOT(1, 0))
+    projection = apply_gate(state, gates.Z(0))
+    return overlap(state, projection)
+
+# Lets compute both values and gradients for a set of parameters and compile the circuit.
+circ = jax.jit(jax.value_and_grad(circ))
+# Run it on a state.
+expval_and_grads = circ(state)
+expval = expval_and_grads[0]
+grads = expval_and_grads[1:]
+print(f'Expval: {expval};'
+       f'Grads: {grads}')
+```

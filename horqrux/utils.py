@@ -67,3 +67,7 @@ def equivalent_state(state: Array, reference_state: str) -> bool:
     n_qubits = state.ndim
     ref_state = prepare_state(n_qubits, reference_state)
     return jnp.allclose(state, ref_state)  # type: ignore[no-any-return]
+
+
+def overlap(state: Array, projection: Array) -> Array:
+    return jnp.real(jnp.dot(jnp.conj(state.flatten()), projection.flatten()))
