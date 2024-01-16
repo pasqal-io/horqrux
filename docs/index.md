@@ -18,9 +18,9 @@ pip install horqrux
 Let's have a look at primitive gates first.
 
 ```python exec="on" source="material-block"
-from horqrux.gates import X
+from horqrux.primitive import X
 from horqrux.utils import prepare_state
-from horqrux.ops import apply_gate
+from horqrux.apply import apply_gate
 
 state = prepare_state(2)
 new_state = apply_gate(state, X(0))
@@ -30,9 +30,9 @@ We can also make any gate controlled, in the case of X, we have to pass the targ
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux.gates import X
+from horqrux.primitive import X
 from horqrux.utils import prepare_state, equivalent_state
-from horqrux.ops import apply_gate
+from horqrux.apply import apply_gate
 
 n_qubits = 2
 state = prepare_state(n_qubits, '11')
@@ -47,9 +47,9 @@ When applying parametric gates, we pass the numeric value for the parameter firs
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux.gates import Rx
+from horqrux.parametric import Rx
 from horqrux.utils import prepare_state
-from horqrux.ops import apply_gate
+from horqrux.apply import apply_gate
 
 target_qubit = 1
 state = prepare_state(target_qubit+1)
@@ -61,9 +61,9 @@ We can also make any parametric gate controlled simply by passing a control qubi
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux.gates import Rx
+from horqrux.parametric import Rx
 from horqrux.utils import prepare_state
-from horqrux.ops import apply_gate
+from horqrux.apply import apply_gate
 
 n_qubits = 2
 target_qubit = 1
@@ -78,24 +78,24 @@ A fully differentiable variational circuit is simply a sequence of gates which a
 ```python exec="on" source="material-block"
 import jax
 import jax.numpy as jnp
-from horqrux import gates
+from horqrux import parametric, primitive
 from horqrux.utils import prepare_state, overlap
-from horqrux.ops import apply_gate
+from horqrux.apply import apply_gate
 
 n_qubits = 2
 state = prepare_state(2, '00')
 # Lets define a sequence of rotations
-ops = [gates.Rx, gates.Ry, gates.Rx]
+ops = [parametric.Rx, parametric.Ry, parametric.Rx]
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(0)
 params = jax.random.uniform(key, shape=(n_qubits * len(ops),))
 
-def circ(state) -> jax.Array:
+def circ(state: jax.Array) -> jax.Array:
     for qubit in range(n_qubits):
         for gate,param in zip(ops, params):
             state = apply_gate(state, gate(param, qubit))
-    state = apply_gate(state,gates.NOT(1, 0))
-    projection = apply_gate(state, gates.Z(0))
+    state = apply_gate(state, primitive.NOT(1, 0))
+    projection = apply_gate(state, primitive.Z(0))
     return overlap(state, projection)
 
 # Let's compute both values and gradients for a set of parameters and compile the circuit.
