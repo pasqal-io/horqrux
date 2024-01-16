@@ -7,6 +7,10 @@ from numpy import log2
 from horqrux.utils import hilbert_reshape
 
 
+def _unitary(theta: float) -> Array:
+    return jnp.cos(theta / 2) * jnp.eye(2) - 1j * jnp.sin(theta / 2)
+
+
 def make_controlled(operator: Array, n_control: int) -> Array:
     n_qubits = int(log2(operator.shape[0]))
     _controlled = jnp.eye(2 ** (n_control + n_qubits))

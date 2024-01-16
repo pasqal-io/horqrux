@@ -4,7 +4,8 @@ import jax.numpy as jnp
 import pytest
 
 from horqrux.apply import apply_gate
-from horqrux.gates import NOT, SWAP, H, Rx, Ry, Rz, X, Y, Z
+from horqrux.parametric import Rx, Ry, Rz
+from horqrux.primitive import NOT, SWAP, H, X, Y, Z
 from horqrux.utils import equivalent_state, prepare_state
 
 
