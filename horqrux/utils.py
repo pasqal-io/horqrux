@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from typing import Iterable, Tuple
+from typing import Any, Iterable, Tuple
 
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
 from jax.typing import ArrayLike
+
+State = ArrayLike
+ConcretizedOperator = ArrayLike
+QubitSupport = Tuple[Any, ...]
 
 
 def prepare_state(n_qubits: int, state: str = None) -> Array:
@@ -71,3 +75,11 @@ def equivalent_state(state: Array, reference_state: str) -> bool:
 
 def overlap(state: Array, projection: Array) -> Array:
     return jnp.real(jnp.dot(jnp.conj(state.flatten()), projection.flatten()))
+
+
+def uniform_state(
+    n_qubits: int,
+) -> Array:
+    state = jnp.ones(2**n_qubits, dtype=jnp.complex128)
+    state = state / jnp.sqrt(jnp.array(2**n_qubits))
+    return state.reshape([2] * n_qubits)

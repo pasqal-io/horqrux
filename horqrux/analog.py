@@ -1,24 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from jax import Array
 from jax.scipy.linalg import expm
 
-from .ops import apply_operator
-from .types import State
+from .abstract import Operator, QubitSupport
 
 
-@dataclass
-class HamiltonianEvolution:
+def HamiltonianEvolution(
+    target_idx: QubitSupport,
+    control_idx: QubitSupport,
+    hamiltonian: Array,
+    time_evolution: Array,
+) -> Operator:
     """
-    A class which performs the Hamiltonian Evolution operation
-    Wrapper class which stores the qubits indices on which
+    A slim wrapper function which evolves a 'hamiltonian'
+    given a 'time_evolution' parameter and applies it to 'state' psi by doing: matrixexp(-iHt)|psi>
     """
-
-    qubits: tuple
-    n_qubits: int
-
-    def forward(self, hamiltonian: Array, time_evolution: Array, state: Array) -> State:
-        # return expm(-iHt)|psi>
-        return apply_operator(state, expm(-1j * hamiltonian * time_evolution), self.qubits, (None,))
+    return Operator(expm(hamiltonian * (-1j * time_evolution)), target_idx, control_idx)

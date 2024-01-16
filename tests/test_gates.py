@@ -3,8 +3,8 @@ from __future__ import annotations
 import jax.numpy as jnp
 import pytest
 
+from horqrux.apply import apply_gate
 from horqrux.gates import NOT, SWAP, H, Rx, Ry, Rz, X, Y, Z
-from horqrux.ops import apply_gate
 from horqrux.utils import equivalent_state, prepare_state
 
 
