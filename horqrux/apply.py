@@ -56,15 +56,15 @@ def apply_gate(state: State, gate: Operator | Iterable[Operator]) -> State:
     Returns:
         Array: Changed state.
     """
-    op: Tuple[ConcretizedOperator, ...]
+    unitary: Tuple[ConcretizedOperator, ...]
     if isinstance(gate, Operator):
-        op, target, control = (gate.unitary,), gate.target, gate.control
+        unitary, target, control = (gate.unitary,), gate.target, gate.control
     else:
-        op = tuple(g.unitary for g in gate)
+        unitary = tuple(g.unitary for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
     return reduce(
-        lambda state, inputs: apply_operator(state, *inputs),
-        zip(op, (target,), (control,)),
+        lambda state, gate: apply_operator(state, *gate),
+        zip(unitary, (target,), (control,)),
         state,
     )
