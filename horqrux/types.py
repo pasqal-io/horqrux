@@ -21,7 +21,7 @@ State = Array
 @register_pytree_node_class
 @dataclass
 class Gate:
-    O: ArrayLike
+    operator: ArrayLike
     target_idx: TargetIdx
     control_idx: ControlIdx
 
@@ -38,7 +38,7 @@ class Gate:
     ) -> Tuple:
         if isinstance(idx, int):
             return ((idx,),)
-        elif isinstance(idx, np.int64):  # for some weird reason...
+        elif isinstance(idx, np.int64):
             return ((idx,),)
         elif isinstance(idx, tuple):
             return (idx,)
@@ -46,11 +46,10 @@ class Gate:
             return (idx.astype(int),)
 
     def __iter__(self) -> Iterable:
-        return iter((self.O, self.target_idx, self.control_idx))
+        return iter((self.operator, self.target_idx, self.control_idx))
 
-    # For Jax vmap etc to work
     def tree_flatten(self) -> Tuple[Tuple[Array], Tuple[TargetIdx, ControlIdx]]:
-        children = (self.O,)
+        children = (self.operator,)
         aux_data = (
             self.target_idx,
             self.control_idx,

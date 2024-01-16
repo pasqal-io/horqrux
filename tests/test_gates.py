@@ -43,15 +43,13 @@ def test_swap_gate(x):
     assert equivalent_state(out_state, expected_state), "Output states not similar."
 
 
-@pytest.mark.skip
 def test_single_gates():
-    # horqrux
     state = prepare_state(7)
-    state = apply_gate(state, X(0))
-    state = apply_gate(state, Y(1))
-    state = apply_gate(state, Z(2))
-    state = apply_gate(state, H(3))
-    state = apply_gate(state, Rx(1 / 4 * jnp.pi, 4))
-    state = apply_gate(state, Ry(1 / 3 * jnp.pi, 5))
-    state = apply_gate(state, Rz(1 / 2 * jnp.pi, 6))
+    state = apply_gate(state, X(0, 1))
+    state = apply_gate(state, Y(1, 2))
+    state = apply_gate(state, Z(2, 4))
+    state = apply_gate(state, H(3, 5))
+    state = apply_gate(state, Rx(1 / 4 * jnp.pi, 4, 1))
+    state = apply_gate(state, Ry(1 / 3 * jnp.pi, 5, 2))
+    state = apply_gate(state, Rz(1 / 2 * jnp.pi, 6, 0))
     # FIXME

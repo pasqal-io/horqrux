@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import jax.numpy as jnp
 
+from .matrices import _H, _I, _ISQSWAP, _ISWAP, _NOT, _S, _SQSWAP, _SWAP, _T, _X, _Y, _Z
 from .types import ControlIdx, Gate, TargetIdx
 
 # Single qubit gates
 # NOT gate
-_NOT = jnp.asarray([[0, 1], [1, 0]])
 
 
 def NOT(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
@@ -30,7 +30,6 @@ def NOT(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
 
 
 # X gate
-_X = jnp.array([[0, 1], [1, 0]])
 
 
 def X(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
@@ -53,9 +52,6 @@ def X(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
 
 
 # Y gate
-_Y = jnp.array(
-    [[0, -1j], [1j, 0]],
-)
 
 
 def Y(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
@@ -78,9 +74,6 @@ def Y(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
 
 
 # Z gate
-_Z = jnp.array(
-    [[1, 0], [0, -1]],
-)
 
 
 def Z(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
@@ -103,13 +96,6 @@ def Z(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
 
 
 # H gate
-_H = (
-    jnp.array(
-        [[1, 1], [1, -1]],
-    )
-    * 1
-    / jnp.sqrt(2)
-)
 
 
 def H(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
@@ -132,9 +118,6 @@ def H(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
 
 
 # S gate
-_S = jnp.array(
-    [[1, 0], [0, 1j]],
-)
 
 
 def S(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
@@ -157,7 +140,6 @@ def S(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
 
 
 # T gate
-_T = jnp.array([[1, 0], [0, jnp.exp(1j * jnp.pi / 4)]])
 
 
 def T(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
@@ -231,11 +213,6 @@ def Rz(theta: float, target_idx: TargetIdx, control_idx: ControlIdx = None) -> G
 ## Multi qubit gates
 
 
-_SWAP = jnp.asarray(
-    [[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]],
-)
-
-
 def SWAP(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
     """SWAP gate. By providing a control idx it turns into a controlled gate (Fredkin gate),
        use None for no control qubits.
@@ -252,16 +229,6 @@ def SWAP(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
         Gate: Gate object.
     """
     return Gate(_SWAP, target_idx, control_idx)  # type: ignore[arg-type]
-
-
-_SQSWAP = jnp.asarray(
-    [
-        [1, 0, 0, 0],
-        [0, 0.5 * (1 + 1j), 0.5 * (1 - 1j), 0],
-        [0, 0.5 * (1 - 1j), 0.5 * (1 + 1j), 0],
-        [0, 0, 0, 1],
-    ]
-)
 
 
 def SQSWAP(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
@@ -282,11 +249,6 @@ def SQSWAP(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
     return Gate(_SQSWAP, target_idx, control_idx)  # type: ignore[arg-type]
 
 
-_ISWAP = jnp.asarray(
-    [[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1j, 0, 0], [0, 0, 0, 1]],
-)
-
-
 def ISWAP(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
     """ISWAP gate. By providing a control idx it turns into a controlled gate
       (Fredkin gate), use None for no control qubits.
@@ -305,16 +267,6 @@ def ISWAP(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
     return Gate(_ISWAP, target_idx, control_idx)  # type: ignore[arg-type]
 
 
-_ISQSWAP = jnp.asarray(
-    [
-        [1, 0, 0, 0],
-        [0, 1 / jnp.sqrt(2), 1j / jnp.sqrt(2), 0],
-        [0, 1j / jnp.sqrt(2), 1 / jnp.sqrt(2), 0],
-        [0, 0, 0, 1],
-    ]
-)
-
-
 def ISQSWAP(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
     """ISQSWAP gate. By providing a control idx it turns into a controlled gate
        (Fredkin gate), use None for no control qubits.
@@ -331,9 +283,6 @@ def ISQSWAP(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:
         Gate: Gate object.
     """
     return Gate(_ISQSWAP, target_idx, control_idx)  # type: ignore[arg-type]
-
-
-_I = jnp.asarray([[1, 0], [0, 1]])
 
 
 def I(target_idx: TargetIdx, control_idx: ControlIdx = None) -> Gate:

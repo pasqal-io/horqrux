@@ -39,18 +39,18 @@ def none_like(x: Iterable) -> Tuple[None, ...]:
     return tuple(map(lambda _: None, x))
 
 
-def hilbert_reshape(O: ArrayLike) -> Array:
-    """Reshapes O of shape [M, M] to array of shape [2, 2, ...].
+def hilbert_reshape(operator: ArrayLike) -> Array:
+    """Reshapes 'operator' of shape [M, M] to array of shape [2, 2, ...].
        Useful for working with controlled and multi-qubit gates.
 
     Args:
-        O (Array): Array to be reshaped.
+        operator (Array): Array to be reshaped.
 
     Returns:
         Array: Array with shape [2, 2, ...]
     """
-    n_axes = int(np.log2(O.size))
-    return O.reshape(tuple(2 for _ in np.arange(n_axes)))
+    n_axes = int(np.log2(operator.size))
+    return operator.reshape(tuple(2 for _ in np.arange(n_axes)))
 
 
 def equivalent_state(state: Array, reference_state: str) -> bool:
