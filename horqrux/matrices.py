@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
-from jax import Array
+from jax import Array, config
 from numpy import log2
 
 from horqrux.utils import hilbert_reshape
+
+config.update("jax_enable_x64", True)  # Quantum ML requires higher precision
 
 
 def _unitary(theta: float) -> Array:
