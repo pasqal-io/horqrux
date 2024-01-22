@@ -6,15 +6,16 @@ from typing import Iterable, Tuple
 
 import jax.numpy as jnp
 import numpy as np
+from jax import Array
 
-from .abstract import Operator
-from .matrices import make_controlled
-from .utils import ConcretizedOperator, QubitSupport, State, hilbert_reshape
+from horqrux.abstract import Operator
+
+from .utils import QubitSupport, State, hilbert_reshape, make_controlled
 
 
 def apply_operator(
     state: State,
-    unitary: ConcretizedOperator,
+    operator: Array,
     target: QubitSupport,
     control: QubitSupport,
 ) -> State:
@@ -34,18 +35,22 @@ def apply_operator(
     Returns:
         Array: Changed state.
     """
+
+    target = (target,) if isinstance(target, int) else target
     qubits = target
-    if None not in control:
-        unitary = make_controlled(unitary, len(control))
+    if control is not None:
+        control = (control,) if isinstance(control, int) else control
+        operator = make_controlled(operator, len(control))
         qubits = control + target
-    n_support = len(qubits)
-    unitary = hilbert_reshape(unitary) if len(target) > 1 else unitary
-    op_dims = tuple(range(n_support, 2 * n_support))
-    state = jnp.tensordot(a=unitary, b=state, axes=(op_dims, qubits))
-    return jnp.moveaxis(a=state, source=np.arange(n_support), destination=qubits)
+    operator = hilbert_reshape(operator) if len(target) > 1 else operator
+    op_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
+    state = jnp.tensordot(a=operator, b=state, axes=(op_dims, qubits))
+    return jnp.moveaxis(a=state, source=np.arange(len(qubits)), destination=qubits)
 
 
-def apply_gate(state: State, gate: Operator | Iterable[Operator]) -> State:
+def apply_gate(
+    state: State, gate: Operator | Iterable[Operator], values: dict[str, float] = {}
+) -> State:
     """Applies gate to given state. Essentially a simple wrapper around
        apply_operator, see that docstring for more info.
 
@@ -56,15 +61,15 @@ def apply_gate(state: State, gate: Operator | Iterable[Operator]) -> State:
     Returns:
         Array: Changed state.
     """
-    unitary: Tuple[ConcretizedOperator, ...]
+    unitary: Tuple[Array, ...]
     if isinstance(gate, Operator):
-        unitary, target, control = (gate.unitary,), gate.target, gate.control
+        unitary, target, control = (gate.unitary(values),), gate.target, gate.control
     else:
-        unitary = tuple(g.unitary for g in gate)
+        unitary = tuple(g.unitary(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
     return reduce(
         lambda state, gate: apply_operator(state, *gate),
-        zip(unitary, (target,), (control,)),
+        zip(unitary, target, control),
         state,
     )

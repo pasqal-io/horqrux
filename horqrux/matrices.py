@@ -1,24 +1,9 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
-from jax import Array, config
-from numpy import log2
-
-from horqrux.utils import hilbert_reshape
+from jax import config
 
 config.update("jax_enable_x64", True)  # Quantum ML requires higher precision
-
-
-def _unitary(theta: float) -> Array:
-    return jnp.cos(theta / 2) * jnp.eye(2) - 1j * jnp.sin(theta / 2)
-
-
-def make_controlled(operator: Array, n_control: int) -> Array:
-    n_qubits = int(log2(operator.shape[0]))
-    _controlled = jnp.eye(2 ** (n_control + n_qubits))
-    _controlled = _controlled.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
-    return hilbert_reshape(_controlled)
-
 
 _X = jnp.array([[0, 1], [1, 0]], dtype=jnp.complex128)
 _NOT = _X
@@ -55,3 +40,15 @@ _ISQSWAP = jnp.asarray(
     ],
     dtype=jnp.complex128,
 )
+
+OPERATIONS_DICT = {
+    "X": _X,
+    "Y": _Y,
+    "Z": _Z,
+    "NOT": _NOT,
+    "H": _H,
+    "S": _S,
+    "T": _T,
+    "I": _I,
+    "SWAP": _SWAP,
+}

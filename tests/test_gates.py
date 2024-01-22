@@ -20,21 +20,21 @@ from horqrux.utils import equivalent_state, prepare_state
 )
 def test_bell_states(init_state, final_state):
     state = prepare_state(len(init_state), init_state)
-    state = apply_gate(state, H(target_idx=0))
-    state = apply_gate(state, NOT(target_idx=1, control_idx=0))
+    state = apply_gate(state, H(target=0))
+    state = apply_gate(state, NOT(target=1, control=0))
     assert jnp.allclose(state.flatten(), final_state)
 
 
 @pytest.mark.parametrize(
     "x",
     [
-        ("10", "01", SWAP(target_idx=(0, 1))),
-        ("00", "00", SWAP(target_idx=(0, 1))),
-        ("001", "100", SWAP(target_idx=(0, 2))),
-        ("011", "110", SWAP(target_idx=(0, 2), control_idx=1)),
-        ("001", "001", SWAP(target_idx=(0, 2), control_idx=1)),
-        ("00101", "01100", SWAP(target_idx=(4, 1), control_idx=2)),
-        ("1001001", "1000011", SWAP(target_idx=(5, 3), control_idx=(6, 0))),
+        ("10", "01", SWAP(target=(0, 1))),
+        ("00", "00", SWAP(target=(0, 1))),
+        ("001", "100", SWAP(target=(0, 2))),
+        ("011", "110", SWAP(target=(0, 2), control=1)),
+        ("001", "001", SWAP(target=(0, 2), control=1)),
+        ("00101", "01100", SWAP(target=(4, 1), control=2)),
+        ("1001001", "1000011", SWAP(target=(5, 3), control=(6, 0))),
     ],
 )
 def test_swap_gate(x):

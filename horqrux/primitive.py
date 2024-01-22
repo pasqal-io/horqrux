@@ -1,29 +1,26 @@
 from __future__ import annotations
 
-from .abstract import Operator, QubitSupport
-from .matrices import _H, _I, _ISQSWAP, _ISWAP, _NOT, _S, _SQSWAP, _SWAP, _T, _X, _Y, _Z
-
-ControlIdx = QubitSupport
-TargetIdx = QubitSupport
+from .abstract import Primitive
+from .utils import ControlQubits, TargetQubits
 
 # Single qubit gates
 
 
-def I(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def I(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """The Identity operation on a single qubit.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_I, target_idx, control_idx)
+    return Primitive("I", target, control)
 
 
-def NOT(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def NOT(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """NOT gate. Note that since we lazily evaluate the circuit, this function
     returns the gate representationt of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
@@ -33,17 +30,17 @@ def NOT(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: `NOT(((1, )), ((0, )))` applies the NOT to qubit 1 with controlled bit 0.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_NOT, target_idx, control_idx)
+    return Primitive("NOT", target, control)
 
 
-def X(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def X(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """X gate. Note that since we lazily evaluate the circuit, this function
     returns the gate representationt of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
@@ -52,17 +49,17 @@ def X(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: X(((1, )), ((0, ))) applies the NOT to qubit 1 with controlled bit 0.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_X, target_idx, control_idx)
+    return Primitive("X", target, control)
 
 
-def Y(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def Y(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """Y gate. Note that since we lazily evaluate the circuit, this function
     returns the gate representationt of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
@@ -71,17 +68,17 @@ def Y(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: Y(((1, )), ((0, ))) applies the NOT to qubit 1 with controlled bit 0.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_Y, target_idx, control_idx)
+    return Primitive("Y", target, control)
 
 
-def Z(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def Z(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """Z gate. Note that since we lazily evaluate the circuit, this function
     returns the gate representationt of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
@@ -90,17 +87,17 @@ def Z(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: Z(((1, )), ((0, ))) applies the NOT to qubit 1 with controlled bit 0.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_Z, target_idx, control_idx)
+    return Primitive("Z", target, control)
 
 
-def H(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def H(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """H gate. Note that since we lazily evaluate the circuit, this function
     returns the gate representationt of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
@@ -109,17 +106,17 @@ def H(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: H(((1, )), ((0, ))) applies the NOT to qubit 1 with controlled bit 0.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones
-        describing the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones
+        describing the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_H, target_idx, control_idx)
+    return Primitive("H", target, control)
 
 
-def S(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def S(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """S gate. Note that since we lazily evaluate the circuit, this function
     returns the gate representationt of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
@@ -128,17 +125,17 @@ def S(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: Y(((1, )), ((0, ))) applies the NOT to qubit 1 with controlled bit 0.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_S, target_idx, control_idx)
+    return Primitive("S", target, control)
 
 
-def T(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def T(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """T gate. Note that since we lazily evaluate the circuit, this function
     returns the gate representationt of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
@@ -147,20 +144,20 @@ def T(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: Y(((1, )), ((0, ))) applies the NOT to qubit 1 with controlled bit 0.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_T, target_idx, control_idx)
+    return Primitive("T", target, control)
 
 
 ## Multi qubit gates
 
 
-def SWAP(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def SWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """SWAP gate. By providing a control idx it turns into a controlled gate (Fredkin gate),
        use None for no control qubits.
 
@@ -168,17 +165,17 @@ def SWAP(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: SWAP(((0, 1), ), ((2, ))) swaps qubits 0 and 1 with controlled bit 2.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_SWAP, target_idx, control_idx)
+    return Primitive("SWAP", target, control)
 
 
-def SQSWAP(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def SQSWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """SQSWAP gate. By providing a control idx it turns into a controlled gate (Fredkin gate),
        use None for no control qubits.
 
@@ -186,17 +183,17 @@ def SQSWAP(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator
     Example usage controlled: SWAP(((0, 1), ), ((2, ))) swaps qubits 0 and 1 with controlled bit 2.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_SQSWAP, target_idx, control_idx)
+    return Primitive("SQSWAP", target, control)
 
 
-def ISWAP(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def ISWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """ISWAP gate. By providing a control idx it turns into a controlled gate
       (Fredkin gate), use None for no control qubits.
 
@@ -204,17 +201,17 @@ def ISWAP(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
     Example usage controlled: SWAP(((0, 1), ), ((2, ))) swaps qubits 0 and 1 with controlled bit 2.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_ISWAP, target_idx, control_idx)
+    return Primitive("ISWAP", target, control)
 
 
-def ISQSWAP(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operator:
+def ISQSWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """ISQSWAP gate. By providing a control idx it turns into a controlled gate
        (Fredkin gate), use None for no control qubits.
 
@@ -222,11 +219,11 @@ def ISQSWAP(target_idx: TargetIdx, control_idx: ControlIdx = (None,)) -> Operato
     Example usage controlled: SWAP(((0, 1), ), ((2, ))) swaps qubits 0 and 1 with controlled bit 2.
 
     Args:
-        target_idx (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control_idx (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target_idx). Defaults to (None,).
+        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
+        control (ControlIdx, optional): Tuple of Tuples or Nones describing
+        the control qubits of length(target). Defaults to (None,).
 
     Returns:
         Gate: Gate object.
     """
-    return Operator(_ISQSWAP, target_idx, control_idx)
+    return Primitive("ISQSWAP", target, control)
