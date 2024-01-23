@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Tuple
+from typing import Any, Iterable, Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
@@ -10,7 +10,7 @@ from numpy import log2
 
 State = ArrayLike
 QubitSupport = Tuple[Any, ...]
-ControlQubits = Tuple[None | Tuple[int, ...], ...]
+ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
 TargetQubits = Tuple[Tuple[int, ...], ...]
 
 
