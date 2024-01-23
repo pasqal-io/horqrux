@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax import Array
 
 from .abstract import Parametric
-from .utils import ControlQubits, TargetQubits
+from .utils import ControlQubits, TargetQubits, is_controlled
 
 
 def RX(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
@@ -49,6 +49,23 @@ def RZ(param: float | str, target: TargetQubits, control: ControlQubits = (None,
     return Parametric("Z", target, control, param=param)
 
 
+class _PHASE(Parametric):
+    def unitary(self, values: dict[str, float] = {}) -> Array:
+        u = jnp.eye(2, 2, dtype=jnp.complex128)
+        u = u.at[(1, 1)].set(jnp.exp(1.0j * self.parse_values(values)))
+        return u
+
+    def jacobian(self, values: dict[str, float] = {}) -> Array:
+        jac = jnp.zeros((2, 2), dtype=jnp.complex128)
+        jac = jac.at[(1, 1)].set(1j * jnp.exp(1.0j * self.parse_values(values)))
+        return jac
+
+    @property
+    def name(self) -> str:
+        base_name = "PHASE"
+        return "C" + base_name if is_controlled(self.control) else base_name
+
+
 def PHASE(param: float, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
     """Phase gate.
 
@@ -61,18 +78,4 @@ def PHASE(param: float, target: TargetQubits, control: ControlQubits = (None,)) 
         Parametric: A Parametric gate object.
     """
 
-    def unitary(values: dict[str, float] = {}) -> Array:
-        u = jnp.eye(2, 2, dtype=jnp.complex128)
-        u = u.at[(1, 1)].set(jnp.exp(1.0j * values[param]))
-        return u
-
-    def jacobian(values: dict[str, float] = {}) -> Array:
-        jac = jnp.zeros((2, 2), dtype=jnp.complex128)
-        jac = jac.at[(1, 1)].set(1j * jnp.exp(1.0j * values[param]))
-        return jac
-
-    phase = Parametric("I", target, control, param)
-    phase.name = "PHASE"
-    phase.unitary = unitary
-    phase.jacobian = jacobian
-    return phase
+    return _PHASE("I", target, control, param)

@@ -1,12 +1,71 @@
 from __future__ import annotations
 
+from typing import Callable
+
 import jax.numpy as jnp
+import numpy as np
 import pytest
 
-from horqrux.apply import apply_gate
-from horqrux.parametric import RX, RY, RZ
-from horqrux.primitive import NOT, SWAP, H, X, Y, Z
+from horqrux.apply import apply_gate, apply_operator
+from horqrux.parametric import PHASE, RX, RY, RZ
+from horqrux.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
 from horqrux.utils import equivalent_state, prepare_state
+
+MAX_QUBITS = 7
+PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
+PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
+
+
+@pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
+def test_primitive(gate_fn: Callable) -> None:
+    target = np.random.randint(0, MAX_QUBITS)
+    gate = gate_fn(target)
+    orig_state = prepare_state(MAX_QUBITS)
+    state = apply_gate(orig_state, gate)
+    assert jnp.allclose(
+        apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
+    )
+
+
+@pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
+def test_controlled_primitive(gate_fn: Callable) -> None:
+    target = np.random.randint(0, MAX_QUBITS)
+    control = np.random.randint(0, MAX_QUBITS)
+    while control == target:
+        control = np.random.randint(1, MAX_QUBITS)
+    gate = gate_fn(target, control)
+    orig_state = prepare_state(MAX_QUBITS)
+    state = apply_gate(orig_state, gate)
+    assert jnp.allclose(
+        apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
+    )
+
+
+@pytest.mark.parametrize("gate_fn", PARAMETRIC_GATES)
+def test_parametric(gate_fn: Callable) -> None:
+    target = np.random.randint(0, MAX_QUBITS)
+    gate = gate_fn("theta", target)
+    values = {"theta": np.random.uniform(0.1, 2 * np.pi)}
+    orig_state = prepare_state(MAX_QUBITS)
+    state = apply_gate(orig_state, gate, values)
+    assert jnp.allclose(
+        apply_operator(state, gate.dagger(values), gate.target[0], gate.control[0]), orig_state
+    )
+
+
+@pytest.mark.parametrize("gate_fn", PARAMETRIC_GATES)
+def test_controlled_parametric(gate_fn: Callable) -> None:
+    target = np.random.randint(0, MAX_QUBITS)
+    control = np.random.randint(0, MAX_QUBITS)
+    while control == target:
+        control = np.random.randint(1, MAX_QUBITS)
+    gate = gate_fn("theta", target, control)
+    values = {"theta": np.random.uniform(0.1, 2 * np.pi)}
+    orig_state = prepare_state(MAX_QUBITS)
+    state = apply_gate(orig_state, gate, values)
+    assert jnp.allclose(
+        apply_operator(state, gate.dagger(values), gate.target[0], gate.control[0]), orig_state
+    )
 
 
 @pytest.mark.parametrize(
@@ -42,15 +101,3 @@ def test_swap_gate(x):
     state = prepare_state(len(init_state), init_state)
     out_state = apply_gate(state, op)
     assert equivalent_state(out_state, expected_state), "Output states not similar."
-
-
-def test_single_gates():
-    state = prepare_state(7)
-    state = apply_gate(state, X(0, 1))
-    state = apply_gate(state, Y(1, 2))
-    state = apply_gate(state, Z(2, 4))
-    state = apply_gate(state, H(3, 5))
-    state = apply_gate(state, RX(1 / 4 * jnp.pi, 4, 1))
-    state = apply_gate(state, RY(1 / 3 * jnp.pi, 5, 2))
-    state = apply_gate(state, RZ(1 / 2 * jnp.pi, 6, 0))
-    # FIXME

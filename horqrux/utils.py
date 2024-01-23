@@ -113,7 +113,8 @@ def uniform_state(
     return state.reshape([2] * n_qubits)
 
 
-def is_controlled(qs: ControlQubits) -> bool:
+def is_controlled(qs: Tuple[int | None | Tuple[int, ...], ...]) -> bool:
+    # FIXME despaghettify
     if qs is None:
         return False
     if isinstance(qs, tuple):

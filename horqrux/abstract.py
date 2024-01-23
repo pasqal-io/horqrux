@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, Tuple
+from typing import Any, Callable, Iterable, Tuple
 
 import numpy as np
 from jax import Array
@@ -79,7 +79,9 @@ class Parametric(Primitive):
         def parse_dict(values: dict[str, float] = {}) -> float:
             return values[self.param]
 
-        self.parse_values = parse_dict if isinstance(self.param, str) else lambda x: self.param
+        self.parse_values: Callable[[dict[str, float]], float] = (
+            parse_dict if isinstance(self.param, str) else lambda x: self.param
+        )
 
     def tree_flatten(self) -> Tuple[Tuple, Tuple[str, QubitSupport, QubitSupport, str]]:
         children = ()
