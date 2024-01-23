@@ -31,16 +31,16 @@ def apply_operator(
     Returns:
         State after applying 'operator'.
     """
-    qubits: Tuple[int, ...] = target
+    state_dims: Tuple[int | None, ...] = target
     if is_controlled(control):
         operator = _controlled(operator, len(control))
-        qubits = (*control, *target)
+        state_dims = (*control, *target)
     n_qubits = int(np.log2(operator.size))
     operator = operator.reshape(tuple(2 for _ in np.arange(n_qubits)))
     op_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
-    state = jnp.tensordot(a=operator, b=state, axes=(op_dims, qubits))
-    new_dims = tuple(i for i in range(len(qubits)))
-    return jnp.moveaxis(a=state, source=new_dims, destination=qubits)
+    state = jnp.tensordot(a=operator, b=state, axes=(op_dims, state_dims))
+    new_state_dims = tuple(i for i in range(len(state_dims)))
+    return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
 
 def apply_gate(

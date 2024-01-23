@@ -8,7 +8,16 @@ from jax import Array
 from jax.tree_util import register_pytree_node_class
 
 from .matrices import OPERATIONS_DICT
-from .utils import QubitSupport, _dagger, _jacobian, _unitary, is_controlled, none_like
+from .utils import (
+    ControlQubits,
+    QubitSupport,
+    TargetQubits,
+    _dagger,
+    _jacobian,
+    _unitary,
+    is_controlled,
+    none_like,
+)
 
 
 @register_pytree_node_class
@@ -83,7 +92,7 @@ class Parametric(Primitive):
             parse_dict if isinstance(self.param, str) else lambda x: self.param
         )
 
-    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, QubitSupport, QubitSupport, str]]:
+    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits, str | float]]:
         children = ()
         aux_data = (
             self.name,
