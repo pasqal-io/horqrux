@@ -47,21 +47,21 @@ When applying parametric gates, we pass the numeric value for the parameter firs
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux.parametric import Rx
+from horqrux.parametric import RX
 from horqrux.utils import prepare_state
 from horqrux.apply import apply_gate
 
 target_qubit = 1
 state = prepare_state(target_qubit+1)
 param_value = 1 / 4 * jnp.pi
-new_state = apply_gate(state, Rx(param_value, target_qubit))
+new_state = apply_gate(state, RX(param_value, target_qubit))
 ```
 
 We can also make any parametric gate controlled simply by passing a control qubit.
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux.parametric import Rx
+from horqrux.parametric import RX
 from horqrux.utils import prepare_state
 from horqrux.apply import apply_gate
 
@@ -70,7 +70,7 @@ target_qubit = 1
 control_qubit = 0
 state = prepare_state(2, '11')
 param_value = 1 / 4 * jnp.pi
-new_state = apply_gate(state, Rx(param_value, target_qubit, control_qubit))
+new_state = apply_gate(state, RX(param_value, target_qubit, control_qubit))
 ```
 
 A fully differentiable variational circuit is simply a sequence of gates which are applied to a state.
@@ -85,7 +85,7 @@ from horqrux.apply import apply_gate
 n_qubits = 2
 state = prepare_state(2, '00')
 # Lets define a sequence of rotations
-ops = [parametric.Rx, parametric.Ry, parametric.Rx]
+ops = [parametric.RX, parametric.RY, parametric.RX]
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(0)
 params = jax.random.uniform(key, shape=(n_qubits * len(ops),))
