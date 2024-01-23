@@ -43,7 +43,7 @@ features = [
 ]
 
 [tool.hatch.envs.tests.scripts]
-test = "pytest -n auto {args}"
+test = "pytest -n auto {args} && hatch -e docs run docs:build"
 
 [tool.hatch.envs.docs]
 dependencies = [

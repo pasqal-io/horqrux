@@ -18,7 +18,7 @@ def RX(param: float | str, target: TargetQubits, control: ControlQubits = (None,
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("X", target, control, param=param)
+    return Parametric("X", target, control, param)
 
 
 def RY(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
@@ -32,7 +32,7 @@ def RY(param: float | str, target: TargetQubits, control: ControlQubits = (None,
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("Y", target, control, param=param)
+    return Parametric("Y", target, control, param)
 
 
 def RZ(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
@@ -46,7 +46,7 @@ def RZ(param: float | str, target: TargetQubits, control: ControlQubits = (None,
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("Z", target, control, param=param)
+    return Parametric("Z", target, control, param)
 
 
 class _PHASE(Parametric):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Tuple
+from typing import Any, Iterable, Tuple
 
 import numpy as np
 from jax import Array
@@ -48,7 +48,7 @@ class Operator:
     def __iter__(self) -> Iterable:
         return iter((self.generator_name, self.target, self.control))
 
-    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, QubitSupport, QubitSupport]]:
+    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits]]:
         children = ()
         aux_data = (self.generator_name, self.target, self.control)
         return (children, aux_data)
@@ -86,13 +86,14 @@ class Parametric(Primitive):
         super().__post_init__()
 
         def parse_dict(values: dict[str, float] = {}) -> float:
-            return values[self.param]
+            return values[self.param]  # type: ignore[index]
 
-        self.parse_values: Callable[[dict[str, float]], float] = (
-            parse_dict if isinstance(self.param, str) else lambda x: self.param
-        )
+        def parse_val(values: dict[str, float] = {}) -> float:
+            return self.param  # type: ignore[return-value]
 
-    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits, str | float]]:
+        self.parse_values = parse_dict if isinstance(self.param, str) else parse_val
+
+    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, str | float]]:  # type: ignore[override]
         children = ()
         aux_data = (
             self.name,
