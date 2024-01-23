@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import pytest
 
 from horqrux.apply import apply_gate
-from horqrux.parametric import Rx, Ry, Rz
+from horqrux.parametric import RX, RY, RZ
 from horqrux.primitive import NOT, SWAP, H, X, Y, Z
 from horqrux.utils import equivalent_state, prepare_state
 
@@ -50,7 +50,7 @@ def test_single_gates():
     state = apply_gate(state, Y(1, 2))
     state = apply_gate(state, Z(2, 4))
     state = apply_gate(state, H(3, 5))
-    state = apply_gate(state, Rx(1 / 4 * jnp.pi, 4, 1))
-    state = apply_gate(state, Ry(1 / 3 * jnp.pi, 5, 2))
-    state = apply_gate(state, Rz(1 / 2 * jnp.pi, 6, 0))
+    state = apply_gate(state, RX(1 / 4 * jnp.pi, 4, 1))
+    state = apply_gate(state, RY(1 / 3 * jnp.pi, 5, 2))
+    state = apply_gate(state, RZ(1 / 2 * jnp.pi, 6, 0))
     # FIXME

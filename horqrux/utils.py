@@ -10,8 +10,8 @@ from numpy import log2
 
 State = ArrayLike
 QubitSupport = Tuple[Any, ...]
-ControlQubits = QubitSupport
-TargetQubits = QubitSupport
+ControlQubits = Tuple[None | Tuple[int, ...], ...]
+TargetQubits = Tuple[Tuple[int, ...], ...]
 
 
 def _dagger(operator: Array) -> Array:
@@ -19,18 +19,25 @@ def _dagger(operator: Array) -> Array:
 
 
 def _unitary(generator: Array, theta: float) -> Array:
-    return jnp.cos(theta / 2) * jnp.eye(2) - 1j * jnp.sin(theta / 2) * generator
+    return (
+        jnp.cos(theta / 2) * jnp.eye(2, dtype=jnp.complex128) - 1j * jnp.sin(theta / 2) * generator
+    )
 
 
 def _jacobian(generator: Array, theta: float) -> Array:
-    return -1 / 2 * (jnp.sin(theta / 2) * jnp.eye(2) + 1j * jnp.cos(theta / 2)) * generator
+    return (
+        -1
+        / 2
+        * (jnp.sin(theta / 2) * jnp.eye(2, dtype=jnp.complex128) + 1j * jnp.cos(theta / 2))
+        * generator
+    )
 
 
-def make_controlled(operator: Array, n_control: int) -> Array:
+def _controlled(operator: Array, n_control: int) -> Array:
     n_qubits = int(log2(operator.shape[0]))
-    _controlled = jnp.eye(2 ** (n_control + n_qubits))
-    _controlled = _controlled.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
-    return hilbert_reshape(_controlled)
+    control = jnp.eye(2 ** (n_control + n_qubits), dtype=jnp.complex128)
+    control = control.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
+    return control
 
 
 def prepare_state(n_qubits: int, state: str = None) -> Array:
@@ -104,3 +111,13 @@ def uniform_state(
     state = jnp.ones(2**n_qubits, dtype=jnp.complex128)
     state = state / jnp.sqrt(jnp.array(2**n_qubits))
     return state.reshape([2] * n_qubits)
+
+
+def is_controlled(qs: ControlQubits) -> bool:
+    if qs is None:
+        return False
+    if isinstance(qs, tuple):
+        return any(isinstance(q, int) for q in qs)
+    for s in qs:
+        return any([qubit is not None for qubit in s])
+    return False

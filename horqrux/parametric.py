@@ -7,52 +7,60 @@ from .abstract import Parametric
 from .utils import ControlQubits, TargetQubits
 
 
-def Rx(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
-    """Rx gate.
+def RX(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+    """RX gate.
 
-    Args:
-        theta (float): Rotational angle.
-        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target). Defaults to (None,).
+    Arguments:
+        param: Parameter denoting the Rotational angle.
+        target: Tuple of target qubits denoted as ints.
+        control: Optional tuple of control qubits denoted as ints.
 
     Returns:
-        Gate: Gate object.
+        Parametric: A Parametric gate object.
     """
     return Parametric("X", target, control, param=param)
 
 
-def Ry(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
-    """Ry gate.
+def RY(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+    """RY gate.
 
-    Args:
-        theta (float): Rotational angle.
-        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target). Defaults to (None,).
+    Arguments:
+        param: Parameter denoting the Rotational angle.
+        target: Tuple of target qubits denoted as ints.
+        control: Optional tuple of control qubits denoted as ints.
 
     Returns:
-        Gate: Gate object.
+        Parametric: A Parametric gate object.
     """
     return Parametric("Y", target, control, param=param)
 
 
-def Rz(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
-    """Rz gate.
+def RZ(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+    """RZ gate.
 
-    Args:
-        theta (float): Rotational angle.
-        target (TargetIdx): Tuple of Tuples describing the qubits to apply to.
-        control (ControlIdx, optional): Tuple of Tuples or Nones describing
-        the control qubits of length(target). Defaults to (None,).
+    Arguments:
+        param: Parameter denoting the Rotational angle.
+        target: Tuple of target qubits denoted as ints.
+        control: Optional tuple of control qubits denoted as ints.
 
     Returns:
-        Gate: Gate object.
+        Parametric: A Parametric gate object.
     """
     return Parametric("Z", target, control, param=param)
 
 
-def Phase(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+def PHASE(param: float, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+    """Phase gate.
+
+    Arguments:
+        param: Parameter denoting the Rotational angle.
+        target: Tuple of target qubits denoted as ints.
+        control: Optional tuple of control qubits denoted as ints.
+
+    Returns:
+        Parametric: A Parametric gate object.
+    """
+
     def unitary(values: dict[str, float] = {}) -> Array:
         u = jnp.eye(2, 2, dtype=jnp.complex128)
         u = u.at[(1, 1)].set(jnp.exp(1.0j * values[param]))
@@ -63,7 +71,7 @@ def Phase(param: float | str, target: TargetQubits, control: ControlQubits = (No
         jac = jac.at[(1, 1)].set(1j * jnp.exp(1.0j * values[param]))
         return jac
 
-    phase = Parametric("I", target, control)
+    phase = Parametric("I", target, control, param)
     phase.name = "PHASE"
     phase.unitary = unitary
     phase.jacobian = jacobian

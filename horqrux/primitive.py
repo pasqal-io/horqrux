@@ -22,7 +22,7 @@ def I(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
 
 def NOT(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """NOT gate. Note that since we lazily evaluate the circuit, this function
-    returns the gate representationt of Gate type and does *not* apply the gate.
+    returns the gate representation of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
 
     Example usage: `NOT(((1, ), ), (None, ))` applies the NOT to qubit 1.
@@ -42,7 +42,7 @@ def NOT(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
 
 def X(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """X gate. Note that since we lazily evaluate the circuit, this function
-    returns the gate representationt of Gate type and does *not* apply the gate.
+    returns the gate representation of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
 
     Example usage: X(((1, ), ), (None, )) applies the NOT to qubit 1.
@@ -61,7 +61,7 @@ def X(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
 
 def Y(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """Y gate. Note that since we lazily evaluate the circuit, this function
-    returns the gate representationt of Gate type and does *not* apply the gate.
+    returns the gate representation of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
 
     Example usage: Y(((1, ), ), (None, )) applies the NOT to qubit 1.
@@ -80,7 +80,7 @@ def Y(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
 
 def Z(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """Z gate. Note that since we lazily evaluate the circuit, this function
-    returns the gate representationt of Gate type and does *not* apply the gate.
+    returns the gate representation of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
 
     Example usage: Z(((1, ), ), (None, )) applies the NOT to qubit 1.
@@ -99,7 +99,7 @@ def Z(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
 
 def H(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """H gate. Note that since we lazily evaluate the circuit, this function
-    returns the gate representationt of Gate type and does *not* apply the gate.
+    returns the gate representation of Gate type and does *not* apply the gate.
     By providing a control idx it turns into a controlled gate, use None for no control qubits.
 
     Example usage: H(((1, ), ), (None, )) applies the NOT to qubit 1.
