@@ -5,11 +5,12 @@ from typing import Callable
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from jax import Array
 
 from horqrux.apply import apply_gate, apply_operator
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
-from horqrux.utils import equivalent_state, prepare_state
+from horqrux.utils import equivalent_state, product_state, random_state
 
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
@@ -20,7 +21,7 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 def test_primitive(gate_fn: Callable) -> None:
     target = np.random.randint(0, MAX_QUBITS)
     gate = gate_fn(target)
-    orig_state = prepare_state(MAX_QUBITS)
+    orig_state = random_state(MAX_QUBITS)
     state = apply_gate(orig_state, gate)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
@@ -34,7 +35,7 @@ def test_controlled_primitive(gate_fn: Callable) -> None:
     while control == target:
         control = np.random.randint(1, MAX_QUBITS)
     gate = gate_fn(target, control)
-    orig_state = prepare_state(MAX_QUBITS)
+    orig_state = random_state(MAX_QUBITS)
     state = apply_gate(orig_state, gate)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
@@ -46,7 +47,7 @@ def test_parametric(gate_fn: Callable) -> None:
     target = np.random.randint(0, MAX_QUBITS)
     gate = gate_fn("theta", target)
     values = {"theta": np.random.uniform(0.1, 2 * np.pi)}
-    orig_state = prepare_state(MAX_QUBITS)
+    orig_state = random_state(MAX_QUBITS)
     state = apply_gate(orig_state, gate, values)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(values), gate.target[0], gate.control[0]), orig_state
@@ -61,7 +62,7 @@ def test_controlled_parametric(gate_fn: Callable) -> None:
         control = np.random.randint(1, MAX_QUBITS)
     gate = gate_fn("theta", target, control)
     values = {"theta": np.random.uniform(0.1, 2 * np.pi)}
-    orig_state = prepare_state(MAX_QUBITS)
+    orig_state = random_state(MAX_QUBITS)
     state = apply_gate(orig_state, gate, values)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(values), gate.target[0], gate.control[0]), orig_state
@@ -69,7 +70,7 @@ def test_controlled_parametric(gate_fn: Callable) -> None:
 
 
 @pytest.mark.parametrize(
-    ["init_state", "final_state"],
+    ["bitstring", "expected_state"],
     [
         ("00", 1 / jnp.sqrt(2) * jnp.array([1, 0, 0, 1])),
         ("01", 1 / jnp.sqrt(2) * jnp.array([0, 1, 1, 0])),
@@ -77,15 +78,15 @@ def test_controlled_parametric(gate_fn: Callable) -> None:
         ("10", 1 / jnp.sqrt(2) * jnp.array([1, 0, 0, -1])),
     ],
 )
-def test_bell_states(init_state, final_state):
-    state = prepare_state(len(init_state), init_state)
+def test_bell_states(bitstring: str, expected_state: Array):
+    state = product_state(bitstring)
     state = apply_gate(state, H(target=0))
     state = apply_gate(state, NOT(target=1, control=0))
-    assert jnp.allclose(state.flatten(), final_state)
+    assert jnp.allclose(state.flatten(), expected_state)
 
 
 @pytest.mark.parametrize(
-    "x",
+    "inputs",
     [
         ("10", "01", SWAP(target=(0, 1))),
         ("00", "00", SWAP(target=(0, 1))),
@@ -96,8 +97,8 @@ def test_bell_states(init_state, final_state):
         ("1001001", "1000011", SWAP(target=(5, 3), control=(6, 0))),
     ],
 )
-def test_swap_gate(x):
-    init_state, expected_state, op = x
-    state = prepare_state(len(init_state), init_state)
+def test_swap_gate(inputs: tuple[str, str, Array]) -> None:
+    bitstring, expected_bitstring, op = inputs
+    state = product_state(bitstring)
     out_state = apply_gate(state, op)
-    assert equivalent_state(out_state, expected_state), "Output states not similar."
+    assert equivalent_state(out_state, product_state(expected_bitstring))

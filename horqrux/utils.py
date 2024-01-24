@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Tuple, Union
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
@@ -12,6 +13,7 @@ State = ArrayLike
 QubitSupport = Tuple[Any, ...]
 ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
 TargetQubits = Tuple[Tuple[int, ...], ...]
+ATOL = 1e-014
 
 
 def _dagger(operator: Array) -> Array:
@@ -40,7 +42,7 @@ def _controlled(operator: Array, n_control: int) -> Array:
     return control
 
 
-def prepare_state(n_qubits: int, state: str = None) -> Array:
+def product_state(bitstring: str) -> Array:
     """Generates a state of shape [2, 2, ..]_n_qubits in the given state.
     If given state is None, return all qubits in |0> state.
 
@@ -51,12 +53,14 @@ def prepare_state(n_qubits: int, state: str = None) -> Array:
     Returns:
         Array: Prepared state.
     """
-    if state is None:
-        state = "0" * n_qubits
-
+    n_qubits = len(bitstring)
     space = jnp.zeros(tuple(2 for _ in range(n_qubits)), dtype=jnp.complex128)
-    space = space.at[tuple(map(int, state))].set(1.0)
+    space = space.at[tuple(map(int, bitstring))].set(1.0)
     return space
+
+
+def zero_state(n_qubits: int) -> Array:
+    return product_state("0" * n_qubits)
 
 
 def none_like(x: Iterable) -> Tuple[None, ...]:
@@ -85,20 +89,18 @@ def hilbert_reshape(operator: ArrayLike) -> Array:
     return operator.reshape(tuple(2 for _ in np.arange(n_axes)))
 
 
-def equivalent_state(state: Array, reference_state: str) -> bool:
+def equivalent_state(s0: Array, s1: Array) -> bool:
     """Small utility to easily compare an output state to a given (pure) state like
         equivalent_state(output_state, '10').
 
     Args:
-        state (Array): State array to be checked.
-        reference_state (str): Bitstring to compare the state to.
+        s0: State array to be checked.
+        s1:  State array to compare to.
 
     Returns:
         bool: Boolean indicating whether the states are equivalent.
     """
-    n_qubits = state.ndim
-    ref_state = prepare_state(n_qubits, reference_state)
-    return jnp.allclose(state, ref_state)  # type: ignore[no-any-return]
+    return jnp.allclose(overlap(s0, s1), 1.0, atol=ATOL)  # type: ignore[no-any-return]
 
 
 def overlap(state: Array, projection: Array) -> Array:
@@ -109,16 +111,27 @@ def uniform_state(
     n_qubits: int,
 ) -> Array:
     state = jnp.ones(2**n_qubits, dtype=jnp.complex128)
-    state = state / jnp.sqrt(jnp.array(2**n_qubits))
+    state = state / jnp.sqrt(jnp.array(2**n_qubits, dtype=jnp.complex128))
     return state.reshape([2] * n_qubits)
 
 
-def is_controlled(qs: Tuple[int | None | Tuple[int, ...], ...]) -> bool:
-    # FIXME despaghettify
-    if qs is None:
-        return False
-    if isinstance(qs, tuple):
-        return any(isinstance(q, int) for q in qs)
-    for s in qs:
-        return any([qubit is not None for qubit in s])
+def is_controlled(qs: Tuple[int | None, ...] | int | None) -> bool:
+    if isinstance(qs, int):
+        return True
+    elif isinstance(qs, tuple):
+        return any(is_controlled(q) for q in qs)
     return False
+
+
+def random_state(n_qubits: int) -> Array:
+    def _normalize(wf: Array) -> Array:
+        return wf / jnp.sqrt((jnp.sum(jnp.abs(wf) ** 2)))
+
+    key = jax.random.PRNGKey(n_qubits)
+    N = 2**n_qubits
+    x = -jnp.log(jax.random.uniform(key, shape=(N,)))
+    sumx = jnp.sum(x)
+    phases = jax.random.uniform(key, shape=(N,)) * 2.0 * jnp.pi
+    return _normalize(
+        (jnp.sqrt(x / sumx) * jnp.exp(1j * phases)).reshape(tuple(2 for _ in range(n_qubits)))
+    )

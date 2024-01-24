@@ -19,10 +19,10 @@ Let's have a look at primitive gates first.
 
 ```python exec="on" source="material-block"
 from horqrux.primitive import X
-from horqrux.utils import prepare_state
+from horqrux.utils import random_state
 from horqrux.apply import apply_gate
 
-state = prepare_state(2)
+state = random_state(2)
 new_state = apply_gate(state, X(0))
 ```
 
@@ -31,16 +31,16 @@ We can also make any gate controlled, in the case of X, we have to pass the targ
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
 from horqrux.primitive import X
-from horqrux.utils import prepare_state, equivalent_state
+from horqrux.utils import product_state, equivalent_state
 from horqrux.apply import apply_gate
 
 n_qubits = 2
-state = prepare_state(n_qubits, '11')
+state = product_state('11')
 control = 0
 target = 1
 # This is equivalent to performing CNOT(0,1)
 new_state= apply_gate(state, X(target,control))
-assert jnp.allclose(new_state, prepare_state(n_qubits, '10'))
+assert jnp.allclose(new_state, product_state('10'))
 ```
 
 When applying parametric gates, we pass the numeric value for the parameter first
@@ -48,11 +48,11 @@ When applying parametric gates, we pass the numeric value for the parameter firs
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
 from horqrux.parametric import RX
-from horqrux.utils import prepare_state
+from horqrux.utils import random_state
 from horqrux.apply import apply_gate
 
 target_qubit = 1
-state = prepare_state(target_qubit+1)
+state = random_state(target_qubit+1)
 param_value = 1 / 4 * jnp.pi
 new_state = apply_gate(state, RX(param_value, target_qubit))
 ```
@@ -62,13 +62,13 @@ We can also make any parametric gate controlled simply by passing a control qubi
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
 from horqrux.parametric import RX
-from horqrux.utils import prepare_state
+from horqrux.utils import product_state
 from horqrux.apply import apply_gate
 
 n_qubits = 2
 target_qubit = 1
 control_qubit = 0
-state = prepare_state(2, '11')
+state = product_state('11')
 param_value = 1 / 4 * jnp.pi
 new_state = apply_gate(state, RX(param_value, target_qubit, control_qubit))
 ```
@@ -79,11 +79,11 @@ A fully differentiable variational circuit is simply a sequence of gates which a
 import jax
 import jax.numpy as jnp
 from horqrux import parametric, primitive
-from horqrux.utils import prepare_state, overlap
+from horqrux.utils import zero_state, overlap
 from horqrux.apply import apply_gate
 
 n_qubits = 2
-state = prepare_state(2, '00')
+state = zero_state(2)
 # Lets define a sequence of rotations
 ops = [parametric.RX, parametric.RY, parametric.RX]
 # Create random initial values for the parameters
