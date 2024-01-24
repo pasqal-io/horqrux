@@ -43,7 +43,7 @@ new_state= apply_gate(state, X(target,control))
 assert jnp.allclose(new_state, product_state('10'))
 ```
 
-When applying parametric gates, we pass the numeric value for the parameter first
+When applying parametric gates, we can either pass a numeric value or a parameter name for the parameter as the first argument.
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
@@ -55,6 +55,9 @@ target_qubit = 1
 state = random_state(target_qubit+1)
 param_value = 1 / 4 * jnp.pi
 new_state = apply_gate(state, RX(param_value, target_qubit))
+# Parametric horqrux gates also accept parameter names in the form of strings.
+# Simply pass a dictionary of parameter names and values to the 'apply_gate' function
+new_state = apply_gate(state, RX('theta', target_qubit), {'theta': jnp.pi})
 ```
 
 We can also make any parametric gate controlled simply by passing a control qubit.
@@ -73,7 +76,8 @@ param_value = 1 / 4 * jnp.pi
 new_state = apply_gate(state, RX(param_value, target_qubit, control_qubit))
 ```
 
-A fully differentiable variational circuit is simply a sequence of gates which are applied to a state.
+We can now build a fully differentiable variational circuit by simply defining a sequence of gates
+and a set of initial parameter values we want to optimize.
 Lets fit a function using a simple circuit class wrapper.
 
 ```python exec="on" source="material-block" html="1"
@@ -95,10 +99,10 @@ from horqrux.apply import apply_gate
 from uuid import uuid4
 
 n_qubits = 5
-# Lets define a sequence of rotations
 n_params = 3
 n_layers = 3
 
+# Lets define a sequence of rotations
 def ansatz_w_params(n_qubits: int, n_layers: int) -> tuple[list, list]:
     all_ops = []
     param_names = []
@@ -111,7 +115,8 @@ def ansatz_w_params(n_qubits: int, n_layers: int) -> tuple[list, list]:
             all_ops += ops
 
     return all_ops, param_names
-# We will use a featuremap of RX rotations to encode some classical data
+
+# We will define a function we want to learn and produce training data
 fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in range(degree)), 0)
 DEGREE = 5
 
@@ -124,6 +129,7 @@ class Circuit:
     n_layers: int
 
     def __post_init__(self) -> None:
+        # We will use a featuremap of RX rotations to encode some classical data
         self.feature_map: list[Operator] = [RX('phi', i) for i in range(n_qubits)]
         self.ansatz, self.param_names = ansatz_w_params(self.n_qubits, self.n_layers)
         self.observable: list[Operator] = [Z(0)]
@@ -152,7 +158,7 @@ y_init = circ(param_vals, x)
 optimizer = optax.adam(learning_rate=0.01)
 opt_state = optimizer.init(param_vals)
 
-
+# Define a loss function
 def loss_fn(param_vals, x, y) -> Array:
     y_pred = circ(param_vals, x)
     return jnp.mean(optax.l2_loss(y_pred, y))
