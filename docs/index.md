@@ -83,14 +83,13 @@ from horqrux.utils import zero_state, overlap
 from horqrux.apply import apply_gate
 
 n_qubits = 2
-state = zero_state(2)
 # Lets define a sequence of rotations
 ops = [parametric.RX, parametric.RY, parametric.RX]
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(0)
 params = jax.random.uniform(key, shape=(n_qubits * len(ops),))
 
-def circ(state: jax.Array) -> jax.Array:
+def circ(params: jax.Array, state=zero_state(2)) -> jax.Array:
     for qubit in range(n_qubits):
         for gate,param in zip(ops, params):
             state = apply_gate(state, gate(param, qubit))
@@ -101,7 +100,7 @@ def circ(state: jax.Array) -> jax.Array:
 # Let's compute both values and gradients for a set of parameters and compile the circuit.
 circ = jax.jit(jax.value_and_grad(circ))
 # Run it on a state.
-expval_and_grads = circ(state)
+expval_and_grads = circ(params)
 expval = expval_and_grads[0]
 grads = expval_and_grads[1:]
 print(f'Expval: {expval};'
