@@ -74,6 +74,7 @@ new_state = apply_gate(state, RX(param_value, target_qubit, control_qubit))
 ```
 
 A fully differentiable variational circuit is simply a sequence of gates which are applied to a state.
+Lets fit a function using a simple circuit class wrapper.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
@@ -133,14 +134,14 @@ class Circuit:
         param_dict = {name: val for name, val in zip(self.param_names, param_values)}
         state = apply_gate(state, self.feature_map + self.ansatz, {**param_dict, **{'phi': x}})
         return overlap(state, apply_gate(state, self.observable))
-    
+
     def __call__(self, param_values, x) -> Any:
         return self.forward(param_values, x)
-    
+
     @property
     def n_vparams(self) -> int:
         return len(self.param_names)
-    
+
 circ = Circuit(n_qubits, n_layers)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
@@ -180,6 +181,13 @@ plt.plot(x, y, label="truth")
 plt.plot(x, y_init, label="initial")
 plt.plot(x, y_final, "--", label="final", linewidth=3)
 plt.legend()
-from docs import docutils # markdown-exec: hide
-print(docutils.fig_to_html(plt.gcf())) # markdown-exec: hide
+
+from io import StringIO  # markdown-exec: hide
+from matplotlib.figure import Figure  # markdown-exec: hide
+def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
+    buffer = StringIO()  # markdown-exec: hide
+    fig.savefig(buffer, format="svg")  # markdown-exec: hide
+    return buffer.getvalue()  # markdown-exec: hide
+# from docs import docutils # markdown-exec: hide
+print(fig_to_html(plt.gcf())) # markdown-exec: hide
 ```
