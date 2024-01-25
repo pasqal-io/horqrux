@@ -23,6 +23,9 @@ from .utils import (
 @register_pytree_node_class
 @dataclass
 class Operator:
+    """Abstract class which stores information about generators target and control qubits
+    of a particular quantum operator."""
+
     generator_name: str
     target: QubitSupport
     control: QubitSupport
@@ -77,6 +80,8 @@ Primitive = Operator
 @register_pytree_node_class
 @dataclass
 class Parametric(Primitive):
+    """Extension of the Primitive class adding the option to pass a parameter."""
+
     generator_name: str
     target: QubitSupport
     control: QubitSupport

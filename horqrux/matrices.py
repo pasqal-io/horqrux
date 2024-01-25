@@ -6,7 +6,6 @@ from jax import config
 config.update("jax_enable_x64", True)  # Quantum ML requires higher precision
 
 _X = jnp.array([[0, 1], [1, 0]], dtype=jnp.complex128)
-_NOT = _X
 _Y = jnp.array([[0, -1j], [1j, 0]], dtype=jnp.complex128)
 _Z = jnp.array([[1, 0], [0, -1]], dtype=jnp.complex128)
 _H = jnp.array([[1, 1], [1, -1]], dtype=jnp.complex128) * 1 / jnp.sqrt(2)
@@ -45,7 +44,6 @@ OPERATIONS_DICT = {
     "X": _X,
     "Y": _Y,
     "Z": _Z,
-    "NOT": _NOT,
     "H": _H,
     "S": _S,
     "T": _T,

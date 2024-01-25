@@ -43,15 +43,13 @@ def _controlled(operator: Array, n_control: int) -> Array:
 
 
 def product_state(bitstring: str) -> Array:
-    """Generates a state of shape [2, 2, ..]_n_qubits in the given state.
-    If given state is None, return all qubits in |0> state.
+    """Generates a state of shape [2 for _ in range(len(bitstring))].
 
     Args:
-        n_qubits (int): size of state.
-        state (str, optional): Bitstring describing state to be prepared. Defaults to None.
+        bitstring: The target bitstring.
 
     Returns:
-        Array: Prepared state.
+        A state corresponding to 'bitstring'.
     """
     n_qubits = len(bitstring)
     space = jnp.zeros(tuple(2 for _ in range(n_qubits)), dtype=jnp.complex128)
@@ -90,8 +88,7 @@ def hilbert_reshape(operator: ArrayLike) -> Array:
 
 
 def equivalent_state(s0: Array, s1: Array) -> bool:
-    """Small utility to easily compare an output state to a given (pure) state like
-        equivalent_state(output_state, '10').
+    """Utility to easily compare two states.
 
     Args:
         s0: State array to be checked.
