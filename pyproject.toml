@@ -12,7 +12,7 @@ authors = [
 requires-python = ">=3.9,<3.12"
 license = {text = "Apache 2.0"}
 
-version = "0.3.0"
+version = "0.4.0"
 
 classifiers=[
     "License :: Other/Proprietary License",
@@ -43,7 +43,7 @@ features = [
 ]
 
 [tool.hatch.envs.tests.scripts]
-test = "pytest -n auto {args}"
+test = "pytest -n auto {args} && hatch -e docs run docs:build"
 
 [tool.hatch.envs.docs]
 dependencies = [
@@ -56,6 +56,7 @@ dependencies = [
   "mkdocs-exclude",
   "markdown-exec",
   "mike",
+  "matplotlib",
 ]
 
 [tool.hatch.build.targets.wheel]
