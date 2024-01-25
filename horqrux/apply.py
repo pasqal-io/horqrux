@@ -44,7 +44,7 @@ def apply_operator(
 
 
 def apply_gate(
-    state: State, gate: Operator | Iterable[Operator], values: dict[str, float] = {}
+    state: State, gate: Operator | Iterable[Operator], values: dict[str, float] = dict()
 ) -> State:
     """Applies a gate or a series of gates to a given state.
        This function sequentially applies 'gate', adding control bits

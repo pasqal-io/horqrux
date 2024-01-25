@@ -57,10 +57,10 @@ class Operator:
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def unitary(self, values: dict[str, float] = {}) -> Array:
+    def unitary(self, values: dict[str, float] = dict()) -> Array:
         return OPERATIONS_DICT[self.generator_name]
 
-    def dagger(self, values: dict[str, float] = {}) -> Array:
+    def dagger(self, values: dict[str, float] = dict()) -> Array:
         return _dagger(self.unitary(values))
 
     @property
@@ -85,10 +85,10 @@ class Parametric(Primitive):
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        def parse_dict(values: dict[str, float] = {}) -> float:
+        def parse_dict(values: dict[str, float] = dict()) -> float:
             return values[self.param]  # type: ignore[index]
 
-        def parse_val(values: dict[str, float] = {}) -> float:
+        def parse_val(values: dict[str, float] = dict()) -> float:
             return self.param  # type: ignore[return-value]
 
         self.parse_values = parse_dict if isinstance(self.param, str) else parse_val
@@ -103,10 +103,10 @@ class Parametric(Primitive):
         )
         return (children, aux_data)
 
-    def unitary(self, values: dict[str, float] = {}) -> Array:
+    def unitary(self, values: dict[str, float] = dict()) -> Array:
         return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
 
-    def jacobian(self, values: dict[str, float] = {}) -> Array:
+    def jacobian(self, values: dict[str, float] = dict()) -> Array:
         return _jacobian(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
 
     @property
