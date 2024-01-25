@@ -18,9 +18,7 @@ pip install horqrux
 Let's have a look at primitive gates first.
 
 ```python exec="on" source="material-block"
-from horqrux.primitive import X
-from horqrux.utils import random_state
-from horqrux.apply import apply_gate
+from horqrux import X, random_state, apply_gate
 
 state = random_state(2)
 new_state = apply_gate(state, X(0))
@@ -30,9 +28,7 @@ We can also make any gate controlled, in the case of X, we have to pass the targ
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux.primitive import X
-from horqrux.utils import product_state, equivalent_state
-from horqrux.apply import apply_gate
+from horqrux import X, product_state, equivalent_state, apply_gate
 
 n_qubits = 2
 state = product_state('11')
@@ -47,9 +43,7 @@ When applying parametric gates, we can either pass a numeric value or a paramete
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux.parametric import RX
-from horqrux.utils import random_state
-from horqrux.apply import apply_gate
+from horqrux import RX, random_state, apply_gate
 
 target_qubit = 1
 state = random_state(target_qubit+1)
@@ -64,9 +58,7 @@ We can also make any parametric gate controlled simply by passing a control qubi
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux.parametric import RX
-from horqrux.utils import product_state
-from horqrux.apply import apply_gate
+from horqrux import RX, product_state, apply_gate
 
 n_qubits = 2
 target_qubit = 1
@@ -82,21 +74,20 @@ Lets fit a function using a simple circuit class wrapper.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
+
 import jax
 from jax import grad, jit, Array, value_and_grad, vmap
 from dataclasses import dataclass
 import jax.numpy as jnp
 import optax
-from itertools import chain
 from functools import reduce, partial
 from operator import add
 from typing import Any, Callable
-import matplotlib.pyplot as plt
-from horqrux.abstract import Operator
-from horqrux import Z, RX, RY, NOT
-from horqrux.utils import zero_state, overlap
-from horqrux.apply import apply_gate
 from uuid import uuid4
+
+from horqrux.abstract import Operator
+from horqrux import Z, RX, RY, NOT, zero_state, apply_gate, overlap
+
 
 n_qubits = 5
 n_params = 3
@@ -116,12 +107,10 @@ def ansatz_w_params(n_qubits: int, n_layers: int) -> tuple[list, list]:
 
     return all_ops, param_names
 
-# We will define a function we want to learn and produce training data
+#  We need a function to fit and use it to produce training data
 fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in range(degree)), 0)
-DEGREE = 5
-
 x = jnp.linspace(0, 10, 100)
-y = fn(x, DEGREE)
+y = fn(x, 5)
 
 @dataclass
 class Circuit:
@@ -141,7 +130,7 @@ class Circuit:
         state = apply_gate(state, self.feature_map + self.ansatz, {**param_dict, **{'phi': x}})
         return overlap(state, apply_gate(state, self.observable))
 
-    def __call__(self, param_values, x) -> Any:
+    def __call__(self, param_values: Array, x: Array) -> Array:
         return self.forward(param_values, x)
 
     @property
@@ -159,7 +148,7 @@ optimizer = optax.adam(learning_rate=0.01)
 opt_state = optimizer.init(param_vals)
 
 # Define a loss function
-def loss_fn(param_vals, x, y) -> Array:
+def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
     y_pred = circ(param_vals, x)
     return jnp.mean(optax.l2_loss(y_pred, y))
 
@@ -183,6 +172,7 @@ param_vals, opt_state = jax.lax.fori_loop(0, n_epochs, train_step, (param_vals, 
 y_final = circ(param_vals, x)
 
 # Lets plot the results
+import matplotlib.pyplot as plt
 plt.plot(x, y, label="truth")
 plt.plot(x, y_init, label="initial")
 plt.plot(x, y_final, "--", label="final", linewidth=3)
