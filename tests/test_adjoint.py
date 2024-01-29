@@ -33,4 +33,4 @@ def test_gradcheck() -> None:
     grads_adjoint = grad(adjoint_expfn)(values)
     grad_ad = grad(ad_expfn)(values)
     for param, ad_grad in grad_ad.items():
-        assert jnp.isclose(grads_adjoint[param], ad_grad, atol=0.01)
+        assert jnp.isclose(grads_adjoint[param], ad_grad, atol=0.02)

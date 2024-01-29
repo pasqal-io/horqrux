@@ -10,7 +10,7 @@ from jax import Array
 
 from horqrux.abstract import Operator
 
-from .utils import State, _controlled, is_controlled
+from .utils import OperationType, State, _controlled, is_controlled
 
 
 def apply_operator(
@@ -52,7 +52,10 @@ def apply_operator(
 
 
 def apply_gate(
-    state: State, gate: Operator | Iterable[Operator], values: dict[str, float] = dict()
+    state: State,
+    gate: Operator | Iterable[Operator],
+    values: dict[str, float] = dict(),
+    op_type: OperationType = OperationType.UNITARY,
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
     Arguments:
@@ -62,15 +65,16 @@ def apply_gate(
     Returns:
         State after applying 'gate'.
     """
-    unitary: Tuple[Array, ...]
+    operator: Tuple[Array, ...]
     if isinstance(gate, Operator):
-        unitary, target, control = (gate.unitary(values),), gate.target, gate.control
+        operator_fn = getattr(gate, op_type)
+        operator, target, control = (operator_fn(values),), gate.target, gate.control
     else:
-        unitary = tuple(g.unitary(values) for g in gate)
+        operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
     return reduce(
         lambda state, gate: apply_operator(state, *gate),
-        zip(unitary, target, control),
+        zip(operator, target, control),
         state,
     )

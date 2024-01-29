@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any, Iterable, Tuple, Union
 
 import jax
@@ -14,6 +15,23 @@ QubitSupport = Tuple[Any, ...]
 ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
 TargetQubits = Tuple[Tuple[int, ...], ...]
 ATOL = 1e-014
+
+
+class StrEnum(str, Enum):
+    def __str__(self) -> str:
+        """Used when dumping enum fields in a schema."""
+        ret: str = self.value
+        return ret
+
+    @classmethod
+    def list(cls) -> list[str]:
+        return list(map(lambda c: c.value, cls))  # type: ignore
+
+
+class OperationType(StrEnum):
+    UNITARY = "unitary"
+    DAGGER = "dagger"
+    JACOBIAN = "jacobian"
 
 
 def _dagger(operator: Array) -> Array:
