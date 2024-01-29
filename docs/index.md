@@ -69,8 +69,8 @@ new_state = apply_gate(state, RX(param_value, target_qubit, control_qubit))
 ```
 
 We can now build a fully differentiable variational circuit by simply defining a sequence of gates
-and a set of initial parameter values we want to optimize.
-Lets fit a function using a simple circuit class wrapper.
+and a set of initial parameter values we want to optimize. Horqrux offers a adjoint differentation mode,
+which we can use to fit a function using a simple circuit class wrapper.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
@@ -85,6 +85,7 @@ from operator import add
 from typing import Any, Callable
 from uuid import uuid4
 
+from horqrux.adjoint import adjoint_expectation
 from horqrux.abstract import Operator
 from horqrux import Z, RX, RY, NOT, zero_state, apply_gate, overlap
 
@@ -127,8 +128,7 @@ class Circuit:
     def forward(self, param_values: Array, x: Array) -> Array:
         state = zero_state(self.n_qubits)
         param_dict = {name: val for name, val in zip(self.param_names, param_values)}
-        state = apply_gate(state, self.feature_map + self.ansatz, {**param_dict, **{'phi': x}})
-        return overlap(state, apply_gate(state, self.observable))
+        return adjoint_expectation(state ,self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}})
 
     def __call__(self, param_values: Array, x: Array) -> Array:
         return self.forward(param_values, x)
