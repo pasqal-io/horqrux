@@ -10,7 +10,7 @@ def I(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """Identity / I gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 
-    Example usage: I(1) applies I to qubit 1.
+    Example usage: I(1) represents the instruction to apply I to qubit 1.
 
     Args:
         target: Tuple of ints describing the qubits to apply to.
@@ -26,8 +26,8 @@ def X(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """X gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 
-    Example usage: X(1) applies X to qubit 1.
-    Example usage controlled: X(1, 0) applies CX / CNOT to qubit 1 with controlled qubit 0.
+    Example usage: X(1) represents the instruction to apply X to qubit 1.
+    Example usage controlled: X(1, 0) represents the instruction to apply CX / CNOT to qubit 1 with controlled qubit 0.
 
     Args:
         target: Tuple of ints describing the qubits to apply to.
@@ -46,8 +46,8 @@ def Y(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """Y gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 
-    Example usage: Y(1) applies X to qubit 1.
-    Example usage controlled: Y(1, 0) applies CY to qubit 1 with controlled qubit 0.
+    Example usage: Y(1) represents the instruction to apply X to qubit 1.
+    Example usage controlled: Y(1, 0) represents the instruction to apply CY to qubit 1 with controlled qubit 0.
 
     Args:
         target: Tuple of ints describing the qubits to apply to.
@@ -63,8 +63,8 @@ def Z(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """Z gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 
-    Example usage: Z(1) applies Z to qubit 1.
-    Example usage controlled: Z(1, 0) applies CZ to qubit 1 with controlled qubit 0.
+    Example usage: Z(1) represents the instruction to apply Z to qubit 1.
+    Example usage controlled: Z(1, 0) represents the instruction to apply CZ to qubit 1 with controlled qubit 0.
 
     Args:
         target: Tuple of ints describing the qubits to apply to.
@@ -80,7 +80,7 @@ def H(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """H/ Hadamard gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 
-    Example usage: H(1) applies Hadamard to qubit 1.
+    Example usage: H(1) represents the instruction to apply Hadamard to qubit 1.
 
     Args:
         target: Tuple of ints describing the qubits to apply to.
@@ -96,7 +96,7 @@ def S(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """S gate or constant phase gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 
-    Example usage: S(1) applies S to qubit 1.
+    Example usage: S(1) represents the instruction to apply S to qubit 1.
 
     Args:
         target: Tuple of ints describing the qubits to apply to.
@@ -112,7 +112,7 @@ def T(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """T gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 
-    Example usage: T(1) applies Hadamard to qubit 1.
+    Example usage: T(1) represents the instruction to apply Hadamard to qubit 1.
 
     Args:
         target: Tuple of ints describing the qubits to apply to.
