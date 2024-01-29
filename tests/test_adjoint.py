@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
+import numpy as np
 from jax import Array, grad
 
 from horqrux import random_state
@@ -16,7 +17,11 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 def test_gradcheck() -> None:
     ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0)]
     observable = [Z(0)]
-    values = {"theta": jnp.pi, "epsilon": jnp.pi / 2, "phi": jnp.pi * 2}
+    values = {
+        "theta": np.random.uniform(0, 1),
+        "epsilon": np.random.uniform(0, 1),
+        "phi": np.random.uniform(0, 1),
+    }
     state = random_state(MAX_QUBITS)
 
     def adjoint_expfn(values) -> Array:
@@ -28,4 +33,4 @@ def test_gradcheck() -> None:
     grads_adjoint = grad(adjoint_expfn)(values)
     grad_ad = grad(ad_expfn)(values)
     for param, ad_grad in grad_ad.items():
-        assert jnp.isclose(grads_adjoint[param], ad_grad, atol=1e-02)
+        assert jnp.isclose(grads_adjoint[param], ad_grad, atol=0.01)
