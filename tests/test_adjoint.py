@@ -15,12 +15,13 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 
 def test_gradcheck() -> None:
-    ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0)]
+    ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0), NOT(1, 0), RX("omega", 0, 1)]
     observable = [Z(0)]
     values = {
         "theta": np.random.uniform(0, 1),
         "epsilon": np.random.uniform(0, 1),
         "phi": np.random.uniform(0, 1),
+        "omega": np.random.uniform(0, 1),
     }
     state = random_state(MAX_QUBITS)
 
