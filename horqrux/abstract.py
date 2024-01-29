@@ -53,7 +53,7 @@ class Operator:
 
     def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits]]:
         children = ()
-        aux_data = (self.generator_name, self.target, self.control)
+        aux_data = (self.generator_name, self.target[0], self.control[0])
         return (children, aux_data)
 
     @classmethod
@@ -101,12 +101,19 @@ class Parametric(Primitive):
     def tree_flatten(self) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, str | float]]:  # type: ignore[override]
         children = ()
         aux_data = (
-            self.name,
-            self.target,
-            self.control,
+            self.generator_name,
+            self.target[0],
+            self.control[0],
             self.param,
         )
         return (children, aux_data)
+
+    def __iter__(self) -> Iterable:
+        return iter((self.generator_name, self.target, self.control, self.param))
+
+    @classmethod
+    def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
+        return cls(*children, *aux_data)
 
     def unitary(self, values: dict[str, float] = dict()) -> Array:
         return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
