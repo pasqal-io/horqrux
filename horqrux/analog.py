@@ -6,14 +6,21 @@ from jax.scipy.linalg import expm
 from .abstract import Primitive, QubitSupport
 
 
-def HamiltonianEvolution(
-    target_idx: QubitSupport,
-    control_idx: QubitSupport,
-    hamiltonian: Array,
-    time_evolution: Array,
-) -> Primitive:
+class _HamiltonianEvolution(Primitive):
     """
-    A slim wrapper function which evolves a 'hamiltonian'
+    A slim wrapper class which evolves a 'hamiltonian'
     given a 'time_evolution' parameter and applies it to 'state' psi by doing: matrixexp(-iHt)|psi>
     """
-    return Primitive(expm(hamiltonian * (-1j * time_evolution)), target_idx, control_idx)
+
+    generator_name: str
+    target: QubitSupport
+    control: QubitSupport
+
+    def unitary(self, values: dict[str, Array] = dict()) -> Array:
+        return expm(values["hamiltonian"] * (-1j * values["time_evolution"]))
+
+
+def HamiltonianEvolution(
+    target: QubitSupport, control: QubitSupport = (None,)
+) -> _HamiltonianEvolution:
+    return _HamiltonianEvolution("I", target, control)

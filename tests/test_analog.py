@@ -13,7 +13,7 @@ Hbase = jnp.kron(sigmaz, sigmaz)
 Hamiltonian = jnp.kron(Hbase, Hbase)
 
 
-@pytest.mark.xfail
+# @pytest.mark.xfail
 @pytest.mark.parametrize(
     ["init_state", "final_state"],
     [
@@ -25,17 +25,16 @@ Hamiltonian = jnp.kron(Hbase, Hbase)
 )
 def test_bell_states(init_state, final_state):
     state = product_state(init_state)
-    hamiltonian = jnp.eye(2, dtype=jnp.complex128)
     time_evo = jnp.array([1.0], dtype=jnp.complex128)
-    state = apply_gate(state, HamiltonianEvolution((0, 1), None, hamiltonian, time_evo))
+    state = apply_gate(state, HamiltonianEvolution((0, 1)), {"hamiltonian": Hbase, "time_evolution": time_evo})
 
 
-@pytest.mark.xfail
+# @pytest.mark.xfail
 def test_hamevo_single() -> None:
     n_qubits = 4
     t_evo = jnp.pi / 4
-    hamevo = HamiltonianEvolution(tuple([i for i in range(n_qubits)]), None, Hamiltonian, t_evo)
+    hamevo = HamiltonianEvolution(tuple([i for i in range(n_qubits)]))
     psi = uniform_state(n_qubits)
-    psi_star = apply_gate(psi, hamevo)
+    psi_star = apply_gate(psi, hamevo, {"hamiltonian": Hamiltonian, "time_evolution": t_evo})
     result = overlap(psi_star, psi)
     assert jnp.isclose(result, 0.5)
