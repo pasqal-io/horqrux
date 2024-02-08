@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from jax import Array
 import jax.numpy as jnp
 import pytest
 
@@ -23,10 +24,11 @@ Hamiltonian = jnp.kron(Hbase, Hbase)
         ("10", 1 / jnp.sqrt(2) * jnp.array([1, 0, 0, -1])),
     ],
 )
-def test_bell_states(init_state, final_state):
-    state = product_state(init_state)
+def test_bell_states(bitstring:str, final_state: Array):
+    state = product_state(bitstring)
     time_evo = jnp.array([1.0], dtype=jnp.complex128)
     state = apply_gate(state, HamiltonianEvolution((0, 1)), {"hamiltonian": Hbase, "time_evolution": time_evo})
+    assert jnp.isclose(state, final_state)
 
 
 # @pytest.mark.xfail
