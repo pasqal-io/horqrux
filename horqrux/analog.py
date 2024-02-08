@@ -3,7 +3,7 @@ from __future__ import annotations
 from jax import Array
 from jax.scipy.linalg import expm
 
-from .abstract import Operator, QubitSupport
+from .abstract import Primitive, QubitSupport
 
 
 def HamiltonianEvolution(
@@ -11,9 +11,9 @@ def HamiltonianEvolution(
     control_idx: QubitSupport,
     hamiltonian: Array,
     time_evolution: Array,
-) -> Operator:
+) -> Primitive:
     """
     A slim wrapper function which evolves a 'hamiltonian'
     given a 'time_evolution' parameter and applies it to 'state' psi by doing: matrixexp(-iHt)|psi>
     """
-    return Operator(expm(hamiltonian * (-1j * time_evolution)), target_idx, control_idx)
+    return Primitive(expm(hamiltonian * (-1j * time_evolution)), target_idx, control_idx)

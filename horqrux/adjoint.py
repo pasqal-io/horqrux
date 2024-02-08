@@ -4,13 +4,13 @@ from typing import Tuple
 
 from jax import Array, custom_vjp
 
-from horqrux.abstract import Operator, Parametric
+from horqrux.abstract import Parametric, Primitive
 from horqrux.apply import apply_gate
 from horqrux.utils import OperationType, overlap
 
 
 def expectation(
-    state: Array, gates: list[Operator], observable: list[Operator], values: dict[str, float]
+    state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
 ) -> Array:
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
     projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
@@ -19,21 +19,21 @@ def expectation(
 
 @custom_vjp
 def adjoint_expectation(
-    state: Array, gates: list[Operator], observable: list[Operator], values: dict[str, float]
+    state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
 ) -> Array:
     return expectation(state, gates, observable, values)
 
 
 def adjoint_expectation_fwd(
-    state: Array, gates: list[Operator], observable: list[Operator], values: dict[str, float]
-) -> Tuple[Array, Tuple[Array, Array, list[Operator], dict[str, float]]]:
+    state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
+) -> Tuple[Array, Tuple[Array, Array, list[Primitive], dict[str, float]]]:
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
     projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
     return overlap(out_state, projected_state), (out_state, projected_state, gates, values)
 
 
 def adjoint_expectation_bwd(
-    res: Tuple[Array, Array, list[Operator], dict[str, float]], tangent: Array
+    res: Tuple[Array, Array, list[Primitive], dict[str, float]], tangent: Array
 ) -> tuple:
     out_state, projected_state, gates, values = res
     grads = {}
