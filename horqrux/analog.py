@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from jax import Array
 from jax.scipy.linalg import expm
+from jax.tree_util import register_pytree_node_class
 
 from .abstract import Primitive, QubitSupport
 
 
+@register_pytree_node_class
+@dataclass
 class _HamiltonianEvolution(Primitive):
     """
     A slim wrapper class which evolves a 'hamiltonian'
