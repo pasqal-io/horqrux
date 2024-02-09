@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import Array
 
-from horqrux.abstract import Operator
+from horqrux.abstract import Primitive
 
 from .utils import OperationType, State, _controlled, is_controlled
 
@@ -53,7 +53,7 @@ def apply_operator(
 
 def apply_gate(
     state: State,
-    gate: Operator | Iterable[Operator],
+    gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
 ) -> State:
@@ -68,7 +68,7 @@ def apply_gate(
         State after applying 'gate'.
     """
     operator: Tuple[Array, ...]
-    if isinstance(gate, Operator):
+    if isinstance(gate, Primitive):
         operator_fn = getattr(gate, op_type)
         operator, target, control = (operator_fn(values),), gate.target, gate.control
     else:

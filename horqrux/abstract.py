@@ -22,8 +22,8 @@ from .utils import (
 
 @register_pytree_node_class
 @dataclass
-class Operator:
-    """Abstract class which stores information about generators target and control qubits
+class Primitive:
+    """Primitive gate class which stores information about generators target and control qubits
     of a particular quantum operator."""
 
     generator_name: str
@@ -42,11 +42,11 @@ class Operator:
             return (idx.astype(int),)
 
     def __post_init__(self) -> None:
-        self.target = Operator.parse_idx(self.target)
+        self.target = Primitive.parse_idx(self.target)
         if self.control is None:
             self.control = none_like(self.target)
         else:
-            self.control = Operator.parse_idx(self.control)
+            self.control = Primitive.parse_idx(self.control)
 
     def __iter__(self) -> Iterable:
         return iter((self.generator_name, self.target, self.control))
@@ -72,9 +72,6 @@ class Operator:
 
     def __repr__(self) -> str:
         return self.name + f"(target={self.target[0]}, control={self.control[0]})"
-
-
-Primitive = Operator
 
 
 @register_pytree_node_class

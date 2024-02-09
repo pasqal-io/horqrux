@@ -87,8 +87,8 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from horqrux.adjoint import adjoint_expectation
-from horqrux.abstract import Operator
-from horqrux import Z, RX, RY, NOT, zero_state, apply_gate, overlap
+from horqrux.abstract import Primitive
+from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
 
 
 n_qubits = 5
@@ -121,9 +121,9 @@ class Circuit:
 
     def __post_init__(self) -> None:
         # We will use a featuremap of RX rotations to encode some classical data
-        self.feature_map: list[Operator] = [RX('phi', i) for i in range(n_qubits)]
+        self.feature_map: list[Primitive] = [RX('phi', i) for i in range(n_qubits)]
         self.ansatz, self.param_names = ansatz_w_params(self.n_qubits, self.n_layers)
-        self.observable: list[Operator] = [Z(0)]
+        self.observable: list[Primitive] = [Z(0)]
 
     @partial(vmap, in_axes=(None, None, 0))
     def forward(self, param_values: Array, x: Array) -> Array:
