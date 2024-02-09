@@ -154,3 +154,7 @@ def random_state(n_qubits: int) -> Array:
     return _normalize(
         (jnp.sqrt(x / sumx) * jnp.exp(1j * phases)).reshape(tuple(2 for _ in range(n_qubits)))
     )
+
+
+def is_normalized(state: Array) -> bool:
+    return equivalent_state(state, state)
