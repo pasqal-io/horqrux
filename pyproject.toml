@@ -9,7 +9,7 @@ authors = [
     { name = "Gert-Jan Both" , email = "gert-jan.both@pasqal.com" },
     { name = "Dominik Seitz", email = "dominik.seitz@pasqal.com" },
 ]
-requires-python = ">=3.9,<3.12"
+requires-python = ">=3.8,<3.13"
 license = {text = "Apache 2.0"}
 
 version = "0.6.0"
@@ -18,9 +18,11 @@ classifiers=[
     "License :: Other/Proprietary License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
