@@ -88,7 +88,7 @@ from uuid import uuid4
 
 from horqrux.adjoint import adjoint_expectation
 from horqrux.abstract import Primitive
-from horqrux import Z, RX, RY, NOT, zero_state, apply_gate, overlap
+from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
 
 
 n_qubits = 5

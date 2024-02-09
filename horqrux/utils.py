@@ -118,8 +118,12 @@ def equivalent_state(s0: Array, s1: Array) -> bool:
     return jnp.allclose(overlap(s0, s1), 1.0, atol=ATOL)  # type: ignore[no-any-return]
 
 
+def inner(state: Array, projection: Array) -> Array:
+    return jnp.dot(jnp.conj(state.flatten()), projection.flatten())
+
+
 def overlap(state: Array, projection: Array) -> Array:
-    return jnp.real(jnp.dot(jnp.conj(state.flatten()), projection.flatten()))
+    return jnp.real(jnp.power(inner(state, projection), 2))
 
 
 def uniform_state(
