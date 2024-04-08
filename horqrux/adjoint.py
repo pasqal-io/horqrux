@@ -5,8 +5,9 @@ from typing import Tuple
 from jax import Array, custom_vjp
 from jax.numpy import real as jnpreal
 
-from horqrux.abstract import Parametric, Primitive
 from horqrux.apply import apply_gate
+from horqrux.parametric import Parametric
+from horqrux.primitive import Primitive
 from horqrux.utils import OperationType, inner
 
 

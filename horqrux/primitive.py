@@ -1,9 +1,75 @@
 from __future__ import annotations
 
-from .abstract import Primitive
-from .utils import ControlQubits, TargetQubits
+from dataclasses import dataclass
+from typing import Any, Iterable, Tuple
 
-# Single qubit gates
+import numpy as np
+from jax import Array
+from jax.tree_util import register_pytree_node_class
+
+from .matrices import OPERATIONS_DICT
+from .utils import (
+    ControlQubits,
+    QubitSupport,
+    TargetQubits,
+    _dagger,
+    is_controlled,
+    none_like,
+)
+
+
+@register_pytree_node_class
+@dataclass
+class Primitive:
+    """Primitive gate class which stores information about generators target and control qubits
+    of a particular quantum operator."""
+
+    generator_name: str
+    target: QubitSupport
+    control: QubitSupport
+
+    @staticmethod
+    def parse_idx(
+        idx: Tuple,
+    ) -> Tuple:
+        if isinstance(idx, (int, np.int64)):
+            return ((idx,),)
+        elif isinstance(idx, tuple):
+            return (idx,)
+        else:
+            return (idx.astype(int),)
+
+    def __post_init__(self) -> None:
+        self.target = Primitive.parse_idx(self.target)
+        if self.control is None:
+            self.control = none_like(self.target)
+        else:
+            self.control = Primitive.parse_idx(self.control)
+
+    def __iter__(self) -> Iterable:
+        return iter((self.generator_name, self.target, self.control))
+
+    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits]]:
+        children = ()
+        aux_data = (self.generator_name, self.target[0], self.control[0])
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
+        return cls(*children, *aux_data)
+
+    def unitary(self, values: dict[str, float] = dict()) -> Array:
+        return OPERATIONS_DICT[self.generator_name]
+
+    def dagger(self, values: dict[str, float] = dict()) -> Array:
+        return _dagger(self.unitary(values))
+
+    @property
+    def name(self) -> str:
+        return "C" + self.generator_name if is_controlled(self.control) else self.generator_name
+
+    def __repr__(self) -> str:
+        return self.name + f"(target={self.target[0]}, control={self.control[0]})"
 
 
 def I(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:

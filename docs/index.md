@@ -88,7 +88,7 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from horqrux.adjoint import adjoint_expectation
-from horqrux.abstract import Primitive
+from horqrux.primitive import Primitive
 from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
 
 
@@ -208,7 +208,7 @@ from jax import Array, jit, value_and_grad, vmap
 from numpy.random import uniform
 
 from horqrux import NOT, RX, RY, Z, apply_gate, zero_state
-from horqrux.abstract import Primitive
+from horqrux.primitive import Primitive
 from horqrux.utils import inner
 
 LEARNING_RATE = 0.01

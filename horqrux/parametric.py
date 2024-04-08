@@ -1,10 +1,77 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Any, Iterable, Tuple
+
 import jax.numpy as jnp
 from jax import Array
+from jax.tree_util import register_pytree_node_class
 
-from .abstract import Parametric
-from .utils import ControlQubits, TargetQubits, is_controlled
+from .matrices import OPERATIONS_DICT
+from .primitive import Primitive
+from .utils import (
+    ControlQubits,
+    QubitSupport,
+    TargetQubits,
+    _jacobian,
+    _unitary,
+    is_controlled,
+)
+
+
+@register_pytree_node_class
+@dataclass
+class Parametric(Primitive):
+    """Extension of the Primitive class adding the option to pass a parameter."""
+
+    generator_name: str
+    target: QubitSupport
+    control: QubitSupport
+    param: str | float = ""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        def parse_dict(values: dict[str, float] = dict()) -> float:
+            return values[self.param]  # type: ignore[index]
+
+        def parse_val(values: dict[str, float] = dict()) -> float:
+            return self.param  # type: ignore[return-value]
+
+        self.parse_values = parse_dict if isinstance(self.param, str) else parse_val
+
+    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, str | float]]:  # type: ignore[override]
+        children = ()
+        aux_data = (
+            self.generator_name,
+            self.target[0],
+            self.control[0],
+            self.param,
+        )
+        return (children, aux_data)
+
+    def __iter__(self) -> Iterable:
+        return iter((self.generator_name, self.target, self.control, self.param))
+
+    @classmethod
+    def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
+        return cls(*children, *aux_data)
+
+    def unitary(self, values: dict[str, float] = dict()) -> Array:
+        return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
+
+    def jacobian(self, values: dict[str, float] = dict()) -> Array:
+        return _jacobian(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
+
+    @property
+    def name(self) -> str:
+        base_name = "R" + self.generator_name
+        return "C" + base_name if is_controlled(self.control) else base_name
+
+    def __repr__(self) -> str:
+        return (
+            self.name + f"(target={self.target[0]}, control={self.control[0]}, param={self.param})"
+        )
 
 
 def RX(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
