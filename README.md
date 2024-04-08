@@ -21,23 +21,23 @@ pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases
 
 ## Contributing
 
-Please refer to [CONTRIBUTING](docs/CONTRIBUTING.md) to learn how to contribute to `horqrux`.
+To learn how to contribute, please visit the [CONTRIBUTING](docs/CONTRIBUTING.md) page.
 
-We recommend to use the [`hatch`](https://hatch.pypa.io/latest/) environment manager to install `horqrux` from source:
+When developing within `horqrux`, you can either use the python environment manager [`hatch`](https://hatch.pypa.io/latest/):
 
 ```bash
-python -m pip install hatch
+pip install hatch
 
-# get into a shell with all the dependencies
-python -m hatch shell
+# enter a shell with containing all the dependencies
+hatch shell
 
 # run a command within the virtual environment with all the dependencies
-python -m hatch run python my_script.py
+hatch run python my_script.py
 ```
 
-Please note that `hatch` will not combine nicely with other environment managers such Conda. If you want to use Conda, install `horqrux` from source using `pip`:
+When using any other environment manager like `venv` or `conda`, simply do:
 
 ```bash
-# within the Conda environment
-python -m pip install -e .
+# within the virtual environment
+pip install -e .
 ```
