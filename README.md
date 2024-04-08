@@ -2,16 +2,15 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Pypi](https://badge.fury.io/py/horqrux.svg)](https://pypi.org/project/horqrux/)
 
-**horqrux** is a [JAX](https://jax.readthedocs.io/en/latest/)-based state vector simulator designed for quantum machine learning.
-It acts as a backend for [`Qadence`](https://github.com/pasqal-io/qadence), a digital-analog quantum programming interface.
+`horqrux` is a [JAX](https://jax.readthedocs.io/en/latest/)-based state vector simulator designed for quantum machine learning and acts as a backend for [`Qadence`](https://github.com/pasqal-io/qadence), a digital-analog quantum programming interface.
 
 ## Installation
 
-`horqrux` (CPU-only) can be installed from PyPI with `pip` as follows:
+To install the CPU-only version, simply use `pip`:
 ```bash
 pip install horqrux
 ```
-If you intend to run `horqrux` on  GPU, simply do:
+If you intend to use GPU:
 
 ```bash
 pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html
@@ -23,8 +22,6 @@ pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases
 ## Contributing
 
 Please refer to [CONTRIBUTING](docs/CONTRIBUTING.md) to learn how to contribute to `horqrux`.
-
-### Install from source
 
 We recommend to use the [`hatch`](https://hatch.pypa.io/latest/) environment manager to install `horqrux` from source:
 
