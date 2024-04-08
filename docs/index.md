@@ -288,7 +288,6 @@ class Circuit:
         self.ansatz, self.param_names = ansatz_w_params(self.n_qubits, self.n_layers)
         self.observable = TotalMagnetization(self.n_qubits)
 
-    # @partial(vmap, in_axes=(None, None, 0, 0))
     def forward(self, param_values: Array, x: Array, y: Array) -> Array:
         state = zero_state(self.n_qubits)
         param_dict = {name: val for name, val in zip(self.param_names, param_values)}
