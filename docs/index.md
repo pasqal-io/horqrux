@@ -11,7 +11,7 @@ choice and install it normally with `pip`:
 pip install horqrux
 ```
 
-## Gates
+## Digital operations
 
 `horqrux` implements a large selection of both primitive and parametric single to n-qubit, digital quantum gates.
 
@@ -68,7 +68,30 @@ param_value = 1 / 4 * jnp.pi
 new_state = apply_gate(state, RX(param_value, target_qubit, control_qubit))
 ```
 
-## Fitting a function
+## Analog Operations
+
+`horqrux` also allows for global state evolution via the `HamiltonianEvolution` operation.
+Note that it expects a hamiltonian and a time evolution parameter passed as `numpy` or `jax.numpy` arrays. To build arbitrary Pauli hamiltonians, we recommend using [Qadence](https://github.com/pasqal-io/qadence/blob/main/examples/backends/low_level/horqrux_analog.py).
+
+```python exec="on" source="material-block"
+from jax.numpy import pi, array, diag, kron, cdouble
+from horqrux.analog import HamiltonianEvolution
+from horqrux.apply import apply_gate
+from horqrux.utils import uniform_state
+
+sigmaz = diag(array([1.0, -1.0], dtype=cdouble))
+Hbase = kron(sigmaz, sigmaz)
+
+Hamiltonian = kron(Hbase, Hbase)
+n_qubits = 4
+t_evo = pi / 4
+hamevo = HamiltonianEvolution(tuple([i for i in range(n_qubits)]))
+psi = uniform_state(n_qubits)
+psi_star = apply_gate(psi, hamevo, {"hamiltonian": Hamiltonian, "time_evolution": t_evo})
+```
+
+## Fitting a nonlinear function using adjoint differentiation
+
 We can now build a fully differentiable variational circuit by simply defining a sequence of gates
 and a set of initial parameter values we want to optimize.
 Horqrux provides an implementation of [adjoint differentiation](https://arxiv.org/abs/2009.02823),
@@ -189,7 +212,10 @@ def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
 # from docs import docutils # markdown-exec: hide
 print(fig_to_html(plt.gcf())) # markdown-exec: hide
 ```
-## Fitting a partial differential equation
+## Fitting a partial differential equation using DQC
+
+Finally, we show how to implement [DQC](https://arxiv.org/abs/2011.10395) to solve a partial differential equation.
+
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
 

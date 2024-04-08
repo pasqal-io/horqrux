@@ -12,7 +12,7 @@ authors = [
 requires-python = ">=3.8,<3.13"
 license = {text = "Apache 2.0"}
 
-version = "0.6.0"
+version = "0.6.1"
 
 classifiers=[
     "License :: Other/Proprietary License",
