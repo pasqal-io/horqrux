@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import Array
 
-from horqrux.abstract import Primitive
+from horqrux.primitive import Primitive
 
 from .utils import OperationType, State, _controlled, is_controlled
 

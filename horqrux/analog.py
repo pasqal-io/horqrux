@@ -6,7 +6,7 @@ from jax import Array
 from jax.scipy.linalg import expm
 from jax.tree_util import register_pytree_node_class
 
-from .abstract import Primitive, QubitSupport
+from .primitive import Primitive, QubitSupport
 
 
 @register_pytree_node_class
