@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import reduce
 from operator import add
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, no_type_check
 
 import jax.numpy as jnp
 import numpy as np
@@ -51,6 +51,7 @@ def apply_operator(
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
 
+@no_type_check
 def merge_operators(
     operators: tuple[Array, ...], targets: tuple[int], controls: tuple[int]
 ) -> tuple[tuple[Array, ...], tuple[int, ...], tuple[int, ...]]:
