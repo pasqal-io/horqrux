@@ -102,3 +102,13 @@ def test_swap_gate(inputs: tuple[str, str, Array]) -> None:
     state = product_state(bitstring)
     out_state = apply_gate(state, op)
     assert equivalent_state(out_state, product_state(expected_bitstring))
+
+
+def test_merge_gates() -> None:
+    gates = [RX("theta", 0), RY("lambda", 0)]
+    state = product_state("00")
+    out_state = apply_gate(
+        state,
+        gates,
+        {"theta": np.random.uniform(0.1, 2 * np.pi), "lambda": np.random.uniform(0.1, 2 * np.pi)},
+    )
