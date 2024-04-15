@@ -123,7 +123,7 @@ def inner(state: Array, projection: Array) -> Array:
 
 
 def overlap(state: Array, projection: Array) -> Array:
-    return jnp.real(jnp.power(inner(state, projection), 2))
+    return jnp.power(inner(state, projection), 2).real
 
 
 def uniform_state(

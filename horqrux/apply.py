@@ -54,6 +54,17 @@ def apply_operator(
 def merge_operators(
     operators: tuple[Array, ...], targets: tuple[int, ...], controls: tuple[int, ...]
 ) -> tuple[tuple[Array, ...], tuple[int, ...], tuple[int, ...]]:
+    """
+    If possible, merge several gates acting on the same qubits into a single tensordot operation.
+
+    Arguments:
+        operators: The arrays representing the unitaries to be merged.
+        targets: The corresponding target qubits.
+        controls: The corresponding control qubits.
+    Returns:
+        A tuple of merged operators, targets and controls.
+
+    """
     if len(operators) < 2:
         return operators, targets, controls
     operators, targets, controls = operators[::-1], targets[::-1], controls[::-1]
