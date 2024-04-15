@@ -269,10 +269,10 @@ class TotalMagnetization:
     def __post_init__(self) -> None:
         self.paulis = [Z(i) for i in range(self.n_qubits)]
 
-    def __call__(self, state: Array, values: dict) -> Array:
-        return reduce(add, [apply_gate(state, pauli, values) for pauli in self.paulis])
+    def __call__(self, out_state: Array, values: dict) -> Array:
+        projected_state = reduce(add, [apply_gate(out_state, pauli, values) for pauli in self.paulis])
+        return inner(out_state, projected_state).real
 
-total_magnetization = lambda n_qubits, state: reduce(add, [apply_gate(state, [Z(i) for i in range(n_qubits)], {})])
 
 @dataclass
 class Circuit:
@@ -284,14 +284,15 @@ class Circuit:
             RX("y", i) for i in range(self.n_qubits // 2, self.n_qubits)
         ]
         self.ansatz, self.param_names = ansatz_w_params(self.n_qubits, self.n_layers)
+        self.observable = TotalMagnetization(self.n_qubits)
+        self.state = zero_state(self.n_qubits)
 
     def __call__(self, param_vals: Array, x: Array, y: Array) -> Array:
-        state = zero_state(self.n_qubits)
         param_dict = {name: val for name, val in zip(self.param_names, param_vals)}
         out_state = apply_gate(
-            state, self.feature_map + self.ansatz, {**param_dict, **{"x": x, "y": y}}
+            self.state, self.feature_map + self.ansatz, {**param_dict, **{"x": x, "y": y}}
         )
-        return inner(out_state, total_magnetization(self.n_qubits, out_state)).real
+        return self.observable(out_state, {})
 
     @property
     def n_vparams(self) -> int:
