@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import reduce
 from operator import add
-from typing import Iterable, Tuple, no_type_check
+from typing import Iterable, Tuple
 
 import jax.numpy as jnp
 import numpy as np
@@ -51,36 +51,27 @@ def apply_operator(
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
 
-@no_type_check
 def merge_operators(
-    operators: tuple[Array, ...], targets: tuple[int], controls: tuple[int]
+    operators: tuple[Array, ...], targets: tuple[int, ...], controls: tuple[int, ...]
 ) -> tuple[tuple[Array, ...], tuple[int, ...], tuple[int, ...]]:
-    if len(operators) == 1:
+    if len(operators) < 2:
         return operators, targets, controls
-    operators = operators[::-1]
-    targets = targets[::-1]
-    controls = controls[::-1]
-    merged_operator = operators[0]
-    merged_target = targets[0]
-    merged_control = controls[0]
-    new_operators = tuple()
-    new_targets = tuple()
-    new_controls = tuple()
-    for op, target, control in zip(operators[1:], targets[1:], controls[1:]):
+    operators, targets, controls = operators[::-1], targets[::-1], controls[::-1]
+    merged_operator, merged_target, merged_control = operators[0], targets[0], controls[0]
+    merged_operators = merged_targets = merged_controls = tuple()  # type: ignore[var-annotated]
+    for operator, target, control in zip(operators[1:], targets[1:], controls[1:]):
         if target == merged_target and control == merged_control:
-            merged_operator = merged_operator @ op
+            merged_operator = merged_operator @ operator
         else:
-            new_operators = new_operators + (merged_operator,)
-            new_targets = new_targets + (merged_target,)
-            new_controls = new_controls + (merged_control,)
-            merged_operator = op
-            merged_target = target
-            merged_control = control
+            merged_operators += (merged_operator,)
+            merged_targets += (merged_target,)
+            merged_controls += (merged_control,)
+            merged_operator, merged_target, merged_control = operator, target, control
     if merged_operator is not None:
-        new_operators = new_operators + (merged_operator,)
-        new_targets = new_targets + (merged_target,)
-        new_controls = new_controls + (merged_control,)
-    return new_operators[::-1], new_targets[::-1], new_controls[::-1]
+        merged_operators += (merged_operator,)
+        merged_targets += (merged_target,)
+        merged_controls += (merged_control,)
+    return merged_operators[::-1], merged_targets[::-1], merged_controls[::-1]
 
 
 def apply_gate(
