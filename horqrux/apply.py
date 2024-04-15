@@ -51,6 +51,24 @@ def apply_operator(
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
 
+def group_by_index(gates: Iterable[Primitive]) -> Iterable[Primitive]:
+    sorted_gates = []
+    gate_batch = []
+    for gate in gates:
+        if not is_controlled(gate.control):
+            gate_batch.append(gate)
+        else:
+            if len(gate_batch) > 0:
+                gate_batch.sort(key=lambda g: g.target)
+                sorted_gates += gate_batch
+                gate_batch = []
+            sorted_gates.append(gate)
+    if len(gate_batch) > 0:
+        gate_batch.sort(key=lambda g: g.target)
+        sorted_gates += gate_batch
+    return sorted_gates
+
+
 def merge_operators(
     operators: tuple[Array, ...], targets: tuple[int, ...], controls: tuple[int, ...]
 ) -> tuple[tuple[Array, ...], tuple[int, ...], tuple[int, ...]]:
@@ -106,6 +124,7 @@ def apply_gate(
         operator_fn = getattr(gate, op_type)
         operator, target, control = (operator_fn(values),), gate.target, gate.control
     else:
+        gate = group_by_index(gate)
         operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
