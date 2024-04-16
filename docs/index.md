@@ -239,9 +239,10 @@ LEARNING_RATE = 0.01
 N_QUBITS = 4
 DEPTH = 3
 VARIABLES = ("x", "y")
+NUM_VARIABLES = len(VARIABLES)
 X_POS = 0
 Y_POS = 1
-N_POINTS = 150
+BATCH_SIZE = 150
 N_EPOCHS = 1000
 
 
@@ -270,7 +271,9 @@ class TotalMagnetization:
         self.paulis = [Z(i) for i in range(self.n_qubits)]
 
     def __call__(self, out_state: Array, values: dict) -> Array:
-        projected_state = reduce(add, [apply_gate(out_state, pauli, values) for pauli in self.paulis])
+        projected_state = reduce(
+            add, [apply_gate(out_state, pauli, values) for pauli in self.paulis]
+        )
         return inner(out_state, projected_state).real
 
 
@@ -313,17 +316,16 @@ def exp_fn(param_vals: Array, x: Array, y: Array) -> Array:
 
 
 def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
-    def pde_loss(x: float, y: float) -> Array:
-        l_b, r_b, t_b, b_b = list(
-            map(
-                lambda xy: exp_fn(param_vals, *xy),
-                [
-                    [jnp.zeros((1, 1)), y],  # u(0,y)=0
-                    [jnp.ones((1, 1)), y],  # u(L,y)=0
-                    [x, jnp.ones((1, 1))],  # u(x,H)=0
-                    [x, jnp.zeros((1, 1))],  # u(x,0)=f(x)
-                ],
-            )
+    def pde_loss(x: Array, y: Array) -> Array:
+        x = x.reshape(-1, 1)
+        y = y.reshape(-1, 1)
+        t0 = (jnp.zeros_like(y), y)  # u(0,y)=0
+        t1 = (jnp.ones_like(y), y)  # u(L,y)=0
+        t2 = (x, jnp.ones_like(x))  # u(x,H)=0
+        t3 = (x, jnp.zeros_like(x))  # u(x,0)=f(x)
+        terms = jnp.dstack(list(map(jnp.hstack, [t0, t1, t2, t3])))
+        l_b, r_b, t_b, b_b = vmap(lambda xy: exp_fn(param_vals, xy[:, 0], xy[:, 1]), in_axes=(2,))(
+            terms
         )
         b_b -= jnp.sin(jnp.pi * x)
         hessian = jax.hessian(lambda xy: exp_fn(param_vals, xy[0], xy[1]))(
@@ -339,7 +341,16 @@ def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
             )
         )
         interior = hessian[X_POS][X_POS] + hessian[Y_POS][Y_POS]  # uxx+uyy=0
-        return reduce(add, list(map(lambda term: jnp.power(term, 2), [l_b, r_b, t_b, b_b, interior])))
+        return jnp.sum(
+            jnp.concatenate(
+                list(
+                    map(
+                        lambda term: jnp.power(term, 2).reshape(-1, 1),
+                        [l_b, r_b, t_b, b_b, interior],
+                    )
+                )
+            )
+        )
 
     return jnp.mean(vmap(pde_loss, in_axes=(0, 0))(x, y))
 
@@ -350,32 +361,27 @@ def optimize_step(param_vals: Array, opt_state: Array, grads: dict[str, Array]) 
     return param_vals, opt_state
 
 
-# collocation points sampling and training
-def sample_points(n_in: int, n_p: int) -> Array:
-    return uniform(0, 1.0, (n_in, n_p))
-
-
 @jit
 def train_step(i: int, paramvals_w_optstate: tuple) -> tuple:
     param_vals, opt_state = paramvals_w_optstate
-    x, y = sample_points(2, N_POINTS)
+    x, y = uniform(0, 1.0, (NUM_VARIABLES, BATCH_SIZE))
     loss, grads = value_and_grad(loss_fn)(param_vals, x, y)
     return optimize_step(param_vals, opt_state, grads)
 
 
 param_vals, opt_state = jax.lax.fori_loop(0, N_EPOCHS, train_step, (param_vals, opt_state))
 # compare the solution to known ground truth
-single_domain = jnp.linspace(0, 1, num=N_POINTS)
+single_domain = jnp.linspace(0, 1, num=BATCH_SIZE)
 domain = jnp.array(list(product(single_domain, single_domain)))
 # analytical solution
 analytic_sol = (
-    (np.exp(-np.pi * domain[:, 0]) * np.sin(np.pi * domain[:, 1])).reshape(N_POINTS, N_POINTS).T
+    (np.exp(-np.pi * domain[:, 0]) * np.sin(np.pi * domain[:, 1])).reshape(BATCH_SIZE, BATCH_SIZE).T
 )
 # DQC solution
 
-dqc_sol = vmap(lambda domain: exp_fn(param_vals, domain[0], domain[1]), in_axes=(0,))(domain).reshape(
-    N_POINTS, N_POINTS
-)
+dqc_sol = vmap(lambda domain: exp_fn(param_vals, domain[0], domain[1]), in_axes=(0,))(
+    domain
+).reshape(BATCH_SIZE, BATCH_SIZE)
 # # plot results
 fig, ax = plt.subplots(1, 2, figsize=(7, 7))
 ax[0].imshow(analytic_sol, cmap="turbo")

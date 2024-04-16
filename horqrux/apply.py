@@ -108,6 +108,8 @@ def apply_gate(
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
+    group_ops: bool = True,
+    merge_ops: bool = True,
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
     Arguments:
@@ -124,11 +126,13 @@ def apply_gate(
         operator_fn = getattr(gate, op_type)
         operator, target, control = (operator_fn(values),), gate.target, gate.control
     else:
-        gate = group_by_index(gate)
+        if group_ops:
+            gate = group_by_index(gate)
         operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
-        operator, target, control = merge_operators(operator, target, control)
+        if merge_ops:
+            operator, target, control = merge_operators(operator, target, control)
     return reduce(
         lambda state, gate: apply_operator(state, *gate),
         zip(operator, target, control),
