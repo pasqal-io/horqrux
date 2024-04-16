@@ -16,6 +16,8 @@ from horqrux.utils import zero_state
 @register_pytree_node_class
 @dataclass
 class Circuit:
+    """A minimalistic circuit class to store a sequence of gates."""
+
     n_qubits: int
     feature_map: list[Primitive]
     ansatz: list[Primitive]
@@ -49,6 +51,8 @@ class Circuit:
 
 
 def hea(n_qubits: int, n_layers: int, rot_fns: list[Callable] = [RX, RY, RX]) -> list[Primitive]:
+    """Hardware-efficient ansatz; A helper function to generate a sequence of rotations followed
+    by a global entangling operation."""
     gates = []
     param_names = []
     for _ in range(n_layers):

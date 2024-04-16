@@ -151,7 +151,7 @@ optimizer = optax.adam(learning_rate=0.01)
 opt_state = optimizer.init(param_vals)
 
 # Define a loss function
-def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
+def loss_fn(param_vals: Array) -> Array:
     y_pred = circ(param_vals, x)
     return jnp.mean(optax.l2_loss(y_pred, y))
 
@@ -165,7 +165,7 @@ def optimize_step(param_vals: Array, opt_state: Array, grads: Array) -> tuple:
 def train_step(i: int, paramvals_w_optstate: tuple
 ) -> tuple:
     param_vals, opt_state = paramvals_w_optstate
-    loss, grads = value_and_grad(loss_fn)(param_vals, x, y)
+    loss, grads = value_and_grad(loss_fn)(param_vals)
     param_vals, opt_state = optimize_step(param_vals, opt_state, grads)
     return param_vals, opt_state
 
@@ -263,7 +263,7 @@ optimizer = optax.adam(learning_rate=0.01)
 opt_state = optimizer.init(param_vals)
 
 
-def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
+def loss_fn(param_vals: Array) -> Array:
     def pde_loss(x: Array, y: Array) -> Array:
         x = x.reshape(-1, 1)
         y = y.reshape(-1, 1)
@@ -300,7 +300,7 @@ def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
             )
         )
 
-    return jnp.mean(vmap(pde_loss, in_axes=(0, 0))(x, y))
+    return jnp.mean(vmap(pde_loss, in_axes=(0, 0))(*uniform(0, 1.0, (NUM_VARIABLES, BATCH_SIZE))))
 
 
 def optimize_step(param_vals: Array, opt_state: Array, grads: dict[str, Array]) -> tuple:
@@ -312,8 +312,7 @@ def optimize_step(param_vals: Array, opt_state: Array, grads: dict[str, Array]) 
 @jit
 def train_step(i: int, paramvals_w_optstate: tuple) -> tuple:
     param_vals, opt_state = paramvals_w_optstate
-    x, y = uniform(0, 1.0, (NUM_VARIABLES, BATCH_SIZE))
-    loss, grads = value_and_grad(loss_fn)(param_vals, x, y)
+    loss, grads = value_and_grad(loss_fn)(param_vals)
     return optimize_step(param_vals, opt_state, grads)
 
 
@@ -326,7 +325,6 @@ analytic_sol = (
     (np.exp(-np.pi * domain[:, 0]) * np.sin(np.pi * domain[:, 1])).reshape(BATCH_SIZE, BATCH_SIZE).T
 )
 # DQC solution
-
 dqc_sol = vmap(lambda domain: circ(param_vals, domain[0], domain[1]), in_axes=(0,))(
     domain
 ).reshape(BATCH_SIZE, BATCH_SIZE)
