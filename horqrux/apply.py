@@ -6,8 +6,9 @@ from typing import Iterable, Tuple
 
 import jax.numpy as jnp
 import numpy as np
-from jax import Array
+from jax import Array, lax
 
+from horqrux.matrices import _I
 from horqrux.primitive import Primitive
 
 from .utils import OperationType, State, _controlled, is_controlled
@@ -138,3 +139,58 @@ def apply_gate(
         zip(operator, target, control),
         state,
     )
+
+
+def expand_operator(inputs: tuple) -> Array:
+    operator, targets, controls, full_qubit_support = inputs
+    qubit_support = targets
+    if is_controlled(controls):
+        operator = _controlled(operator, len(controls))
+        qubit_support = (*controls, *targets)
+    qubit_support = tuple(sorted(qubit_support))
+    mat = _I if qubit_support[0] != full_qubit_support[0] else operator
+    for i in full_qubit_support[1:]:
+        if i == qubit_support[0]:
+            other = operator
+            mat = jnp.kron(mat, other)
+        elif i not in qubit_support:
+            other = _I
+            mat = jnp.kron(mat, other)
+    return mat
+
+
+def scan_gate(
+    state: Array,
+    gates: Iterable[Primitive],
+    values: dict[str, float] = dict(),
+    op_type: OperationType = OperationType.UNITARY,
+    n_qubits: int = 2,
+) -> State:
+    """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
+    Arguments:
+        state: State to operate on.
+        gate: Gate(s) to apply.
+        values: A dictionary with parameter values.
+        op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
+
+    Returns:
+        State after applying 'gate'.
+    """
+
+    if isinstance(gates, Primitive):
+        raise ValueError("Scan gate only works on a iterable of gates.")
+    gates = group_by_index(gates)
+    operators = tuple(getattr(g, op_type)(values) for g in gates)
+    targets = reduce(add, [g.target for g in gates])
+    controls = reduce(add, [g.control for g in gates])
+    operators, targets, controls = merge_operators(operators, targets, controls)
+    fullsups = [[i for i in range(n_qubits)] for _ in range(len(operators))]
+    inputs = list(zip(operators, targets, controls, fullsups))
+    operators = tuple(map(expand_operator, inputs))
+
+    def scan_fn(carry: Array, xs: Array) -> Tuple[Array, None]:
+        carry = xs @ carry
+        return carry, None
+
+    state, _ = lax.scan(scan_fn, state.flatten(), jnp.transpose(jnp.dstack(operators), (2, 0, 1)))
+    return state.reshape([2] * n_qubits)
