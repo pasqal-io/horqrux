@@ -14,7 +14,8 @@ def expectation(
     state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
 ) -> Array:
     """
-    Run 'state' through a sequence of 'gates' given parameters 'values' and compute the expectation given an observable.
+    Run 'state' through a sequence of 'gates' given parameters 'values'
+    and compute the expectation given an observable.
     """
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
     projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
@@ -25,8 +26,6 @@ def expectation(
 def adjoint_expectation(
     state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
 ) -> Array:
-    """Custom vector-jacobian product to compute gradients
-    in O(P) time using O(1) state vectors via Algorithm 1 in https://arxiv.org/abs/2009.02823."""
     return expectation(state, gates, observable, values)
 
 
@@ -41,6 +40,11 @@ def adjoint_expectation_fwd(
 def adjoint_expectation_bwd(
     res: Tuple[Array, Array, list[Primitive], dict[str, float]], tangent: Array
 ) -> tuple:
+    """Implementation of Algorithm 1 of https://arxiv.org/abs/2009.02823
+    which computes the vector-jacobian product in O(P) time using O(1) state vectors
+    where P=number of parameters in the circuit.
+    """
+
     out_state, projected_state, gates, values = res
     grads = {}
     for gate in gates[::-1]:

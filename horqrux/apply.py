@@ -52,6 +52,7 @@ def apply_operator(
 
 
 def group_by_index(gates: Iterable[Primitive]) -> Iterable[Primitive]:
+    """Group gates together which are acting on the same qubit."""
     sorted_gates = []
     gate_batch = []
     for gate in gates:
@@ -73,7 +74,8 @@ def merge_operators(
     operators: tuple[Array, ...], targets: tuple[int, ...], controls: tuple[int, ...]
 ) -> tuple[tuple[Array, ...], tuple[int, ...], tuple[int, ...]]:
     """
-    If possible, merge several gates acting on the same qubits into a single tensordot operation.
+    If possible, merge several operators acting on the same qubits into a single array
+    which can then be contracted over a state in a single tensordot operation.
 
     Arguments:
         operators: The arrays representing the unitaries to be merged.
@@ -108,7 +110,7 @@ def apply_gate(
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
-    group_ops: bool = False,
+    group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
@@ -117,6 +119,8 @@ def apply_gate(
         gate: Gate(s) to apply.
         values: A dictionary with parameter values.
         op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
+        group_gates: Group gates together which are acting on the same qubit.
+        merge_ops: Attempt to merge operators acting on the same qubit.
 
     Returns:
         State after applying 'gate'.
@@ -126,7 +130,7 @@ def apply_gate(
         operator_fn = getattr(gate, op_type)
         operator, target, control = (operator_fn(values),), gate.target, gate.control
     else:
-        if group_ops:
+        if group_gates:
             gate = group_by_index(gate)
         operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
