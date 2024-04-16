@@ -267,15 +267,15 @@ def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
     def pde_loss(x: Array, y: Array) -> Array:
         x = x.reshape(-1, 1)
         y = y.reshape(-1, 1)
-        t0 = (jnp.zeros_like(y), y)  # u(0,y)=0
-        t1 = (jnp.ones_like(y), y)  # u(L,y)=0
-        t2 = (x, jnp.ones_like(x))  # u(x,H)=0
-        t3 = (x, jnp.zeros_like(x))  # u(x,0)=f(x)
-        terms = jnp.dstack(list(map(jnp.hstack, [t0, t1, t2, t3])))
-        l_b, r_b, t_b, b_b = vmap(lambda xy: circ(param_vals, xy[:, 0], xy[:, 1]), in_axes=(2,))(
+        left = (jnp.zeros_like(y), y)  # u(0,y)=0
+        right = (jnp.ones_like(y), y)  # u(L,y)=0
+        top = (x, jnp.ones_like(x))  # u(x,H)=0
+        bottom = (x, jnp.zeros_like(x))  # u(x,0)=f(x)
+        terms = jnp.dstack(list(map(jnp.hstack, [left, right, top, bottom])))
+        loss_left, loss_right, loss_top, loss_bottom = vmap(lambda xy: circ(param_vals, xy[:, 0], xy[:, 1]), in_axes=(2,))(
             terms
         )
-        b_b -= jnp.sin(jnp.pi * x)
+        loss_bottom -= jnp.sin(jnp.pi * x)
         hessian = jax.hessian(lambda xy: circ(param_vals, xy[0], xy[1]))(
             jnp.concatenate(
                 [
@@ -288,13 +288,13 @@ def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
                 ]
             )
         )
-        interior = hessian[X_POS][X_POS] + hessian[Y_POS][Y_POS]  # uxx+uyy=0
+        loss_interior = hessian[X_POS][X_POS] + hessian[Y_POS][Y_POS]  # uxx+uyy=0
         return jnp.sum(
             jnp.concatenate(
                 list(
                     map(
                         lambda term: jnp.power(term, 2).reshape(-1, 1),
-                        [l_b, r_b, t_b, b_b, interior],
+                        [loss_left, loss_right, loss_top, loss_bottom, loss_interior],
                     )
                 )
             )
