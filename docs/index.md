@@ -211,6 +211,7 @@ import optax
 from jax import Array, jit, value_and_grad, vmap
 from numpy.random import uniform
 
+from horqrux.apply import group_by_index
 from horqrux.circuit import Circuit, hea
 from horqrux import NOT, RX, RY, Z, apply_gate, zero_state
 from horqrux.primitive import Primitive
@@ -239,6 +240,7 @@ def total_magnetization(n_qubits:int) -> Callable:
 
 class DQC(Circuit):
     def __post_init__(self) -> None:
+        self.ansatz = group_by_index(self.ansatz)
         self.observable = total_magnetization(self.n_qubits)
         self.state = zero_state(self.n_qubits)
 

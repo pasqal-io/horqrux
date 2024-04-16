@@ -108,7 +108,7 @@ def apply_gate(
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
-    group_ops: bool = True,
+    group_ops: bool = False,
     merge_ops: bool = True,
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
