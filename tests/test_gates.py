@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from jax import Array
 
-from horqrux.apply import apply_gate, apply_operator
+from horqrux.apply import apply_gate, apply_operator, group_by_index, merge_operators
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
 from horqrux.utils import equivalent_state, product_state, random_state
@@ -102,3 +102,19 @@ def test_swap_gate(inputs: tuple[str, str, Array]) -> None:
     state = product_state(bitstring)
     out_state = apply_gate(state, op)
     assert equivalent_state(out_state, product_state(expected_bitstring))
+
+
+def test_merge_gates() -> None:
+    gates = [RX("a", 0), RZ("b", 1), RY("c", 0)]
+    gates = group_by_index(gates)
+    values = {
+        "a": np.random.uniform(0.1, 2 * np.pi),
+        "b": np.random.uniform(0.1, 2 * np.pi),
+        "c": np.random.uniform(0.1, 2 * np.pi),
+    }
+    op, trgt, ctrl = merge_operators(
+        tuple(g.unitary(values) for g in gates),
+        tuple(g.target for g in gates),
+        tuple(g.control for g in gates),
+    )
+    assert len(op) == 2
