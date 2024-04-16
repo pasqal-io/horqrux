@@ -123,7 +123,7 @@ def inner(state: Array, projection: Array) -> Array:
 
 
 def overlap(state: Array, projection: Array) -> Array:
-    return jnp.real(jnp.power(inner(state, projection), 2))
+    return jnp.power(inner(state, projection), 2).real
 
 
 def uniform_state(
@@ -134,11 +134,11 @@ def uniform_state(
     return state.reshape([2] * n_qubits)
 
 
-def is_controlled(qs: Tuple[int | None, ...] | int | None) -> bool:
-    if isinstance(qs, int):
+def is_controlled(qubit_support: Tuple[int | None, ...] | int | None) -> bool:
+    if isinstance(qubit_support, int):
         return True
-    elif isinstance(qs, tuple):
-        return any(is_controlled(q) for q in qs)
+    elif isinstance(qubit_support, tuple):
+        return any(is_controlled(q) for q in qubit_support)
     return False
 
 

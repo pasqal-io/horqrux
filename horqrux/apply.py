@@ -51,11 +51,67 @@ def apply_operator(
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
 
+def group_by_index(gates: Iterable[Primitive]) -> Iterable[Primitive]:
+    """Group gates together which are acting on the same qubit."""
+    sorted_gates = []
+    gate_batch = []
+    for gate in gates:
+        if not is_controlled(gate.control):
+            gate_batch.append(gate)
+        else:
+            if len(gate_batch) > 0:
+                gate_batch.sort(key=lambda g: g.target)
+                sorted_gates += gate_batch
+                gate_batch = []
+            sorted_gates.append(gate)
+    if len(gate_batch) > 0:
+        gate_batch.sort(key=lambda g: g.target)
+        sorted_gates += gate_batch
+    return sorted_gates
+
+
+def merge_operators(
+    operators: tuple[Array, ...], targets: tuple[int, ...], controls: tuple[int, ...]
+) -> tuple[tuple[Array, ...], tuple[int, ...], tuple[int, ...]]:
+    """
+    If possible, merge several operators acting on the same qubits into a single array
+    which can then be contracted over a state in a single tensordot operation.
+
+    Arguments:
+        operators: The arrays representing the unitaries to be merged.
+        targets: The corresponding target qubits.
+        controls: The corresponding control qubits.
+    Returns:
+        A tuple of merged operators, targets and controls.
+
+    """
+    if len(operators) < 2:
+        return operators, targets, controls
+    operators, targets, controls = operators[::-1], targets[::-1], controls[::-1]
+    merged_operator, merged_target, merged_control = operators[0], targets[0], controls[0]
+    merged_operators = merged_targets = merged_controls = tuple()  # type: ignore[var-annotated]
+    for operator, target, control in zip(operators[1:], targets[1:], controls[1:]):
+        if target == merged_target and control == merged_control:
+            merged_operator = merged_operator @ operator
+        else:
+            merged_operators += (merged_operator,)
+            merged_targets += (merged_target,)
+            merged_controls += (merged_control,)
+            merged_operator, merged_target, merged_control = operator, target, control
+    if merged_operator is not None:
+        merged_operators += (merged_operator,)
+        merged_targets += (merged_target,)
+        merged_controls += (merged_control,)
+    return merged_operators[::-1], merged_targets[::-1], merged_controls[::-1]
+
+
 def apply_gate(
     state: State,
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
+    group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
+    merge_ops: bool = True,
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
     Arguments:
@@ -63,6 +119,8 @@ def apply_gate(
         gate: Gate(s) to apply.
         values: A dictionary with parameter values.
         op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
+        group_gates: Group gates together which are acting on the same qubit.
+        merge_ops: Attempt to merge operators acting on the same qubit.
 
     Returns:
         State after applying 'gate'.
@@ -72,9 +130,13 @@ def apply_gate(
         operator_fn = getattr(gate, op_type)
         operator, target, control = (operator_fn(values),), gate.target, gate.control
     else:
+        if group_gates:
+            gate = group_by_index(gate)
         operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
+        if merge_ops:
+            operator, target, control = merge_operators(operator, target, control)
     return reduce(
         lambda state, gate: apply_operator(state, *gate),
         zip(operator, target, control),

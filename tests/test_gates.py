@@ -102,3 +102,19 @@ def test_swap_gate(inputs: tuple[str, str, Array]) -> None:
     state = product_state(bitstring)
     out_state = apply_gate(state, op)
     assert equivalent_state(out_state, product_state(expected_bitstring))
+
+
+def test_merge_gates() -> None:
+    gates = [RX("a", 0), RZ("b", 1), RY("c", 0), NOT(1, 2), RX("a", 0, 3), RZ("c", 3)]
+    values = {
+        "a": np.random.uniform(0.1, 2 * np.pi),
+        "b": np.random.uniform(0.1, 2 * np.pi),
+        "c": np.random.uniform(0.1, 2 * np.pi),
+    }
+    state_grouped = apply_gate(
+        product_state("0000"), gates, values, "unitary", group_gates=True, merge_ops=True
+    )
+    state = apply_gate(
+        product_state("0000"), gates, values, "unitary", group_gates=False, merge_ops=False
+    )
+    assert jnp.allclose(state_grouped, state)
