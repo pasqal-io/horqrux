@@ -111,7 +111,9 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from horqrux.adjoint import adjoint_expectation
+from horqrux.circuit import Circuit, hea
 from horqrux.primitive import Primitive
+from horqrux.parametric import Parametric
 from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
 
 
@@ -120,47 +122,25 @@ n_params = 3
 n_layers = 3
 
 # Lets define a sequence of rotations
-def ansatz_w_params(n_qubits: int, n_layers: int) -> tuple[list, list]:
-    all_ops = []
-    param_names = []
-    rots_fns = [RX ,RY, RX]
-    for _ in range(n_layers):
-        for i in range(n_qubits):
-            ops = [fn(str(uuid4()), qubit) for fn, qubit in zip(rots_fns, [i for _ in range(len(rots_fns))])]
-            param_names += [op.param for op in ops]
-            ops += [NOT((i+1) % n_qubits, i % n_qubits) for i in range(n_qubits)]
-            all_ops += ops
-
-    return all_ops, param_names
 
 #  We need a function to fit and use it to produce training data
 fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in range(degree)), 0)
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
 
-@dataclass
-class Circuit:
-    n_qubits: int
-    n_layers: int
 
+class DQC(Circuit):
     def __post_init__(self) -> None:
-        # We will use a featuremap of RX rotations to encode some classical data
-        self.feature_map: list[Primitive] = [RX('phi', i) for i in range(self.n_qubits)]
-        self.ansatz, self.param_names = ansatz_w_params(self.n_qubits, self.n_layers)
         self.observable: list[Primitive] = [Z(0)]
+        self.state = zero_state(self.n_qubits)
 
     @partial(vmap, in_axes=(None, None, 0))
     def __call__(self, param_values: Array, x: Array) -> Array:
-        state = zero_state(self.n_qubits)
         param_dict = {name: val for name, val in zip(self.param_names, param_values)}
-        return adjoint_expectation(state, self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}})
+        return adjoint_expectation(self.state, self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}})
 
 
-    @property
-    def n_vparams(self) -> int:
-        return len(self.param_names)
-
-circ = Circuit(n_qubits, n_layers)
+circ = DQC(n_qubits=n_qubits, feature_map=[RX('phi', i) for i in range(n_qubits)], ansatz=hea(n_qubits, n_layers))
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -221,7 +201,7 @@ from dataclasses import dataclass
 from functools import reduce
 from itertools import product
 from operator import add
-from uuid import uuid4
+from typing import Callable
 
 import jax
 import jax.numpy as jnp
@@ -231,8 +211,10 @@ import optax
 from jax import Array, jit, value_and_grad, vmap
 from numpy.random import uniform
 
+from horqrux.circuit import Circuit, hea
 from horqrux import NOT, RX, RY, Z, apply_gate, zero_state
 from horqrux.primitive import Primitive
+from horqrux.parametric import Parametric
 from horqrux.utils import inner
 
 LEARNING_RATE = 0.01
@@ -240,54 +222,24 @@ N_QUBITS = 4
 DEPTH = 3
 VARIABLES = ("x", "y")
 NUM_VARIABLES = len(VARIABLES)
-X_POS = 0
-Y_POS = 1
+X_POS, Y_POS = [i for i in range(NUM_VARIABLES)]
 BATCH_SIZE = 150
 N_EPOCHS = 1000
 
+def total_magnetization(n_qubits:int) -> Callable:
+    paulis = [Z(i) for i in range(n_qubits)]
 
-def ansatz_w_params(n_qubits: int, n_layers: int) -> tuple[list, list]:
-    all_ops = []
-    param_names = []
-    rots_fns = [RX, RY, RX]
-    for _ in range(n_layers):
-        for i in range(n_qubits):
-            ops = [
-                fn(str(uuid4()), qubit)
-                for fn, qubit in zip(rots_fns, [i for _ in range(len(rots_fns))])
-            ]
-            param_names += [op.param for op in ops]
-            ops += [NOT((i + 1) % n_qubits, i % n_qubits) for i in range(n_qubits)]
-            all_ops += ops
-
-    return all_ops, param_names
-
-
-@dataclass
-class TotalMagnetization:
-    n_qubits: int
-
-    def __post_init__(self) -> None:
-        self.paulis = [Z(i) for i in range(self.n_qubits)]
-
-    def __call__(self, out_state: Array, values: dict) -> Array:
+    def _total_magnetization(out_state: Array, values: dict[str, Array]) -> Array:
         projected_state = reduce(
-            add, [apply_gate(out_state, pauli, values) for pauli in self.paulis]
+            add, [apply_gate(out_state, pauli, values) for pauli in paulis]
         )
         return inner(out_state, projected_state).real
+    return _total_magnetization
 
 
-@dataclass
-class Circuit:
-    n_qubits: int
-    n_layers: int
-
+class DQC(Circuit):
     def __post_init__(self) -> None:
-        self.feature_map: list[Primitive] = [RX("x", i) for i in range(self.n_qubits // 2)] + [
-            RX("y", i) for i in range(self.n_qubits // 2, self.n_qubits)
-        ]
-        self.ansatz, self.param_names = ansatz_w_params(self.n_qubits, self.n_layers)
-        self.observable = TotalMagnetization(self.n_qubits)
+        self.observable = total_magnetization(self.n_qubits)
         self.state = zero_state(self.n_qubits)
 
     def __call__(self, param_vals: Array, x: Array, y: Array) -> Array:
@@ -297,22 +249,18 @@ class Circuit:
         )
         return self.observable(out_state, {})
 
-    @property
-    def n_vparams(self) -> int:
-        return len(self.param_names)
 
-
-circ = Circuit(N_QUBITS, DEPTH)
+fm =  [RX("x", i) for i in range(N_QUBITS // 2)] + [
+            RX("y", i) for i in range(N_QUBITS // 2, N_QUBITS)
+        ]
+ansatz = hea(N_QUBITS, DEPTH)
+circ = DQC(N_QUBITS, fm, ansatz)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
 
 optimizer = optax.adam(learning_rate=0.01)
 opt_state = optimizer.init(param_vals)
-
-
-def exp_fn(param_vals: Array, x: Array, y: Array) -> Array:
-    return circ(param_vals, x, y)
 
 
 def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
@@ -324,11 +272,11 @@ def loss_fn(param_vals: Array, x: Array, y: Array) -> Array:
         t2 = (x, jnp.ones_like(x))  # u(x,H)=0
         t3 = (x, jnp.zeros_like(x))  # u(x,0)=f(x)
         terms = jnp.dstack(list(map(jnp.hstack, [t0, t1, t2, t3])))
-        l_b, r_b, t_b, b_b = vmap(lambda xy: exp_fn(param_vals, xy[:, 0], xy[:, 1]), in_axes=(2,))(
+        l_b, r_b, t_b, b_b = vmap(lambda xy: circ(param_vals, xy[:, 0], xy[:, 1]), in_axes=(2,))(
             terms
         )
         b_b -= jnp.sin(jnp.pi * x)
-        hessian = jax.hessian(lambda xy: exp_fn(param_vals, xy[0], xy[1]))(
+        hessian = jax.hessian(lambda xy: circ(param_vals, xy[0], xy[1]))(
             jnp.concatenate(
                 [
                     x.reshape(
@@ -379,7 +327,7 @@ analytic_sol = (
 )
 # DQC solution
 
-dqc_sol = vmap(lambda domain: exp_fn(param_vals, domain[0], domain[1]), in_axes=(0,))(
+dqc_sol = vmap(lambda domain: circ(param_vals, domain[0], domain[1]), in_axes=(0,))(
     domain
 ).reshape(BATCH_SIZE, BATCH_SIZE)
 # # plot results
