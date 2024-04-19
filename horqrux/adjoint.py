@@ -10,7 +10,7 @@ from horqrux.primitive import Primitive
 from horqrux.utils import OperationType, inner
 
 
-def expectation(
+def ad_expectation(
     state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
 ) -> Array:
     """
@@ -26,7 +26,7 @@ def expectation(
 def adjoint_expectation(
     state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
 ) -> Array:
-    return expectation(state, gates, observable, values)
+    return ad_expectation(state, gates, observable, values)
 
 
 def adjoint_expectation_fwd(

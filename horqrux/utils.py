@@ -34,6 +34,20 @@ class OperationType(StrEnum):
     JACOBIAN = "jacobian"
 
 
+class DiffMode(StrEnum):
+    """
+    Which Differentiation method to use.
+
+    Options: Automatic Differentiation -  Using the autograd engine of JAX.
+             Adjoint Differentiation   - An implementation of "Efficient calculation of gradients
+                                       in classical simulations of variational quantum algorithms",
+                                       Jones & Gacon, 2020
+    """
+
+    AD = "ad"
+    ADJOINT = "adjoint"
+
+
 def _dagger(operator: Array) -> Array:
     return jnp.conjugate(operator.T)
 

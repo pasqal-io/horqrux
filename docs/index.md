@@ -110,11 +110,11 @@ from operator import add
 from typing import Any, Callable
 from uuid import uuid4
 
-from horqrux.adjoint import adjoint_expectation
-from horqrux.circuit import Circuit, hea
+from horqrux.circuit import Circuit, hea, expectation
 from horqrux.primitive import Primitive
 from horqrux.parametric import Parametric
 from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
+from horqrux.utils import DiffMode
 
 
 n_qubits = 5
@@ -137,7 +137,7 @@ class DQC(Circuit):
     @partial(vmap, in_axes=(None, None, 0))
     def __call__(self, param_values: Array, x: Array) -> Array:
         param_dict = {name: val for name, val in zip(self.param_names, param_values)}
-        return adjoint_expectation(self.state, self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}})
+        return expectation(self.state, self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}}, DiffMode.ADJOINT)
 
 
 circ = DQC(n_qubits=n_qubits, feature_map=[RX('phi', i) for i in range(n_qubits)], ansatz=hea(n_qubits, n_layers))
