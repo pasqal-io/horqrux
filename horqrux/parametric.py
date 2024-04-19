@@ -118,12 +118,12 @@ def RZ(param: float | str, target: TargetQubits, control: ControlQubits = (None,
 
 class _PHASE(Parametric):
     def unitary(self, values: dict[str, float] = dict()) -> Array:
-        u = jnp.eye(2, 2, dtype=jnp.complex128)
+        u = jnp.eye(2, 2, dtype=jnp.complex64)
         u = u.at[(1, 1)].set(jnp.exp(1.0j * self.parse_values(values)))
         return u
 
     def jacobian(self, values: dict[str, float] = dict()) -> Array:
-        jac = jnp.zeros((2, 2), dtype=jnp.complex128)
+        jac = jnp.zeros((2, 2), dtype=jnp.complex64)
         jac = jac.at[(1, 1)].set(1j * jnp.exp(1.0j * self.parse_values(values)))
         return jac
 
