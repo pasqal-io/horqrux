@@ -51,7 +51,7 @@ class Primitive:
 
     def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits]]:
         children = ()
-        aux_data = (self.generator_name, self.target[0], self.control[0])
+        aux_data = (self.generator_name, self.target, self.control)
         return (children, aux_data)
 
     @classmethod
@@ -69,7 +69,7 @@ class Primitive:
         return "C" + self.generator_name if is_controlled(self.control) else self.generator_name
 
     def __repr__(self) -> str:
-        return self.name + f"(target={self.target[0]}, control={self.control[0]})"
+        return self.name + f"(target={self.target}, control={self.control})"
 
 
 def I(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:

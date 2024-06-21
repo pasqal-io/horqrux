@@ -110,11 +110,11 @@ from operator import add
 from typing import Any, Callable
 from uuid import uuid4
 
-from horqrux.adjoint import adjoint_expectation
-from horqrux.circuit import Circuit, hea
+from horqrux.circuit import Circuit, hea, expectation
 from horqrux.primitive import Primitive
 from horqrux.parametric import Parametric
 from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
+from horqrux.utils import DiffMode
 
 
 n_qubits = 5
@@ -137,7 +137,7 @@ class DQC(Circuit):
     @partial(vmap, in_axes=(None, None, 0))
     def __call__(self, param_values: Array, x: Array) -> Array:
         param_dict = {name: val for name, val in zip(self.param_names, param_values)}
-        return adjoint_expectation(self.state, self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}})
+        return expectation(self.state, self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}}, DiffMode.ADJOINT)
 
 
 circ = DQC(n_qubits=n_qubits, feature_map=[RX('phi', i) for i in range(n_qubits)], ansatz=hea(n_qubits, n_layers))
@@ -212,20 +212,20 @@ from jax import Array, jit, value_and_grad, vmap
 from numpy.random import uniform
 
 from horqrux.apply import group_by_index
-from horqrux.circuit import Circuit, hea
+from horqrux.circuit import QuantumCircuit, hea
 from horqrux import NOT, RX, RY, Z, apply_gate, zero_state
 from horqrux.primitive import Primitive
 from horqrux.parametric import Parametric
 from horqrux.utils import inner
 
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.15
 N_QUBITS = 4
 DEPTH = 3
 VARIABLES = ("x", "y")
 NUM_VARIABLES = len(VARIABLES)
 X_POS, Y_POS = [i for i in range(NUM_VARIABLES)]
-BATCH_SIZE = 150
-N_EPOCHS = 1000
+BATCH_SIZE = 500
+N_EPOCHS = 500
 
 def total_magnetization(n_qubits:int) -> Callable:
     paulis = [Z(i) for i in range(n_qubits)]
@@ -238,22 +238,20 @@ def total_magnetization(n_qubits:int) -> Callable:
     return _total_magnetization
 
 
-class DQC(Circuit):
-    def __post_init__(self) -> None:
-        self.ansatz = group_by_index(self.ansatz)
-        self.observable = total_magnetization(self.n_qubits)
-        self.state = zero_state(self.n_qubits)
+class DQC(QuantumCircuit):
+    def __post_init__(self, n_qubits: int, operations: list[Primitive]) -> None:
+        self.operations = group_by_index(operations)
+        self.observable = total_magnetization(n_qubits)
 
-    def __call__(self, param_vals: Array, x: Array, y: Array) -> Array:
-        param_dict = {name: val for name, val in zip(self.param_names, param_vals)}
+    def __call__(self, state, values: dict[str, Array], x: Array, y: Array) -> Array:
         out_state = apply_gate(
-            self.state, self.feature_map + self.ansatz, {**param_dict, **{"x": x, "y": y}}
+            state, self.operations, {**param_dict, **{"f_x": x, "f_y": y}}
         )
         return self.observable(out_state, {})
 
 
-fm =  [RX("x", i) for i in range(N_QUBITS // 2)] + [
-            RX("y", i) for i in range(N_QUBITS // 2, N_QUBITS)
+fm =  [RX("f_x", i) for i in range(N_QUBITS // 2)] + [
+            RX("f_y", i) for i in range(N_QUBITS // 2, N_QUBITS)
         ]
 ansatz = hea(N_QUBITS, DEPTH)
 circ = DQC(N_QUBITS, fm, ansatz)
