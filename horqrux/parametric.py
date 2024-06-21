@@ -44,8 +44,8 @@ class Parametric(Primitive):
         children = ()
         aux_data = (
             self.generator_name,
-            self.target[0],
-            self.control[0],
+            self.target,
+            self.control,
             self.param,
         )
         return (children, aux_data)
@@ -69,9 +69,7 @@ class Parametric(Primitive):
         return "C" + base_name if is_controlled(self.control) else base_name
 
     def __repr__(self) -> str:
-        return (
-            self.name + f"(target={self.target[0]}, control={self.control[0]}, param={self.param})"
-        )
+        return self.name + f"(target={self.target}, control={self.control}, param={self.param})"
 
 
 def RX(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
