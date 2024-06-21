@@ -218,14 +218,14 @@ from horqrux.primitive import Primitive
 from horqrux.parametric import Parametric
 from horqrux.utils import inner
 
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.15
 N_QUBITS = 4
 DEPTH = 3
 VARIABLES = ("x", "y")
 NUM_VARIABLES = len(VARIABLES)
 X_POS, Y_POS = [i for i in range(NUM_VARIABLES)]
-BATCH_SIZE = 150
-N_EPOCHS = 1000
+BATCH_SIZE = 500
+N_EPOCHS = 500
 
 def total_magnetization(n_qubits:int) -> Callable:
     paulis = [Z(i) for i in range(n_qubits)]
