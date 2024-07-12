@@ -95,6 +95,7 @@ def finite_shots_vjp(primals: Tuple, tangents: Array) -> Array:
         return finite_shots(state, gates, observable, values, n_shots, key)
 
     spectral_gap = 2.0
+    # NOTE compute spectral gap through the generator which is associated with a param_name
     shift = jnp.pi / 2
     grads = {key: None for key in values.keys()}
 
