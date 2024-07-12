@@ -9,7 +9,7 @@ from jax import Array
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate
 from horqrux.primitive import Primitive
-from horqrux.utils import OperationType, inner
+from horqrux.utils import DiffMode, ForwardMode, OperationType, inner
 
 
 def run(
@@ -65,13 +65,17 @@ def expectation(
     gates: list[Primitive],
     observable: list[Primitive],
     values: dict[str, float],
-    diff_mode: str = "ad",
+    diff_mode: DiffMode = DiffMode.AD,
+    forward_mode: ForwardMode = ForwardMode.EXACT,
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    if diff_mode == "ad":
+    if diff_mode == DiffMode.AD:
         return ad_expectation(state, gates, observable, values)
-    else:
+    elif diff_mode == DiffMode.ADJOINT:
         return adjoint_expectation(state, gates, observable, values)
+    elif diff_mode == DiffMode.GPSR:
+        assert forward_mode == ForwardMode.SHOTS
+        return NotImplementedError()

@@ -34,6 +34,17 @@ class OperationType(StrEnum):
     JACOBIAN = "jacobian"
 
 
+class DiffMode(StrEnum):
+    AD = "ad"
+    ADJOINT = "adjoint"
+    GPSR = "gpsr"
+
+
+class ForwardMode(StrEnum):
+    EXACT = "exact"
+    SHOTS = "shots"
+
+
 def _dagger(operator: Array) -> Array:
     return jnp.conjugate(operator.T)
 

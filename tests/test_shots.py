@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from horqrux import random_state
+from horqrux import expectation, random_state
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, H, I, S, T, X, Y, Z
 from horqrux.shots import finite_shots
@@ -22,4 +22,5 @@ def test_gradcheck() -> None:
         "omega": np.random.uniform(0, 1),
     }
     state = random_state(MAX_QUBITS)
+    exp_exact = expectation(state, ops, [observable], values, "ad")
     exp_shots = finite_shots(state, ops, observable, values)

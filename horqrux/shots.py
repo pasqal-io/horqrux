@@ -13,7 +13,6 @@ def finite_shots(
     gates: list[Primitive],
     observable: Primitive,
     values: dict[str, float],
-    diff_mode: str = "gpsr",
     n_shots: int = 100,
 ) -> Array:
     """
@@ -25,14 +24,18 @@ def finite_shots(
     # to get eigvals,eigvecs for arbitary compositions of paulis, we need to
     # create the full tensor. check `block_to_jax` in qadence for this
     eigvals, eigvecs = jnp.linalg.eig(observable.unitary())
-    probs = jnp.abs(jnp.float_power(jnp.inner(state, eigvecs), 2.0)).ravel()
+
+    # eigvals: an array of shape (..., M) containing the eigenvalues.
+    # eigvecs: an array of shape (..., M, M), where column v[:, i]
+    # is the eigenvector corresponding to the eigenvalue w[i].
+
+    eigvec_state_prod = jnp.multiply(eigvecs.flatten(), jnp.conjugate(state.T).flatten())
+    probs = jnp.abs(jnp.float_power(eigvec_state_prod, 2.0)).ravel()
     key = jax.random.PRNGKey(0)
     n_qubits = len(state.shape)
     samples = jax.vmap(
         lambda subkey: jax.random.choice(key=subkey, a=jnp.arange(0, 2**n_qubits), p=probs)
     )(jax.random.split(key, n_shots))
-    # samples now contains a list of indices
-    # i forgot the formula
-    # something here which is correct
-    counts = jnp.bincount(samples)
-    return jnp.mean(counts / n_shots)
+    normalized_samples = jnp.bincount(samples) / n_shots
+    # change this einsum to be generic regading the number of dims
+    return jnp.einsum("i,ji ->", eigvals, normalized_samples.reshape([2] * n_qubits)).real
