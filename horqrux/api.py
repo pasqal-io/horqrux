@@ -9,6 +9,7 @@ from jax import Array
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate
 from horqrux.primitive import Primitive
+from horqrux.shots import finite_shots
 from horqrux.utils import DiffMode, ForwardMode, OperationType, inner
 
 
@@ -78,4 +79,4 @@ def expectation(
         return adjoint_expectation(state, gates, observable, values)
     elif diff_mode == DiffMode.GPSR:
         assert forward_mode == ForwardMode.SHOTS
-        return NotImplementedError()
+        return finite_shots(state, gates, observable, values)

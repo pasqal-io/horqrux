@@ -10,21 +10,31 @@ from horqrux.primitive import Primitive
 from horqrux.utils import OperationType, inner
 
 
+def expectation(
+    state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
+) -> Array:
+    """
+    Run 'state' through a sequence of 'gates' given parameters 'values'
+    and compute the expectation given an observable.
+    """
+    out_state = apply_gate(state, gates, values, OperationType.UNITARY)
+    projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
+    return inner(out_state, projected_state).real
+
+
 @custom_vjp
 def adjoint_expectation(
     state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
 ) -> Array:
-    out_state = apply_gate(state, gates, values, OperationType.UNITARY)
-    projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
-    return inner(out_state, projected_state).real
+    return expectation(state, gates, observable, values)
 
 
 def adjoint_expectation_fwd(
     state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
-) -> Array:
+) -> Tuple[Array, Tuple[Array, Array, list[Primitive], dict[str, float]]]:
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
     projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
-    return inner(out_state, projected_state).real
+    return inner(out_state, projected_state).real, (out_state, projected_state, gates, values)
 
 
 def adjoint_expectation_bwd(
