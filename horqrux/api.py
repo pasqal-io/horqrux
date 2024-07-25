@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 from collections import Counter
+from typing import Any, Optional
 
 import jax
 import jax.numpy as jnp
 from jax import Array
+from jax.experimental import checkify
 
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate
-from horqrux.primitive import Primitive
-from horqrux.shots import finite_shots
+from horqrux.primitive import GateSequence, Primitive
+from horqrux.shots import finite_shots_fwd
 from horqrux.utils import DiffMode, ForwardMode, OperationType, inner
 
 
 def run(
-    circuit: list[Primitive],
+    circuit: GateSequence,
     state: Array,
     values: dict[str, float] = dict(),
 ) -> Array:
@@ -23,7 +25,7 @@ def run(
 
 def sample(
     state: Array,
-    gates: list[Primitive],
+    gates: GateSequence,
     values: dict[str, float] = dict(),
     n_shots: int = 1000,
 ) -> Counter:
@@ -50,7 +52,7 @@ def sample(
 
 
 def ad_expectation(
-    state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
+    state: Array, gates: GateSequence, observable: GateSequence, values: dict[str, float]
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -63,11 +65,13 @@ def ad_expectation(
 
 def expectation(
     state: Array,
-    gates: list[Primitive],
-    observable: list[Primitive],
+    gates: GateSequence,
+    observable: GateSequence,
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
     forward_mode: ForwardMode = ForwardMode.EXACT,
+    n_shots: Optional[int] = None,
+    key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -78,5 +82,16 @@ def expectation(
     elif diff_mode == DiffMode.ADJOINT:
         return adjoint_expectation(state, gates, observable, values)
     elif diff_mode == DiffMode.GPSR:
-        assert forward_mode == ForwardMode.SHOTS
-        return finite_shots(state, gates, observable, values)
+        checkify.check(
+            forward_mode == ForwardMode.SHOTS, "Finite shots and GPSR must be used together"
+        )
+        checkify.check(
+            isinstance(observable, Primitive),
+            "Finite Shots only supports a single Primitive as an observable",
+        )
+        checkify.check(
+            type(n_shots) is int,
+            "Number of shots must be an integer for finite shots.",
+        )
+        # Type checking is disabled because mypy doesn't parse checkify.check.
+        return finite_shots_fwd(state, gates, observable, values, n_shots=n_shots, key=key)  # type: ignore

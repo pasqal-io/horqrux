@@ -72,6 +72,9 @@ class Primitive:
         return self.name + f"(target={self.target[0]}, control={self.control[0]})"
 
 
+GateSequence = Primitive | Iterable[Primitive]
+
+
 def I(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     """Identity / I gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -190,7 +193,7 @@ def T(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
     return Primitive("T", target, control)
 
 
-## Multi (target) qubit gates
+# Multi (target) qubit gates
 
 
 def SWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
