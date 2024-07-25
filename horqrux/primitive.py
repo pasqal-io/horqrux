@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, Tuple
+from typing import Any, Iterable, Tuple, Union
 
 import numpy as np
 from jax import Array
@@ -72,7 +72,7 @@ class Primitive:
         return self.name + f"(target={self.target[0]}, control={self.control[0]})"
 
 
-GateSequence = Primitive | Iterable[Primitive]
+GateSequence = Union[Primitive, Iterable[Primitive]]
 
 
 def I(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
