@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .api import expectation
 from .apply import apply_gate, apply_operator
 from .circuit import QuantumCircuit, expectation, sample
 from .parametric import PHASE, RX, RY, RZ

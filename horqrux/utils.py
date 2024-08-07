@@ -35,17 +35,20 @@ class OperationType(StrEnum):
 
 
 class DiffMode(StrEnum):
-    """
-    Which Differentiation method to use.
-
-    Options: Automatic Differentiation -  Using the autograd engine of JAX.
-             Adjoint Differentiation   - An implementation of "Efficient calculation of gradients
-                                       in classical simulations of variational quantum algorithms",
-                                       Jones & Gacon, 2020
-    """
-
+    """Differentiation mode."""
     AD = "ad"
+    """Automatic Differentiation -  Using the autograd engine of JAX."""
     ADJOINT = "adjoint"
+    """Adjoint Differentiation   - An implementation of "Efficient calculation of gradients
+                                   in classical simulations of variational quantum algorithms",
+                                   Jones & Gacon, 2020."""
+    GPSR = "gpsr"
+    """Generalized parameter shift rule."""
+
+
+class ForwardMode(StrEnum):
+    EXACT = "exact"
+    SHOTS = "shots"
 
 
 def _dagger(operator: Array) -> Array:
