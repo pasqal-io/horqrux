@@ -36,6 +36,7 @@ class OperationType(StrEnum):
 
 class DiffMode(StrEnum):
     """Differentiation mode."""
+
     AD = "ad"
     """Automatic Differentiation -  Using the autograd engine of JAX."""
     ADJOINT = "adjoint"
