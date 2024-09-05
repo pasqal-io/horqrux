@@ -5,9 +5,8 @@ from typing import Any
 
 import jax
 import jax.numpy as jnp
-from jax import Array
+from jax import Array, random
 from jax.experimental import checkify
-from jax import random
 
 from horqrux.apply import apply_gate
 from horqrux.primitive import GateSequence, Primitive
@@ -58,24 +57,23 @@ def finite_shots_fwd(
 
 @finite_shots_fwd.defjvp
 def finite_shots_jvp(
-    state,
-    gates,
-    observable,
-    n_shots,
-    key,
-    primals,
-    tangents
+    state: Array,
+    gates: GateSequence,
+    observable: Primitive,
+    n_shots: int,
+    key: Array,
+    primals: tuple[dict[str, float]],
+    tangents: tuple[dict[str, float]],
 ) -> Array:
-
     values = primals[0]
-    tangents = tangents[0]
+    tangent_dict = tangents[0]
 
     # TODO: compute spectral gap through the generator which is associated with
     # a param name.
     spectral_gap = 2.0
     shift = jnp.pi / 2
 
-    def jvp_component(param_name, key):
+    def jvp_component(param_name: str, key: Array) -> Array:
         up_key, down_key = random.split(key)
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
@@ -84,7 +82,7 @@ def finite_shots_jvp(
         down_val[param_name] = down_val[param_name] - shift
         f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, down_key)
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-        return grad * tangents[param_name]
+        return grad * tangent_dict[param_name]
 
     params_with_keys = zip(values.keys(), random.split(key, len(values)))
     fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
 
 from horqrux import expectation, random_state
 from horqrux.parametric import RX
