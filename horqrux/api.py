@@ -80,7 +80,7 @@ def ad_expectation(
 def expectation(
     state: Array,
     gates: GateSequence,
-    observable: list[Primitive],
+    observables: list[Primitive],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
     forward_mode: ForwardMode = ForwardMode.EXACT,
