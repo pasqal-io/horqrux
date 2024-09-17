@@ -37,7 +37,7 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
 def finite_shots_fwd(
     state: Array,
     gates: GateSequence,
-    observable: Primitive,
+    observables: list[Primitive],
     values: dict[str, float],
     n_shots: int = 100,
     key: Any = jax.random.PRNGKey(0),
@@ -48,11 +48,50 @@ def finite_shots_fwd(
     """
     state = apply_gate(state, gates, values)
     n_qubits = len(state.shape)
-    mat_obs = observable_to_matrix(observable, n_qubits)
-    eigvals, eigvecs = jnp.linalg.eigh(mat_obs)
+    mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
+    eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
+    eigvecs, eigvals = align_eigenvectors(eigs)
     inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
     probs = jnp.abs(inner_prod) ** 2
-    return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean()
+    return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+
+
+def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:
+    """
+    Given a list of eigenvalue eigenvector matrix tuples in the form of
+    [(eigenvalue, eigenvector)...], this function aligns all the eigenvector
+    matrices so that they are identical, and also rearranges the corresponding
+    eigenvalues.
+
+    This is primarily used as a utility function to help sample multiple
+    correlated observables when using finite shots.
+
+    Given two permuted eigenvector matrices, A and B, we wish to find a permutation
+    matrix P such that A P = B. This function calculates such a permutation
+    matrix and uses it to align each eigenvector matrix to the first eigenvector
+    matrix of eigs.
+    """
+    eigenvalues = []
+    eigs_copy = eigs.copy()
+    eigenvalue, eigenvector_matrix = eigs_copy.pop(0)
+    eigenvalues.append(eigenvalue)
+    # TODO: laxify this loop
+    for mat in eigs_copy:
+        inv = jnp.linalg.inv(mat[1])
+        P = (inv @ eigenvector_matrix).real > 0.5
+        checkify.check(
+            validate_permutation_matrix(P),
+            "Did not calculate valid permutation matrix",
+        )
+        eigenvalues.append(mat[0] @ P)
+    return eigenvector_matrix, jnp.stack(eigenvalues, axis=1)
+
+
+def validate_permutation_matrix(P: Array) -> Array:
+    rows = P.sum(axis=0)
+    columns = P.sum(axis=1)
+    ones = jnp.ones(P.shape[0], dtype=rows.dtype)
+    return ((ones == rows) & (ones == columns)).min()
 
 
 @finite_shots_fwd.defjvp

@@ -5,7 +5,8 @@ import numpy as np
 from jax import Array, grad
 
 from horqrux import random_state
-from horqrux.adjoint import adjoint_expectation, expectation
+from horqrux.adjoint import adjoint_expectation
+from horqrux.api import expectation
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, H, I, S, T, X, Y, Z
 
@@ -26,10 +27,10 @@ def test_gradcheck() -> None:
     state = random_state(MAX_QUBITS)
 
     def adjoint_expfn(values) -> Array:
-        return adjoint_expectation(state, ops, observable, values)
+        return adjoint_expectation(state, ops, observable, values)[0]
 
     def ad_expfn(values) -> Array:
-        return expectation(state, ops, observable, values)
+        return expectation(state, ops, observable, values)[0]
 
     grads_adjoint = grad(adjoint_expfn)(values)
     grad_ad = grad(ad_expfn)(values)
