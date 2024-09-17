@@ -92,9 +92,9 @@ def expectation(
     and compute the expectation given an observable.
     """
     if diff_mode == DiffMode.AD:
-        return ad_expectation(state, gates, observable, values)
+        return ad_expectation(state, gates, observables, values)
     elif diff_mode == DiffMode.ADJOINT:
-        return adjoint_expectation(state, gates, observable, values)
+        return adjoint_expectation(state, gates, observables, values)
     elif diff_mode == DiffMode.GPSR:
         checkify.check(
             forward_mode == ForwardMode.SHOTS, "Finite shots and GPSR must be used together"
@@ -105,4 +105,4 @@ def expectation(
         )
         # Type checking is disabled because mypy doesn't parse checkify.check.
         # type: ignore
-        return finite_shots_fwd(state, gates, observable, values, n_shots=n_shots, key=key)
+        return finite_shots_fwd(state, gates, observables, values, n_shots=n_shots, key=key)
