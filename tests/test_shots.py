@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import jax
 import jax.numpy as jnp
+import functools
 
 from horqrux import expectation, random_state
 from horqrux.parametric import RX
@@ -13,28 +14,28 @@ N_SHOTS = 100_000
 
 
 def test_shots() -> None:
-    ops = [RX("theta", 0)]
     observables = [Z(0), Z(1)]
     state = random_state(N_QUBITS)
-    x = jnp.pi * 0.5
+    x = jnp.pi * 0.123
+    y = jnp.pi * 0.456
 
-    def exact(x):
+    @functools.partial(jax.jit, static_argnums=2)
+    def expect(x, y, method):
         values = {"theta": x}
+        ops = [RX("theta", 0), RX(0.2, 0), RX(y, 1), RX("theta", 1)]
+        if method == "shots":
+            return expectation(state, ops, observables, values, "gpsr", "shots", n_shots=N_SHOTS)
         return expectation(state, ops, observables, values, "ad")
 
-    def shots(x):
-        values = {"theta": x}
-        return expectation(state, ops, observables, values, "gpsr", "shots", n_shots=N_SHOTS)
-
-    exp_exact = exact(x)
-    exp_shots = shots(x)
+    exp_exact = expect(x, y, "exact")
+    exp_shots = expect(x, y, "shots")
 
     assert jnp.allclose(exp_exact, exp_shots, atol=SHOTS_ATOL)
 
-    d_exact = jax.grad(lambda x: exact(x).sum())
-    d_shots = jax.grad(lambda x: shots(x).sum())
+    d_expect = jax.jit(jax.grad(lambda x, y, z: expect(
+        x, y, z).sum(), argnums=[0, 1]), static_argnums=2)
 
-    grad_backprop = d_exact(x)
-    grad_shots = d_shots(x)
+    grad_backprop = jnp.stack(d_expect(x, y, "exact"))
+    grad_shots = jnp.stack(d_expect(x, y, "shots"))
 
     assert jnp.isclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)

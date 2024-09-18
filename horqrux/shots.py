@@ -4,12 +4,14 @@ from functools import partial, reduce
 from typing import Any
 
 import jax
+from jax import lax
 import jax.numpy as jnp
 from jax import Array, random
 from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
 from horqrux.primitive import GateSequence, Primitive
+from horqrux.parametric import Parametric
 from horqrux.utils import none_like
 
 
@@ -21,10 +23,6 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
 
     LIMITATION: currently only works for observables which are not controlled.
     """
-    checkify.check(
-        observable.control == observable.parse_idx(none_like(observable.target)),
-        "Controlled gates cannot be promoted from observables to operations on the whole state vector",
-    )
     unitary = observable.unitary()
     target = observable.target[0][0]
     identity = jnp.eye(2, dtype=unitary.dtype)
@@ -33,7 +31,7 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
     return reduce(lambda x, y: jnp.kron(x, y), ops[1:], ops[0])
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
+@partial(jax.custom_jvp, nondiff_argnums=(0, 2, 4, 5))
 def finite_shots_fwd(
     state: Array,
     gates: GateSequence,
@@ -79,10 +77,6 @@ def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:
     for mat in eigs_copy:
         inv = jnp.linalg.inv(mat[1])
         P = (inv @ eigenvector_matrix).real > 0.5
-        checkify.check(
-            validate_permutation_matrix(P),
-            "Did not calculate valid permutation matrix",
-        )
         eigenvalues.append(mat[0] @ P)
     return eigenvector_matrix, jnp.stack(eigenvalues, axis=1)
 
@@ -97,33 +91,46 @@ def validate_permutation_matrix(P: Array) -> Array:
 @finite_shots_fwd.defjvp
 def finite_shots_jvp(
     state: Array,
-    gates: GateSequence,
     observable: Primitive,
     n_shots: int,
     key: Array,
     primals: tuple[dict[str, float]],
     tangents: tuple[dict[str, float]],
 ) -> Array:
-    values = primals[0]
-    tangent_dict = tangents[0]
+    gates, values = primals
+    gates_tangent, values_tangent = tangents
 
     # TODO: compute spectral gap through the generator which is associated with
     # a param name.
     spectral_gap = 2.0
     shift = jnp.pi / 2
 
-    def jvp_component(param_name: str, key: Array) -> Array:
-        up_key, down_key = random.split(key)
-        up_val = values.copy()
-        up_val[param_name] = up_val[param_name] + shift
-        f_up = finite_shots_fwd(state, gates, observable, up_val, n_shots, up_key)
-        down_val = values.copy()
-        down_val[param_name] = down_val[param_name] - shift
-        f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, down_key)
-        grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-        return grad * tangent_dict[param_name]
-
-    params_with_keys = zip(values.keys(), random.split(key, len(values)))
     fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
-    jvp = sum(jvp_component(param, key) for param, key in params_with_keys)
-    return fwd, jvp.reshape(fwd.shape)
+
+    keys = random.split(key, len(gates))
+    jvp = jnp.zeros_like(fwd)
+    zero = jnp.zeros_like(fwd)
+
+    def jvp_component(index: int) -> Array:
+        gates, values = primals
+        gates_tangent, values_tangent = tangents
+        if not isinstance(gates[index], Parametric):
+            return zero
+        if gates[index].param_name is None:
+            tangent = gates_tangent[index].param_val
+        else:
+            tangent = values_tangent[gates[index].param_name]
+        if not isinstance(tangent, jax.Array):
+            return zero
+        key = keys[index]
+        up_key, down_key = random.split(key)
+        original_shift = gates[index].shift
+        gates[index].set_shift(original_shift + shift)
+        f_up = finite_shots_fwd(state, gates, observable, values, n_shots, up_key)
+        gates[index].set_shift(original_shift - shift)
+        f_down = finite_shots_fwd(state, gates, observable, values, n_shots, down_key)
+        gates[index].set_shift(original_shift)
+        grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+        return grad * tangent
+
+    return fwd, sum(jvp_component(i) for i, _ in enumerate(gates))

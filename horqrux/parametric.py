@@ -27,38 +27,41 @@ class Parametric(Primitive):
     generator_name: str
     target: QubitSupport
     control: QubitSupport
-    param: str | float = ""
+    param_name: str | None = None
+    param_val: float = 0.0
+    shift: float = 0.0
 
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        def parse_dict(values: dict[str, float] = dict()) -> float:
-            return values[self.param]  # type: ignore[index]
+        def parse_dict(self, values: dict[str, float] = dict()) -> float:
+            return values[self.param_name] + self.shift  # type: ignore[index]
 
-        def parse_val(values: dict[str, float] = dict()) -> float:
-            return self.param  # type: ignore[return-value]
+        def parse_val(self, values: dict[str, float] = dict()) -> float:
+            return self.param_val + self.shift  # type: ignore[return-value]
 
-        self.parse_values = parse_dict if isinstance(self.param, str) else parse_val
+        self.parse_values = parse_val if self.param_name is None else parse_dict
 
-    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, str | float]]:  # type: ignore[override]
-        children = ()
+    # type: ignore[override]
+    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, str | float, float]]:
+        children = (self.param_val, self.shift)
         aux_data = (
             self.generator_name,
             self.target[0],
             self.control[0],
-            self.param,
+            self.param_name
         )
         return (children, aux_data)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.param))
+        return iter((self.generator_name, self.target, self.control, self.param_name, self.param_val, self.shift))
 
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
-        return cls(*children, *aux_data)
+        return cls(*aux_data, *children)
 
     def unitary(self, values: dict[str, float] = dict()) -> Array:
-        return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
+        return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(self, values))
 
     def jacobian(self, values: dict[str, float] = dict()) -> Array:
         return _jacobian(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
@@ -70,8 +73,12 @@ class Parametric(Primitive):
 
     def __repr__(self) -> str:
         return (
-            self.name + f"(target={self.target[0]}, control={self.control[0]}, param={self.param})"
+            self.name +
+            f"(target={self.target[0]}, control={self.control[0]}, param_name={self.param_name}, param_val={self.param_val}, shift={self.shift})"
         )
+
+    def set_shift(self, shift):
+        self.shift = shift
 
 
 def RX(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
@@ -85,7 +92,10 @@ def RX(param: float | str, target: TargetQubits, control: ControlQubits = (None,
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("X", target, control, param)
+
+    if isinstance(param, str):
+        return Parametric("X", target, control, param_name=param)
+    return Parametric("X", target, control, param_val=param)
 
 
 def RY(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
@@ -127,7 +137,7 @@ class _PHASE(Parametric):
         jac = jac.at[(1, 1)].set(1j * jnp.exp(1.0j * self.parse_values(values)))
         return jac
 
-    @property
+    @ property
     def name(self) -> str:
         base_name = "PHASE"
         return "C" + base_name if is_controlled(self.control) else base_name
