@@ -4,15 +4,12 @@ from functools import partial, reduce
 from typing import Any
 
 import jax
-from jax import lax
 import jax.numpy as jnp
 from jax import Array, random
-from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
-from horqrux.primitive import GateSequence, Primitive
 from horqrux.parametric import Parametric
-from horqrux.utils import none_like
+from horqrux.primitive import GateSequence, Primitive
 
 
 def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
@@ -94,8 +91,8 @@ def finite_shots_jvp(
     observable: Primitive,
     n_shots: int,
     key: Array,
-    primals: tuple[dict[str, float]],
-    tangents: tuple[dict[str, float]],
+    primals: tuple[list[Primitive], dict[str, float]],
+    tangents: tuple[list[Primitive], dict[str, float]],
 ) -> Array:
     gates, values = primals
     gates_tangent, values_tangent = tangents
@@ -114,22 +111,24 @@ def finite_shots_jvp(
     def jvp_component(index: int) -> Array:
         gates, values = primals
         gates_tangent, values_tangent = tangents
-        if not isinstance(gates[index], Parametric):
+        shift_gate = gates[index]
+        gate_tangent = gates_tangent[index]
+        if not isinstance(shift_gate, Parametric) or not isinstance(gate_tangent, Parametric):
             return zero
-        if gates[index].param_name is None:
-            tangent = gates_tangent[index].param_val
+        if shift_gate.param_name is None:
+            tangent = gate_tangent.param_val
         else:
-            tangent = values_tangent[gates[index].param_name]
+            tangent = values_tangent[shift_gate.param_name]
         if not isinstance(tangent, jax.Array):
             return zero
         key = keys[index]
         up_key, down_key = random.split(key)
-        original_shift = gates[index].shift
-        gates[index].set_shift(original_shift + shift)
+        original_shift = shift_gate.shift
+        shift_gate.set_shift(original_shift + shift)
         f_up = finite_shots_fwd(state, gates, observable, values, n_shots, up_key)
-        gates[index].set_shift(original_shift - shift)
+        shift_gate.set_shift(original_shift - shift)
         f_down = finite_shots_fwd(state, gates, observable, values, n_shots, down_key)
-        gates[index].set_shift(original_shift)
+        shift_gate.set_shift(original_shift)
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
         return grad * tangent
 

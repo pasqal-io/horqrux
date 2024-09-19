@@ -6,7 +6,6 @@ from typing import Any, Optional
 import jax
 import jax.numpy as jnp
 from jax import Array
-from jax.experimental import checkify
 
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import functools
+
 import jax
 import jax.numpy as jnp
-import functools
 
 from horqrux import expectation, random_state
 from horqrux.parametric import RX
@@ -32,10 +33,11 @@ def test_shots() -> None:
 
     assert jnp.allclose(exp_exact, exp_shots, atol=SHOTS_ATOL)
 
-    d_expect = jax.jit(jax.grad(lambda x, y, z: expect(
-        x, y, z).sum(), argnums=[0, 1]), static_argnums=2)
+    d_expect = jax.jit(
+        jax.grad(lambda x, y, z: expect(x, y, z).sum(), argnums=[0, 1]), static_argnums=2
+    )
 
     grad_backprop = jnp.stack(d_expect(x, y, "exact"))
     grad_shots = jnp.stack(d_expect(x, y, "shots"))
 
-    assert jnp.isclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)
+    assert jnp.allclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)
