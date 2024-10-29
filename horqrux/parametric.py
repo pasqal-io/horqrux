@@ -44,7 +44,7 @@ class Parametric(Primitive):
 
     def tree_flatten(  # type: ignore[override]
         self,
-    ) -> Tuple[Tuple[float, float], Tuple[str, Tuple, Tuple, str | None]]:
+    ) -> tuple[tuple[float, float], tuple[str, tuple, tuple, str | None]]:
         children = (self.param_val, self.shift)
         aux_data = (self.generator_name, self.target[0], self.control[0], self.param_name)
         return (children, aux_data)
