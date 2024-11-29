@@ -52,6 +52,17 @@ def finite_shots_fwd(
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
     inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
+    # TODO: in density matrix formalism, Prob𝐵=Tr(𝜌𝑃𝐵), check if output is the same
+    # TODO: you just need to multiply rho by your eigvecs density matrices and
+    # TODO: then take the trace.
+    # TODO: For every eigvec rho, you have an eigval.
+    # TODO: You would need to compute prob(B) = Tr(rho P_B) for each eigvec.
+    # TODO: Then you store them in the probs vector.
+    # TODO: 1) transform state -> density_matrix
+    # TODO: 2) transform eigvecs -> density_matrix_eigvec
+    # TODO: 3) prob(density_matrix_eigvec) = Tr(rho density_matrix_eigvec)
+    # TODO: 4) probs = [prob(density_matrix_eigvec) for density_matrix_eigvec in density_matrix_eigvecs]
+    # TODO: 5) return does not change
     probs = jnp.abs(inner_prod) ** 2
     return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
 
