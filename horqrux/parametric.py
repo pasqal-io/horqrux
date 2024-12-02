@@ -8,6 +8,7 @@ from jax import Array
 from jax.tree_util import register_pytree_node_class
 
 from .matrices import OPERATIONS_DICT
+from .noise import Noise
 from .primitive import Primitive
 from .utils import (
     ControlQubits,
@@ -27,6 +28,7 @@ class Parametric(Primitive):
     generator_name: str
     target: QubitSupport
     control: QubitSupport
+    noise: Noise | None = None
     param: str | float = ""
 
     def __post_init__(self) -> None:
@@ -40,18 +42,21 @@ class Parametric(Primitive):
 
         self.parse_values = parse_dict if isinstance(self.param, str) else parse_val
 
-    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, str | float]]:  # type: ignore[override]
+    def tree_flatten(  # type: ignore[override]
+        self,
+    ) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, Noise | None, str | float]]:
         children = ()
         aux_data = (
             self.generator_name,
             self.target[0],
             self.control[0],
+            self.noise,
             self.param,
         )
         return (children, aux_data)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.param))
+        return iter((self.generator_name, self.target, self.control, self.noise, self.param))
 
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
@@ -74,46 +79,64 @@ class Parametric(Primitive):
         )
 
 
-def RX(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+def RX(
+    param: float | str,
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: Noise | None = None,
+) -> Parametric:
     """RX gate.
 
     Arguments:
         param: Parameter denoting the Rotational angle.
         target: Tuple of target qubits denoted as ints.
         control: Optional tuple of control qubits denoted as ints.
+        noise: The noise instance. Defaults to None.
 
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("X", target, control, param)
+    return Parametric("X", target, control, param=param, noise=noise)
 
 
-def RY(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+def RY(
+    param: float | str,
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: Noise | None = None,
+) -> Parametric:
     """RY gate.
 
     Arguments:
         param: Parameter denoting the Rotational angle.
         target: Tuple of target qubits denoted as ints.
         control: Optional tuple of control qubits denoted as ints.
+        noise: The noise instance. Defaults to None.
 
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("Y", target, control, param)
+    return Parametric("Y", target, control, param=param, noise=noise)
 
 
-def RZ(param: float | str, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+def RZ(
+    param: float | str,
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: Noise | None = None,
+) -> Parametric:
     """RZ gate.
 
     Arguments:
         param: Parameter denoting the Rotational angle.
         target: Tuple of target qubits denoted as ints.
         control: Optional tuple of control qubits denoted as ints.
+        noise: The noise instance. Defaults to None.
 
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("Z", target, control, param)
+    return Parametric("Z", target, control, param=param, noise=noise)
 
 
 class _PHASE(Parametric):
@@ -133,16 +156,19 @@ class _PHASE(Parametric):
         return "C" + base_name if is_controlled(self.control) else base_name
 
 
-def PHASE(param: float, target: TargetQubits, control: ControlQubits = (None,)) -> Parametric:
+def PHASE(
+    param: float, target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+) -> Parametric:
     """Phase gate.
 
     Arguments:
         param: Parameter denoting the Rotational angle.
         target: Tuple of target qubits denoted as ints.
         control: Optional tuple of control qubits denoted as ints.
+        noise: The noise instance. Defaults to None.
 
     Returns:
         Parametric: A Parametric gate object.
     """
 
-    return _PHASE("I", target, control, param)
+    return _PHASE("I", target, control, param=param, noise=noise)

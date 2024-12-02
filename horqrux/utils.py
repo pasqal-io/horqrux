@@ -14,6 +14,8 @@ State = ArrayLike
 QubitSupport = Tuple[Any, ...]
 ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
 TargetQubits = Tuple[Tuple[int, ...], ...]
+ErrorProbabilities = Tuple[float, ...] | float
+
 ATOL = 1e-014
 
 
