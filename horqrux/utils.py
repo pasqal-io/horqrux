@@ -19,6 +19,15 @@ ErrorProbabilities = Tuple[float, ...] | float
 ATOL = 1e-014
 
 
+class DensityMatrix:
+    def __init__(self, state: ArrayLike) -> None:
+        n_qubits = len(state.shape)
+        state = state.reshape(2**n_qubits)
+        self.dm = jnp.einsum("i,j->ij", state, state.conj()).reshape(
+            tuple(2 for _ in range(2 * n_qubits))
+        )
+
+
 class StrEnum(str, Enum):
     def __str__(self) -> str:
         """Used when dumping enum fields in a schema."""
@@ -171,9 +180,3 @@ def random_state(n_qubits: int) -> Array:
 
 def is_normalized(state: Array) -> bool:
     return equivalent_state(state, state)
-
-
-def density_mat(state: Array) -> Array:
-    n_qubits = len(state.shape)
-    state = state.reshape(2**n_qubits)
-    return jnp.einsum("i,j->ij", state, state.conj()).reshape(tuple(2 for _ in range(2 * n_qubits)))

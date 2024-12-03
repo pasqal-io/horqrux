@@ -62,9 +62,13 @@ class NoiseInstance:
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
+    @property
     def kraus(self) -> tuple[Array, ...]:
         kraus_fn: Callable[..., tuple[Array, ...]] = PROTOCOL_TO_KRAUS_FN[self.type]
         return kraus_fn(error_probability=self.error_probability)
+
+    def __repr__(self) -> str:
+        return self.type + f"(p={self.error_probability})"
 
 
 NoiseProtocol = Tuple[NoiseInstance, ...]

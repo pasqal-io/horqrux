@@ -39,6 +39,11 @@ def test_noisy_primitive(gate_fn: Callable, noise_type: NoiseType) -> None:
     noisy_gate = gate_fn(target, noise=(noise,))
     assert len(noisy_gate.noise) == 1
 
+    orig_state = random_state(MAX_QUBITS)
+    output_dm = apply_gate(orig_state, noisy_gate)
+    # check output is a density matrix
+    assert len(output_dm.shape) == 2 * MAX_QUBITS
+
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
 def test_controlled_primitive(gate_fn: Callable) -> None:

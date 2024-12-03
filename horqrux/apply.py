@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from functools import reduce
+from functools import partial, reduce
 from operator import add
 from typing import Iterable, Tuple
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
 
 from horqrux.primitive import Primitive
 
-from .utils import OperationType, State, _controlled, is_controlled
+from .noise import NoiseProtocol
+from .utils import DensityMatrix, OperationType, State, _controlled, _dagger, is_controlled
 
 
 def apply_operator(
@@ -49,6 +51,46 @@ def apply_operator(
     state = jnp.tensordot(a=operator, b=state, axes=(op_dims, state_dims))
     new_state_dims = tuple(i for i in range(len(state_dims)))
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
+
+
+def apply_kraus_operator(
+    kraus: Array,
+    state: State,
+    target: Tuple[int, ...],
+) -> State:
+    state_dims: Tuple[int, ...] = target
+    n_qubits = int(np.log2(kraus.size))
+    kraus = kraus.reshape(tuple(2 for _ in np.arange(n_qubits)))
+    op_dims = tuple(np.arange(kraus.ndim // 2, kraus.ndim, dtype=int))
+
+    # Ki rho
+    state = jnp.tensordot(a=kraus, b=state, axes=(op_dims, state_dims))
+    new_state_dims = tuple(i for i in range(len(state_dims)))
+    state = jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
+
+    # dagger ops
+    state = jnp.tensordot(a=kraus, b=_dagger(state), axes=(op_dims, state_dims))
+    state = _dagger(state)
+
+    return state
+
+
+def apply_operator_with_noise(
+    state: State,
+    operator: Array,
+    target: Tuple[int, ...],
+    control: Tuple[int | None, ...],
+    noise: NoiseProtocol,
+) -> State:
+    state_gate = apply_operator(state, operator, target, control)
+    if len(noise) == 0:
+        return state_gate
+    else:
+        kraus_ops = jnp.stack(tuple(reduce(add, tuple(n.kraus for n in noise))))
+        apply_one_kraus = jax.vmap(partial(apply_kraus_operator, state=state_gate, target=target))
+        kraus_evol = apply_one_kraus(kraus_ops)
+        output_dm = jnp.sum(kraus_evol, 0)
+        return output_dm
 
 
 def group_by_index(gates: Iterable[Primitive]) -> Iterable[Primitive]:
@@ -106,7 +148,7 @@ def merge_operators(
 
 
 def apply_gate(
-    state: State,
+    state: State | DensityMatrix,
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
@@ -115,7 +157,7 @@ def apply_gate(
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
     Arguments:
-        state: State to operate on.
+        state: State or DensityMatrix to operate on.
         gate: Gate(s) to apply.
         values: A dictionary with parameter values.
         op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
@@ -126,9 +168,11 @@ def apply_gate(
         State after applying 'gate'.
     """
     operator: Tuple[Array, ...]
+    noise = list()
     if isinstance(gate, Primitive):
         operator_fn = getattr(gate, op_type)
         operator, target, control = (operator_fn(values),), gate.target, gate.control
+        noise += [gate.noise]
     else:
         if group_gates:
             gate = group_by_index(gate)
@@ -137,8 +181,18 @@ def apply_gate(
         control = reduce(add, [g.control for g in gate])
         if merge_ops:
             operator, target, control = merge_operators(operator, target, control)
-    return reduce(
-        lambda state, gate: apply_operator(state, *gate),
-        zip(operator, target, control),
+        noise = [g.noise for g in gate]
+
+    has_noise = len(reduce(add, noise)) > 0
+    if has_noise and not isinstance(state, DensityMatrix):
+        print(state.shape)
+        state = DensityMatrix(state).dm
+        print(state.shape)
+
+    output_state = reduce(
+        lambda state, gate: apply_operator_with_noise(state, *gate),
+        zip(operator, target, control, noise),
         state,
     )
+
+    return output_state
