@@ -1,16 +1,9 @@
-
 from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Any, Iterable, Tuple
 
 import jax.numpy as jnp
 from jax import Array
 
 from .matrices import OPERATIONS_DICT
-from .utils import (
-    TargetQubits,
-)
 
 
 def BitFlip(error_probability: float) -> tuple[Array, ...]:
@@ -211,9 +204,7 @@ def PhaseDamping(error_probability: float) -> tuple[Array, ...]:
     return kraus
 
 
-def GeneralizedAmplitudeDamping(
-    error_probability: tuple[float, ...]
-) -> tuple[Array, ...]:
+def GeneralizedAmplitudeDamping(error_probability: tuple[float, ...]) -> tuple[Array, ...]:
     """
     Initialize the GeneralizeAmplitudeDamping gate.
 
