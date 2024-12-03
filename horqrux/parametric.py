@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterable, Tuple
 
 import jax.numpy as jnp
@@ -8,7 +8,7 @@ from jax import Array
 from jax.tree_util import register_pytree_node_class
 
 from .matrices import OPERATIONS_DICT
-from .noise import Noise
+from .noise import NoiseProtocol
 from .primitive import Primitive
 from .utils import (
     ControlQubits,
@@ -28,8 +28,8 @@ class Parametric(Primitive):
     generator_name: str
     target: QubitSupport
     control: QubitSupport
-    noise: Noise | None = None
     param: str | float = ""
+    noise: NoiseProtocol = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -44,19 +44,19 @@ class Parametric(Primitive):
 
     def tree_flatten(  # type: ignore[override]
         self,
-    ) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, Noise | None, str | float]]:
+    ) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, str | float, NoiseProtocol]]:
         children = ()
         aux_data = (
             self.generator_name,
             self.target[0],
             self.control[0],
-            self.noise,
             self.param,
+            self.noise,
         )
         return (children, aux_data)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.noise, self.param))
+        return iter((self.generator_name, self.target, self.control, self.param, self.noise))
 
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
@@ -83,7 +83,7 @@ def RX(
     param: float | str,
     target: TargetQubits,
     control: ControlQubits = (None,),
-    noise: Noise | None = None,
+    noise: NoiseProtocol = tuple(),
 ) -> Parametric:
     """RX gate.
 
@@ -103,7 +103,7 @@ def RY(
     param: float | str,
     target: TargetQubits,
     control: ControlQubits = (None,),
-    noise: Noise | None = None,
+    noise: NoiseProtocol = tuple(),
 ) -> Parametric:
     """RY gate.
 
@@ -123,7 +123,7 @@ def RZ(
     param: float | str,
     target: TargetQubits,
     control: ControlQubits = (None,),
-    noise: Noise | None = None,
+    noise: NoiseProtocol = tuple(),
 ) -> Parametric:
     """RZ gate.
 
@@ -157,7 +157,10 @@ class _PHASE(Parametric):
 
 
 def PHASE(
-    param: float, target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    param: float,
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = tuple(),
 ) -> Parametric:
     """Phase gate.
 

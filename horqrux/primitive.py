@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterable, Tuple, Union
 
 import numpy as np
@@ -8,7 +8,7 @@ from jax import Array
 from jax.tree_util import register_pytree_node_class
 
 from .matrices import OPERATIONS_DICT
-from .noise import Noise
+from .noise import NoiseProtocol
 from .utils import (
     ControlQubits,
     QubitSupport,
@@ -28,7 +28,7 @@ class Primitive:
     generator_name: str
     target: QubitSupport
     control: QubitSupport
-    noise: Noise | None = None
+    noise: NoiseProtocol = field(default_factory=tuple)
 
     @staticmethod
     def parse_idx(
@@ -47,20 +47,11 @@ class Primitive:
             self.control = none_like(self.target)
         else:
             self.control = Primitive.parse_idx(self.control)
-        self._validate_noise()
-
-    def _validate_noise(self) -> None:
-        if self.noise is not None:
-            dim = 2**self.n_qubits
-            noise_dim = (2**dim, 2**dim)
-            for kraus in self.noise.kraus:
-                if kraus.shape != noise_dim:
-                    raise ValueError(f"Specify all noise tensors with shape {noise_dim}.")
 
     def __iter__(self) -> Iterable:
         return iter((self.generator_name, self.target, self.control, self.noise))
 
-    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits, Noise | None]]:
+    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits, NoiseProtocol]]:
         children = ()
         aux_data = (self.generator_name, self.target[0], self.control[0], self.noise)
         return (children, aux_data)
@@ -94,7 +85,7 @@ GateSequence = Union[Primitive, Iterable[Primitive]]
 
 
 def I(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = tuple()
 ) -> Primitive:
     """Identity / I gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -113,7 +104,7 @@ def I(
 
 
 def X(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = tuple()
 ) -> Primitive:
     """X gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -136,7 +127,7 @@ NOT = X
 
 
 def Y(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = tuple()
 ) -> Primitive:
     """Y gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -156,7 +147,7 @@ def Y(
 
 
 def Z(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = tuple()
 ) -> Primitive:
     """Z gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -176,7 +167,7 @@ def Z(
 
 
 def H(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = tuple()
 ) -> Primitive:
     """H/ Hadamard gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -195,7 +186,7 @@ def H(
 
 
 def S(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = tuple()
 ) -> Primitive:
     """S gate or constant phase gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -214,7 +205,7 @@ def S(
 
 
 def T(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = tuple()
 ) -> Primitive:
     """T gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -236,7 +227,7 @@ def T(
 
 
 def SWAP(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = tuple()
 ) -> Primitive:
     """SWAP gate. By providing a control, it turns into a controlled gate (Fredkin gate),
        use None for no control qubits.
@@ -256,19 +247,13 @@ def SWAP(
     return Primitive("SWAP", target, control, noise)
 
 
-def SQSWAP(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
-) -> Primitive:
-    return Primitive("SQSWAP", target, control, noise)
+def SQSWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
+    return Primitive("SQSWAP", target, control)
 
 
-def ISWAP(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
-) -> Primitive:
-    return Primitive("ISWAP", target, control, noise)
+def ISWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
+    return Primitive("ISWAP", target, control)
 
 
-def ISQSWAP(
-    target: TargetQubits, control: ControlQubits = (None,), noise: Noise | None = None
-) -> Primitive:
-    return Primitive("ISQSWAP", target, control, noise)
+def ISQSWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
+    return Primitive("ISQSWAP", target, control)
