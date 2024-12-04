@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Tuple
 
 from jax import Array, custom_vjp
-from jax import numpy as jnp
 
 from horqrux.apply import apply_gate
 from horqrux.parametric import Parametric
@@ -11,15 +10,15 @@ from horqrux.primitive import GateSequence, Primitive
 from horqrux.utils import OperationType, inner
 
 
-def expectation(
-    state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
+def ad_expectation(
+    state: Array, gates: list[Primitive], observables: list[Primitive], values: dict[str, float]
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
-    projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
+    projected_state = apply_gate(out_state, observables, values, OperationType.UNITARY)
     return inner(out_state, projected_state).real
 
 
@@ -27,21 +26,13 @@ def expectation(
 def __adjoint_expectation_single_observable(
     state: Array, gates: list[Primitive], observable: Primitive, values: dict[str, float]
 ) -> Array:
-    return expectation(state, gates, [observable], values)
+    return ad_expectation(state, gates, [observable], values)
 
 
 def adjoint_expectation(
     state: Array, gates: GateSequence, observables: list[Primitive], values: dict[str, float]
 ) -> Array:
-    """
-    Run 'state' through a sequence of 'gates' given parameters 'values'
-    and compute the expectation given an observable.
-    """
-    outputs = [
-        __adjoint_expectation_single_observable(state, gates, observable, values)
-        for observable in observables
-    ]
-    return jnp.stack(outputs)
+    return ad_expectation(state, gates, observables, values)  # type: ignore[arg-type]
 
 
 def adjoint_expectation_single_observable_fwd(

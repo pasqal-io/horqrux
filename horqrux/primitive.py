@@ -78,7 +78,7 @@ class Primitive:
         return n_qubits
 
     def __repr__(self) -> str:
-        return self.name + f"(target={self.target[0]}, control={self.control[0]})"
+        return self.name + f"(target={self.target}, control={self.control})"
 
 
 GateSequence = Union[Primitive, Iterable[Primitive]]

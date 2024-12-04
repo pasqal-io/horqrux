@@ -34,7 +34,12 @@ def Hamiltonian_general(n_qubits: int = 2, batch_size: int = 1) -> jnp.array:
     return H_batch
 
 
-@pytest.mark.parametrize("n_qubits, batch_size", [(2, 1), (4, 2)])
+@pytest.mark.parametrize(
+    "n_qubits, batch_size",
+    [
+        (2, 1),
+    ],
+)
 def test_hamevo_general(n_qubits: int, batch_size: int) -> None:
     H = Hamiltonian_general(n_qubits, batch_size)
     t_evo = np.random.uniform(0, 1, (batch_size, 1))

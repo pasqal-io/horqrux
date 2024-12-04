@@ -45,8 +45,8 @@ def apply_operator(
     if is_controlled(control):
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
-    n_qubits = int(np.log2(operator.size))
-    operator = operator.reshape(tuple(2 for _ in np.arange(n_qubits)))
+    n_qubits = int(np.log2(operator.shape[1]))
+    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits)))
     op_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     state = jnp.tensordot(a=operator, b=state, axes=(op_dims, state_dims))
     new_state_dims = tuple(i for i in range(len(state_dims)))
