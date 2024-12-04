@@ -51,8 +51,8 @@ def sample(
     )
 
 
-def ad_expectation(
-    state: Array, gates: GateSequence, observable: GateSequence, values: dict[str, float]
+def __ad_expectation_single_observable(
+    state: Array, gates: GateSequence, observable: Primitive, values: dict[str, float]
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -63,10 +63,24 @@ def ad_expectation(
     return inner(out_state, projected_state).real
 
 
+def ad_expectation(
+    state: Array, gates: GateSequence, observables: list[Primitive], values: dict[str, float]
+) -> Array:
+    """
+    Run 'state' through a sequence of 'gates' given parameters 'values'
+    and compute the expectation given an observable.
+    """
+    outputs = [
+        __ad_expectation_single_observable(state, gates, observable, values)
+        for observable in observables
+    ]
+    return jnp.stack(outputs)
+
+
 def expectation(
     state: Array,
     gates: GateSequence,
-    observable: GateSequence,
+    observables: list[Primitive],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
     forward_mode: ForwardMode = ForwardMode.EXACT,
@@ -78,20 +92,17 @@ def expectation(
     and compute the expectation given an observable.
     """
     if diff_mode == DiffMode.AD:
-        return ad_expectation(state, gates, observable, values)
+        return ad_expectation(state, gates, observables, values)
     elif diff_mode == DiffMode.ADJOINT:
-        return adjoint_expectation(state, gates, observable, values)
+        return adjoint_expectation(state, gates, observables, values)
     elif diff_mode == DiffMode.GPSR:
         checkify.check(
             forward_mode == ForwardMode.SHOTS, "Finite shots and GPSR must be used together"
-        )
-        checkify.check(
-            isinstance(observable, Primitive),
-            "Finite Shots only supports a single Primitive as an observable",
         )
         checkify.check(
             type(n_shots) is int,
             "Number of shots must be an integer for finite shots.",
         )
         # Type checking is disabled because mypy doesn't parse checkify.check.
-        return finite_shots_fwd(state, gates, observable, values, n_shots=n_shots, key=key)  # type: ignore
+        # type: ignore
+        return finite_shots_fwd(state, gates, observables, values, n_shots=n_shots, key=key)

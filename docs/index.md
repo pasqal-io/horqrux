@@ -110,7 +110,7 @@ from operator import add
 from typing import Any, Callable
 from uuid import uuid4
 
-from horqrux.circuit import Circuit, hea, expectation
+from horqrux.circuit import QuantumCircuit, hea, expectation
 from horqrux.primitive import Primitive
 from horqrux.parametric import Parametric
 from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
@@ -128,8 +128,8 @@ fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in r
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
 
-
-class DQC(Circuit):
+@dataclass
+class DQC(QuantumCircuit):
     def __post_init__(self) -> None:
         self.observable: list[Primitive] = [Z(0)]
         self.state = zero_state(self.n_qubits)
@@ -137,10 +137,11 @@ class DQC(Circuit):
     @partial(vmap, in_axes=(None, None, 0))
     def __call__(self, param_values: Array, x: Array) -> Array:
         param_dict = {name: val for name, val in zip(self.param_names, param_values)}
-        return expectation(self.state, self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}}, DiffMode.ADJOINT)
+        return expectation(self.state, self.operations, self.observable, {**param_dict, **{'phi': x}}, DiffMode.ADJOINT)
 
-
-circ = DQC(n_qubits=n_qubits, feature_map=[RX('phi', i) for i in range(n_qubits)], ansatz=hea(n_qubits, n_layers))
+feature_map = [RX('phi', i) for i in range(n_qubits)]
+ansatz = hea(n_qubits, n_layers)
+circ = DQC(n_qubits=n_qubits, operations=feature_map + ansatz)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -237,15 +238,18 @@ def total_magnetization(n_qubits:int) -> Callable:
         return inner(out_state, projected_state).real
     return _total_magnetization
 
-
+@dataclass
 class DQC(QuantumCircuit):
-    def __post_init__(self, n_qubits: int, operations: list[Primitive]) -> None:
-        self.operations = group_by_index(operations)
-        self.observable = total_magnetization(n_qubits)
+    def __post_init__(self) -> None:
+        self.operations = group_by_index(self.operations)
+        self.observable = total_magnetization(self.n_qubits)
+        self.state = zero_state(self.n_qubits)
 
-    def __call__(self, state, values: dict[str, Array], x: Array, y: Array) -> Array:
+
+    def __call__(self, values: dict[str, Array], x: Array, y: Array) -> Array:
+        param_dict = {name: val for name, val in zip(self.param_names, values)}
         out_state = apply_gate(
-            state, self.operations, {**param_dict, **{"f_x": x, "f_y": y}}
+            self.state, self.operations, {**param_dict, **{"f_x": x, "f_y": y}}
         )
         return self.observable(out_state, {})
 
@@ -254,7 +258,7 @@ fm =  [RX("f_x", i) for i in range(N_QUBITS // 2)] + [
             RX("f_y", i) for i in range(N_QUBITS // 2, N_QUBITS)
         ]
 ansatz = hea(N_QUBITS, DEPTH)
-circ = DQC(N_QUBITS, fm, ansatz)
+circ = DQC(N_QUBITS, fm + ansatz)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))

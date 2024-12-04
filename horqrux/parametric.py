@@ -44,8 +44,8 @@ class Parametric(Primitive):
         children = ()
         aux_data = (
             self.generator_name,
-            self.target,
-            self.control,
+            self.target[0],
+            self.control[0],
             self.param,
         )
         return (children, aux_data)

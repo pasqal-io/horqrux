@@ -51,7 +51,7 @@ class Primitive:
 
     def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits]]:
         children = ()
-        aux_data = (self.generator_name, self.target, self.control)
+        aux_data = (self.generator_name, self.target[0], self.control[0])
         return (children, aux_data)
 
     @classmethod
