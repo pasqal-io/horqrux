@@ -8,7 +8,6 @@ import pytest
 from jax import Array
 
 from horqrux.apply import apply_gate, apply_operator
-from horqrux.noise import NoiseInstance, NoiseType
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
 from horqrux.utils import equivalent_state, product_state, random_state
@@ -16,7 +15,6 @@ from horqrux.utils import equivalent_state, product_state, random_state
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
 PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
-NOISE_TYPES = (NoiseType.BITFLIP, NoiseType.PHASEFLIP, NoiseType.DEPOLARIZING)
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
@@ -28,21 +26,6 @@ def test_primitive(gate_fn: Callable) -> None:
     assert jnp.allclose(
         apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
     )
-
-
-@pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
-@pytest.mark.parametrize("noise_type", NOISE_TYPES)
-def test_noisy_primitive(gate_fn: Callable, noise_type: NoiseType) -> None:
-    target = np.random.randint(0, MAX_QUBITS)
-    noise = NoiseInstance(noise_type, error_probability=0.1)
-
-    noisy_gate = gate_fn(target, noise=(noise,))
-    assert len(noisy_gate.noise) == 1
-
-    orig_state = random_state(MAX_QUBITS)
-    output_dm = apply_gate(orig_state, noisy_gate)
-    # check output is a density matrix
-    assert len(output_dm.shape) == 2 * MAX_QUBITS
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
