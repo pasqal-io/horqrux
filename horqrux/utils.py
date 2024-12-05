@@ -10,6 +10,10 @@ from jax import Array
 from jax.typing import ArrayLike
 from numpy import log2
 
+from ._misc import default_complex_dtype
+
+default_dtype = default_complex_dtype()
+
 State = ArrayLike
 QubitSupport = Tuple[Any, ...]
 ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
@@ -69,7 +73,7 @@ def _dagger(operator: Array) -> Array:
 
 def _unitary(generator: Array, theta: float) -> Array:
     return (
-        jnp.cos(theta / 2) * jnp.eye(2, dtype=jnp.complex64) - 1j * jnp.sin(theta / 2) * generator
+        jnp.cos(theta / 2) * jnp.eye(2, dtype=default_dtype) - 1j * jnp.sin(theta / 2) * generator
     )
 
 
@@ -77,14 +81,14 @@ def _jacobian(generator: Array, theta: float) -> Array:
     return (
         -1
         / 2
-        * (jnp.sin(theta / 2) * jnp.eye(2, dtype=jnp.complex64) + 1j * jnp.cos(theta / 2))
+        * (jnp.sin(theta / 2) * jnp.eye(2, dtype=default_dtype) + 1j * jnp.cos(theta / 2))
         * generator
     )
 
 
 def _controlled(operator: Array, n_control: int) -> Array:
     n_qubits = int(log2(operator.shape[0]))
-    control = jnp.eye(2 ** (n_control + n_qubits), dtype=jnp.complex64)
+    control = jnp.eye(2 ** (n_control + n_qubits), dtype=default_dtype)
     control = control.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
     return control
 
@@ -99,7 +103,7 @@ def product_state(bitstring: str) -> Array:
         A state corresponding to 'bitstring'.
     """
     n_qubits = len(bitstring)
-    space = jnp.zeros(tuple(2 for _ in range(n_qubits)), dtype=jnp.complex64)
+    space = jnp.zeros(tuple(2 for _ in range(n_qubits)), dtype=default_dtype)
     space = space.at[tuple(map(int, bitstring))].set(1.0)
     return space
 
@@ -158,8 +162,8 @@ def overlap(state: Array, projection: Array) -> Array:
 def uniform_state(
     n_qubits: int,
 ) -> Array:
-    state = jnp.ones(2**n_qubits, dtype=jnp.complex64)
-    state = state / jnp.sqrt(jnp.array(2**n_qubits, dtype=jnp.complex64))
+    state = jnp.ones(2**n_qubits, dtype=default_dtype)
+    state = state / jnp.sqrt(jnp.array(2**n_qubits, dtype=default_dtype))
     return state.reshape([2] * n_qubits)
 
 
