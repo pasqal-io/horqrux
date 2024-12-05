@@ -25,14 +25,14 @@ class QuantumCircuit:
     Attributes:
         n_qubits (int): Number of qubits.
         operations (list[Primitive]): Operations defining the circuit.
-        feature_map_parameters (list[str]): List of parameters that are considered
+        fparams (list[str]): List of parameters that are considered
             non trainable, used for passing fixed input data to a quantum circuit.
                 The corresponding operations compose the `feature map`.
     """
 
     n_qubits: int
     operations: list[Primitive]
-    feature_map_parameters: list[str] = field(default_factory=list)
+    fparams: list[str] = field(default_factory=list)
 
     def __call__(self, state: Array, values: dict[str, Array]) -> Array:
         if state is None:
@@ -50,13 +50,13 @@ class QuantumCircuit:
         return [str(op.param) for op in self.operations if isinstance(op, Parametric)]
 
     @property
-    def variational_param_names(self) -> list[str]:
+    def vparams(self) -> list[str]:
         """List of variational parameters of the circuit.
 
         Returns:
             list[str]: Names of variational parameters.
         """
-        return [name for name in self.param_names if name not in self.feature_map_parameters]
+        return [name for name in self.param_names if name not in self.fparams]
 
     @property
     def n_vparams(self) -> int:
@@ -65,12 +65,12 @@ class QuantumCircuit:
         Returns:
             int: Number of variational parameters.
         """
-        return len(self.param_names) - len(self.feature_map_parameters)
+        return len(self.param_names) - len(self.fparams)
 
     def tree_flatten(self) -> tuple:
         children = (
             self.operations,
-            self.feature_map_parameters,
+            self.fparams,
         )
         aux_data = (self.n_qubits,)
         return (aux_data, children)

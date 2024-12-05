@@ -136,13 +136,13 @@ class DQC(QuantumCircuit):
 
     @partial(vmap, in_axes=(None, None, 0))
     def __call__(self, param_values: Array, x: Array) -> Array:
-        param_dict = {name: val for name, val in zip(self.variational_param_names, param_values)}
+        param_dict = {name: val for name, val in zip(self.vparams, param_values)}
         return expectation(self.state, self.operations, self.observable, {**param_dict, **{'phi': x}}, DiffMode.ADJOINT)
 
 feature_map = [RX('phi', i) for i in range(n_qubits)]
 fm_names = [f.param for f in feature_map]
 ansatz = hea(n_qubits, n_layers)
-circ = DQC(n_qubits=n_qubits, operations=feature_map + ansatz, feature_map_parameters=fm_names)
+circ = DQC(n_qubits=n_qubits, operations=feature_map + ansatz, fparams=fm_names)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -248,7 +248,7 @@ class DQC(QuantumCircuit):
 
 
     def __call__(self, values: dict[str, Array], x: Array, y: Array) -> Array:
-        param_dict = {name: val for name, val in zip(self.variational_param_names, values)}
+        param_dict = {name: val for name, val in zip(self.vparams, values)}
         out_state = apply_gate(
             self.state, self.operations, {**param_dict, **{"f_x": x, "f_y": y}}
         )
