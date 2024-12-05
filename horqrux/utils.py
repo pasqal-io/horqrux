@@ -39,9 +39,16 @@ class OperationType(StrEnum):
 
 
 class DiffMode(StrEnum):
+    """Differentiation mode."""
+
     AD = "ad"
+    """Automatic Differentiation -  Using the autograd engine of JAX."""
     ADJOINT = "adjoint"
+    """Adjoint Differentiation   - An implementation of "Efficient calculation of gradients
+                                   in classical simulations of variational quantum algorithms",
+                                   Jones & Gacon, 2020."""
     GPSR = "gpsr"
+    """Generalized parameter shift rule."""
 
 
 class ForwardMode(StrEnum):

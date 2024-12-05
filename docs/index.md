@@ -110,11 +110,11 @@ from operator import add
 from typing import Any, Callable
 from uuid import uuid4
 
-from horqrux.adjoint import adjoint_expectation
-from horqrux.circuit import Circuit, hea
+from horqrux.circuit import QuantumCircuit, hea, expectation
 from horqrux.primitive import Primitive
 from horqrux.parametric import Parametric
 from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
+from horqrux.utils import DiffMode
 
 
 n_qubits = 5
@@ -128,19 +128,21 @@ fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in r
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
 
-
-class DQC(Circuit):
+@dataclass
+class DQC(QuantumCircuit):
     def __post_init__(self) -> None:
         self.observable: list[Primitive] = [Z(0)]
         self.state = zero_state(self.n_qubits)
 
     @partial(vmap, in_axes=(None, None, 0))
     def __call__(self, param_values: Array, x: Array) -> Array:
-        param_dict = {name: val for name, val in zip(self.param_names, param_values)}
-        return adjoint_expectation(self.state, self.feature_map + self.ansatz, self.observable, {**param_dict, **{'phi': x}})[0]
+        param_dict = {name: val for name, val in zip(self.vparams, param_values)}
+        return expectation(self.state, self.operations, self.observable, {**param_dict, **{'phi': x}}, DiffMode.ADJOINT)
 
-
-circ = DQC(n_qubits=n_qubits, feature_map=[RX('phi', i) for i in range(n_qubits)], ansatz=hea(n_qubits, n_layers))
+feature_map = [RX('phi', i) for i in range(n_qubits)]
+fm_names = [f.param for f in feature_map]
+ansatz = hea(n_qubits, n_layers)
+circ = DQC(n_qubits=n_qubits, operations=feature_map + ansatz, fparams=fm_names)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -212,20 +214,20 @@ from jax import Array, jit, value_and_grad, vmap
 from numpy.random import uniform
 
 from horqrux.apply import group_by_index
-from horqrux.circuit import Circuit, hea
+from horqrux.circuit import QuantumCircuit, hea
 from horqrux import NOT, RX, RY, Z, apply_gate, zero_state
 from horqrux.primitive import Primitive
 from horqrux.parametric import Parametric
 from horqrux.utils import inner
 
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.15
 N_QUBITS = 4
 DEPTH = 3
 VARIABLES = ("x", "y")
 NUM_VARIABLES = len(VARIABLES)
 X_POS, Y_POS = [i for i in range(NUM_VARIABLES)]
-BATCH_SIZE = 150
-N_EPOCHS = 1000
+BATCH_SIZE = 500
+N_EPOCHS = 500
 
 def total_magnetization(n_qubits:int) -> Callable:
     paulis = [Z(i) for i in range(n_qubits)]
@@ -237,26 +239,28 @@ def total_magnetization(n_qubits:int) -> Callable:
         return inner(out_state, projected_state).real
     return _total_magnetization
 
-
-class DQC(Circuit):
+@dataclass
+class DQC(QuantumCircuit):
     def __post_init__(self) -> None:
-        self.ansatz = group_by_index(self.ansatz)
+        self.operations = group_by_index(self.operations)
         self.observable = total_magnetization(self.n_qubits)
         self.state = zero_state(self.n_qubits)
 
-    def __call__(self, param_vals: Array, x: Array, y: Array) -> Array:
-        param_dict = {name: val for name, val in zip(self.param_names, param_vals)}
+
+    def __call__(self, values: dict[str, Array], x: Array, y: Array) -> Array:
+        param_dict = {name: val for name, val in zip(self.vparams, values)}
         out_state = apply_gate(
-            self.state, self.feature_map + self.ansatz, {**param_dict, **{"x": x, "y": y}}
+            self.state, self.operations, {**param_dict, **{"f_x": x, "f_y": y}}
         )
         return self.observable(out_state, {})
 
 
-fm =  [RX("x", i) for i in range(N_QUBITS // 2)] + [
-            RX("y", i) for i in range(N_QUBITS // 2, N_QUBITS)
+fm =  [RX("f_x", i) for i in range(N_QUBITS // 2)] + [
+            RX("f_y", i) for i in range(N_QUBITS // 2, N_QUBITS)
         ]
+fm_circuit_parameters = [f.param for f in fm]
 ansatz = hea(N_QUBITS, DEPTH)
-circ = DQC(N_QUBITS, fm, ansatz)
+circ = DQC(N_QUBITS, fm + ansatz, fm_circuit_parameters)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))

@@ -5,10 +5,10 @@ import numpy as np
 from jax import Array, grad
 
 from horqrux import random_state
-from horqrux.adjoint import adjoint_expectation
-from horqrux.api import expectation
+from horqrux.circuit import expectation
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, H, I, S, T, X, Y, Z
+from horqrux.utils import DiffMode
 
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
@@ -26,13 +26,10 @@ def test_gradcheck() -> None:
     }
     state = random_state(MAX_QUBITS)
 
-    def adjoint_expfn(values) -> Array:
-        return adjoint_expectation(state, ops, observable, values)[0]
+    def exp_fn(values: dict, diff_mode: DiffMode = "ad") -> Array:
+        return expectation(state, ops, observable, values, diff_mode)
 
-    def ad_expfn(values) -> Array:
-        return expectation(state, ops, observable, values)[0]
-
-    grads_adjoint = grad(adjoint_expfn)(values)
-    grad_ad = grad(ad_expfn)(values)
+    grads_adjoint = grad(exp_fn)(values, "adjoint")
+    grad_ad = grad(exp_fn)(values)
     for param, ad_grad in grad_ad.items():
-        assert jnp.isclose(grads_adjoint[param], ad_grad, atol=0.09)
+        assert jnp.isclose(grads_adjoint[param], ad_grad, atol=1.0e-3)

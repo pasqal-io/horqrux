@@ -69,7 +69,7 @@ class Primitive:
         return "C" + self.generator_name if is_controlled(self.control) else self.generator_name
 
     def __repr__(self) -> str:
-        return self.name + f"(target={self.target[0]}, control={self.control[0]})"
+        return self.name + f"(target={self.target}, control={self.control})"
 
 
 GateSequence = Union[Primitive, Iterable[Primitive]]
