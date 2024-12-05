@@ -26,10 +26,10 @@ def test_gradcheck() -> None:
     }
     state = random_state(MAX_QUBITS)
 
-    def exp_fn(values: dict, diff_mode: DiffMode) -> Array:
+    def exp_fn(values: dict, diff_mode: DiffMode = "ad") -> Array:
         return expectation(state, ops, observable, values, diff_mode)
 
     grads_adjoint = grad(exp_fn)(values, "adjoint")
-    grad_ad = grad(exp_fn)(values, "ad")
+    grad_ad = grad(exp_fn)(values)
     for param, ad_grad in grad_ad.items():
-        assert jnp.isclose(grads_adjoint[param], ad_grad, atol=0.25)
+        assert jnp.isclose(grads_adjoint[param], ad_grad, atol=1.0e-3)

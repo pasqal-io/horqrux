@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
 from uuid import uuid4
 
@@ -24,6 +24,7 @@ class QuantumCircuit:
 
     n_qubits: int
     operations: list[Primitive]
+    feature_map_parameters: list[str] = field(default_factory=list)
 
     def __call__(self, state: Array, values: dict[str, Array]) -> Array:
         if state is None:
@@ -32,20 +33,21 @@ class QuantumCircuit:
 
     @property
     def param_names(self) -> list[str]:
-        return [
-            str(op.param)
-            for op in self.operations
-            if isinstance(op, Parametric)
-            and isinstance(op.param, str)
-            and op.param.startswith("v_")
-        ]
+        return [str(op.param) for op in self.operations if isinstance(op, Parametric)]
+
+    @property
+    def variational_param_names(self) -> list[str]:
+        return [name for name in self.param_names if name not in self.feature_map_parameters]
 
     @property
     def n_vparams(self) -> int:
-        return len(self.param_names)
+        return len(self.param_names) - len(self.feature_map_parameters)
 
     def tree_flatten(self) -> tuple:
-        children = (self.operations,)
+        children = (
+            self.operations,
+            self.feature_map_parameters,
+        )
         aux_data = (self.n_qubits,)
         return (aux_data, children)
 
@@ -54,7 +56,12 @@ class QuantumCircuit:
         return cls(*aux_data, *children)
 
 
-def hea(n_qubits: int, n_layers: int, rot_fns: list[Callable] = [RX, RY, RX]) -> list[Primitive]:
+def hea(
+    n_qubits: int,
+    n_layers: int,
+    rot_fns: list[Callable] = [RX, RY, RX],
+    variational_param_prefix: str = "v_",
+) -> list[Primitive]:
     """Hardware-efficient ansatz; A helper function to generate a sequence of rotations followed
     by a global entangling operation."""
     gates = []
@@ -62,7 +69,7 @@ def hea(n_qubits: int, n_layers: int, rot_fns: list[Callable] = [RX, RY, RX]) ->
     for _ in range(n_layers):
         for i in range(n_qubits):
             ops = [
-                fn("v_" + str(uuid4()), qubit)
+                fn(variational_param_prefix + str(uuid4()), qubit)
                 for fn, qubit in zip(rot_fns, [i for _ in range(len(rot_fns))])
             ]
             param_names += [op.param for op in ops]
