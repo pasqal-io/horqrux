@@ -7,6 +7,7 @@ import jax.numpy as jnp
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
+from ._misc import default_complex_dtype
 from .matrices import OPERATIONS_DICT
 from .primitive import Primitive
 from .utils import (
@@ -17,6 +18,8 @@ from .utils import (
     _unitary,
     is_controlled,
 )
+
+default_dtype = default_complex_dtype()
 
 
 @register_pytree_node_class
@@ -118,12 +121,12 @@ def RZ(param: float | str, target: TargetQubits, control: ControlQubits = (None,
 
 class _PHASE(Parametric):
     def unitary(self, values: dict[str, float] = dict()) -> Array:
-        u = jnp.eye(2, 2, dtype=jnp.complex128)
+        u = jnp.eye(2, 2, dtype=default_dtype)
         u = u.at[(1, 1)].set(jnp.exp(1.0j * self.parse_values(values)))
         return u
 
     def jacobian(self, values: dict[str, float] = dict()) -> Array:
-        jac = jnp.zeros((2, 2), dtype=jnp.complex128)
+        jac = jnp.zeros((2, 2), dtype=default_dtype)
         jac = jac.at[(1, 1)].set(1j * jnp.exp(1.0j * self.parse_values(values)))
         return jac
 
