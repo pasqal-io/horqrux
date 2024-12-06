@@ -31,8 +31,8 @@ class Parametric(Primitive):
     generator_name: str
     target: QubitSupport
     control: QubitSupport
-    param: str | float = ""
     noise: NoiseProtocol = field(default_factory=tuple)
+    param: str | float = ""
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -47,19 +47,19 @@ class Parametric(Primitive):
 
     def tree_flatten(  # type: ignore[override]
         self,
-    ) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, str | float, NoiseProtocol]]:
+    ) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, NoiseProtocol, str | float]]:
         children = ()
         aux_data = (
             self.generator_name,
             self.target[0],
             self.control[0],
-            self.param,
             self.noise,
+            self.param,
         )
         return (children, aux_data)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.param, self.noise))
+        return iter((self.generator_name, self.target, self.control, self.noise, self.param))
 
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
@@ -97,7 +97,7 @@ def RX(
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("X", target, control, param=param, noise=noise)
+    return Parametric("X", target, control, noise, param)
 
 
 def RY(
@@ -117,7 +117,7 @@ def RY(
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("Y", target, control, param=param, noise=noise)
+    return Parametric("Y", target, control, noise, param)
 
 
 def RZ(
@@ -137,7 +137,7 @@ def RZ(
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("Z", target, control, param=param, noise=noise)
+    return Parametric("Z", target, control, noise, param)
 
 
 class _PHASE(Parametric):
@@ -175,4 +175,4 @@ def PHASE(
         Parametric: A Parametric gate object.
     """
 
-    return _PHASE("I", target, control, param=param, noise=noise)
+    return _PHASE("I", target, control, noise, param)

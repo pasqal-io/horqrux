@@ -185,9 +185,7 @@ def apply_gate(
 
     has_noise = len(reduce(add, noise)) > 0
     if has_noise and not isinstance(state, DensityMatrix):
-        print(state.shape)
         state = DensityMatrix(state).dm
-        print(state.shape)
 
     output_state = reduce(
         lambda state, gate: apply_operator_with_noise(state, *gate),
