@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from functools import partial, reduce
 from typing import Any
+from jax.custom_derivatives import SymbolicZero
 
 import jax
 import jax.numpy as jnp
 from jax import Array, random
+from jax import lax
 
 from horqrux.apply import apply_gate
 from horqrux.parametric import Parametric
@@ -28,7 +30,8 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
     return reduce(lambda x, y: jnp.kron(x, y), ops[1:], ops[0])
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 2, 4, 5))
+# @jax.custom_jvp
+@partial(jax.custom_jvp, nondiff_argnums=(4,))
 def finite_shots_fwd(
     state: Array,
     gates: GateSequence,
@@ -36,19 +39,22 @@ def finite_shots_fwd(
     values: dict[str, float],
     n_shots: int = 100,
     key: Any = jax.random.PRNGKey(0),
+    shift_up_gates=jnp.array([], dtype=int),
+    shift_down_gates=jnp.array([], dtype=int),
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    state = apply_gate(state, gates, values)
+    state = apply_gate(state=state, gate=gates, values=values, shift_up_gates=shift_up_gates,
+                       shift_down_gates=shift_down_gates)
     n_qubits = len(state.shape)
     mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
     inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
     probs = jnp.abs(inner_prod) ** 2
-    return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+    return jax.random.choice(key, eigvals, (n_shots,), True, probs).mean(axis=0)
 
 
 def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:
@@ -85,51 +91,75 @@ def validate_permutation_matrix(P: Array) -> Array:
     return ((ones == rows) & (ones == columns)).min()
 
 
-@finite_shots_fwd.defjvp
+def get_shifted_gate(gate, values, shift):
+    current_angle = gate.parse_values(values)
+    new_angle = current_angle + shift
+    return Parametric(gate.generator_name, gate.target[0], gate.control[0], new_angle)
+
+
+@partial(finite_shots_fwd.defjvp, symbolic_zeros=True)
 def finite_shots_jvp(
-    state: Array,
-    observable: Primitive,
-    n_shots: int,
-    key: Array,
-    primals: tuple[list[Primitive], dict[str, float]],
-    tangents: tuple[list[Primitive], dict[str, float]],
+        n_shots,
+        primals: tuple[list[Primitive], dict[str, float]],
+        tangents: tuple[list[Primitive], dict[str, float]]
 ) -> Array:
-    gates, values = primals
-    gates_tangent, values_tangent = tangents
 
-    # TODO: compute spectral gap through the generator which is associated with
-    # a param name.
-    spectral_gap = 2.0
-    shift = jnp.pi / 2
+    # state: Array,
+    # gates: GateSequence,
+    # observables: list[Primitive],
+    # values: dict[str, float],
+    # n_shots: int = 100,
+    # key: Any = jax.random.PRNGKey(0),
+    # shift_up_gates=jnp.array([], dtype=int),
+    # shift_down_gates=jnp.array([], dtype=int),
 
-    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
-
-    keys = random.split(key, len(gates))
-    jvp = jnp.zeros_like(fwd)
+    state, gates, observables, values,  key, shift_up_gates, shift_down_gates = primals
+    fwd = finite_shots_fwd(state, gates, observables, values, n_shots,
+                           key, shift_up_gates, shift_down_gates)
     zero = jnp.zeros_like(fwd)
+    jvp = jnp.zeros_like(fwd)
 
-    def jvp_component(index: int) -> Array:
-        gates, values = primals
-        gates_tangent, values_tangent = tangents
-        shift_gate = gates[index]
-        gate_tangent = gates_tangent[index]
-        if not isinstance(shift_gate, Parametric) or not isinstance(gate_tangent, Parametric):
-            return zero
-        if shift_gate.param_name is None:
-            tangent = gate_tangent.param_val
-        else:
-            tangent = values_tangent[shift_gate.param_name]
-        if not isinstance(tangent, jax.Array):
-            return zero
-        key = keys[index]
-        up_key, down_key = random.split(key)
-        original_shift = shift_gate.shift
-        shift_gate.set_shift(original_shift + shift)
-        f_up = finite_shots_fwd(state, gates, observable, values, n_shots, up_key)
-        shift_gate.set_shift(original_shift - shift)
-        f_down = finite_shots_fwd(state, gates, observable, values, n_shots, down_key)
-        shift_gate.set_shift(original_shift)
-        grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-        return grad * tangent
+    gate_tangents = [gate.param if isinstance(
+        gate, Parametric) else None for gate in tangents[1]]
+    gate_tangents = [tangents[3][param] if isinstance(
+        param, str) else param for param in gate_tangents]
+    gate_tangents = [tangent if not isinstance(
+        tangent, SymbolicZero) else None for tangent in gate_tangents]
+    gate_tangents = [tangent if isinstance(
+        tangent, jax.Array) else None for tangent in gate_tangents]
 
-    return fwd, sum(jvp_component(i) for i, _ in enumerate(gates))
+    def parametric_gradient_at_i(i, primals, n_shots):
+        state, gates, observables, values, key, shift_up_gates, shift_down_gates = primals
+        base_key = random.split(key, len(gates))[i]
+        up_key, down_key = random.split(base_key, 2)
+        new_shift_up_gates = jnp.append(shift_up_gates, i)
+        new_shift_down_gates = jnp.append(shift_down_gates, i)
+        f_up = finite_shots_fwd(state, gates, observables, values, n_shots,
+                                up_key, new_shift_up_gates, shift_down_gates)
+        f_down = finite_shots_fwd(state, gates, observables, values, n_shots,
+                                  down_key, shift_up_gates, new_shift_down_gates)
+        shift = jnp.pi/2
+        spectral_gap = 2.0
+        return spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+
+    # def loop_func(i, carry):
+    #    primals, zero, gate_tangents, jvp = carry
+    #    jvp_component = lax.cond(jnp.isnan(gate_tangents[i]),
+    #                             lambda *args: zero,
+    #                             lambda i, primals, tangent: tangent[i] *
+    #                             parametric_gradient_at_i(i, primals),
+    #                             i,
+    #                             primals,
+    #                             gate_tangents,
+    #                             )
+    #    return primals, zero, gate_tangents, jvp + jvp_component
+
+    for i, _ in enumerate(gates):
+        if gate_tangents[i] is None:
+            continue
+        jvp = jvp + gate_tangents[i] * parametric_gradient_at_i(i, primals, n_shots)
+
+    # init_carry = primals, zero, gate_tangents, jvp
+    # loop_out = lax.fori_loop(0, gate_tangents.shape[0], loop_func, init_carry)
+
+    return fwd, jvp

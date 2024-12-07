@@ -34,7 +34,7 @@ class Circuit:
 
     @property
     def param_names(self) -> list[str]:
-        return [str(op.param_name) for op in self.ansatz if isinstance(op, Parametric)]
+        return [str(op.param) for op in self.ansatz if isinstance(op, Parametric)]
 
     @property
     def n_vparams(self) -> int:
@@ -61,7 +61,7 @@ def hea(n_qubits: int, n_layers: int, rot_fns: list[Callable] = [RX, RY, RX]) ->
                 fn(str(uuid4()), qubit)
                 for fn, qubit in zip(rot_fns, [i for _ in range(len(rot_fns))])
             ]
-            param_names += [op.param_name for op in ops]
+            param_names += [op.param for op in ops]
             ops += [NOT((i + 1) % n_qubits, i % n_qubits) for i in range(n_qubits)]  # type: ignore[arg-type]
             gates += ops
 

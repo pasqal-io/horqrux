@@ -20,7 +20,6 @@ def test_shots() -> None:
     x = jnp.pi * 0.123
     y = jnp.pi * 0.456
 
-    @functools.partial(jax.jit, static_argnums=2)
     def expect(x, y, method):
         values = {"theta": x}
         ops = [RX("theta", 0), RX(0.2, 0), RX(y, 1), RX("theta", 1)]
@@ -33,11 +32,10 @@ def test_shots() -> None:
 
     assert jnp.allclose(exp_exact, exp_shots, atol=SHOTS_ATOL)
 
-    d_expect = jax.jit(
-        jax.grad(lambda x, y, z: expect(x, y, z).sum(), argnums=[0, 1]), static_argnums=2
-    )
+    d_expect = jax.grad(lambda x, y, z: expect(x, y, z).sum(), argnums=[0, 1])
 
     grad_backprop = jnp.stack(d_expect(x, y, "exact"))
-    grad_shots = jnp.stack(d_expect(x, y, "shots"))
+    with jax.check_tracer_leaks():
+        grad_shots = jnp.stack(d_expect(x, y, "shots"))
 
     assert jnp.allclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)

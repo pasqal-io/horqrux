@@ -66,7 +66,7 @@ def adjoint_expectation_single_observable_bwd(
         out_state = apply_gate(out_state, gate, values, OperationType.DAGGER)
         if isinstance(gate, Parametric):
             mu = apply_gate(out_state, gate, values, OperationType.JACOBIAN)
-            grads[gate.param_name] = tangent * 2 * inner(mu, projected_state).real
+            grads[gate.param] = tangent * 2 * inner(mu, projected_state).real
         projected_state = apply_gate(projected_state, gate, values, OperationType.DAGGER)
     return (None, None, None, grads)
 
