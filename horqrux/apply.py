@@ -12,7 +12,7 @@ from jax import Array
 from horqrux.primitive import Primitive
 
 from .noise import NoiseProtocol
-from .utils import DensityMatrix, OperationType, State, _controlled, _dagger, is_controlled
+from .utils import OperationType, State, _controlled, _dagger, density_mat, is_controlled
 
 
 def apply_operator(
@@ -148,12 +148,13 @@ def merge_operators(
 
 
 def apply_gate(
-    state: State | DensityMatrix,
+    state: State,
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
+    is_state_densitymat: bool = False,
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
     Arguments:
@@ -163,9 +164,10 @@ def apply_gate(
         op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
         group_gates: Group gates together which are acting on the same qubit.
         merge_ops: Attempt to merge operators acting on the same qubit.
+        is_state_densitymat: If True, state is provided as a density matrix.
 
     Returns:
-        State after applying 'gate'.
+        State or density matrix after applying 'gate'.
     """
     operator: Tuple[Array, ...]
     noise = list()
@@ -184,8 +186,8 @@ def apply_gate(
         noise = [g.noise for g in gate]
 
     has_noise = len(reduce(add, noise)) > 0
-    if has_noise and not isinstance(state, DensityMatrix):
-        state = DensityMatrix(state).dm
+    if has_noise and not is_state_densitymat:
+        state = density_mat(state)
 
     output_state = reduce(
         lambda state, gate: apply_operator_with_noise(state, *gate),

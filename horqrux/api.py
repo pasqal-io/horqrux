@@ -52,7 +52,11 @@ def sample(
 
 
 def __ad_expectation_single_observable(
-    state: Array, gates: GateSequence, observable: Primitive, values: dict[str, float]
+    state: Array,
+    gates: GateSequence,
+    observable: Primitive,
+    values: dict[str, float],
+    is_state_densitymat: bool = False,
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -60,11 +64,18 @@ def __ad_expectation_single_observable(
     """
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
     projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
-    return inner(out_state, projected_state).real
+    if not is_state_densitymat:
+        return inner(out_state, projected_state).real
+
+    raise NotImplementedError("Expectation from density matrices is not yet supported!")
 
 
 def ad_expectation(
-    state: Array, gates: GateSequence, observables: list[Primitive], values: dict[str, float]
+    state: Array,
+    gates: GateSequence,
+    observables: list[Primitive],
+    values: dict[str, float],
+    is_state_densitymat: bool = False,
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -85,6 +96,7 @@ def expectation(
     diff_mode: DiffMode = DiffMode.AD,
     forward_mode: ForwardMode = ForwardMode.EXACT,
     n_shots: Optional[int] = None,
+    is_state_densitymat: bool = False,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """
