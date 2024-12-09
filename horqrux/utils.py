@@ -18,7 +18,23 @@ State = ArrayLike
 QubitSupport = Tuple[Any, ...]
 ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
 TargetQubits = Tuple[Tuple[int, ...], ...]
+ErrorProbabilities = Union[Tuple[float, ...], float]
+
 ATOL = 1e-014
+
+
+def density_mat(state: Array) -> Array:
+    """Convert state to density matrix
+
+    Args:
+        state (State): Input state.
+
+    Returns:
+        State: Density matrix representation.
+    """
+    n_qubits = len(state.shape)
+    state = state.reshape(2**n_qubits)
+    return jnp.einsum("i,j->ij", state, state.conj()).reshape(tuple(2 for _ in range(2 * n_qubits)))
 
 
 class StrEnum(str, Enum):

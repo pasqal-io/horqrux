@@ -28,9 +28,13 @@ def sample(
     gates: GateSequence,
     values: dict[str, float] = dict(),
     n_shots: int = 1000,
+    is_state_densitymat: bool = False,
 ) -> Counter:
     if n_shots < 1:
         raise ValueError("You can only call sample with n_shots>0.")
+
+    if is_state_densitymat:
+        raise NotImplementedError("Sampling with density matrices is not yet supported!")
 
     wf = apply_gate(state, gates, values)
     probs = jnp.abs(jnp.float_power(wf, 2.0)).ravel()
@@ -52,7 +56,11 @@ def sample(
 
 
 def __ad_expectation_single_observable(
-    state: Array, gates: GateSequence, observable: Primitive, values: dict[str, float]
+    state: Array,
+    gates: GateSequence,
+    observable: Primitive,
+    values: dict[str, float],
+    is_state_densitymat: bool = False,
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -60,18 +68,25 @@ def __ad_expectation_single_observable(
     """
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
     projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
-    return inner(out_state, projected_state).real
+    if not is_state_densitymat:
+        return inner(out_state, projected_state).real
+
+    raise NotImplementedError("Expectation from density matrices is not yet supported!")
 
 
 def ad_expectation(
-    state: Array, gates: GateSequence, observables: list[Primitive], values: dict[str, float]
+    state: Array,
+    gates: GateSequence,
+    observables: list[Primitive],
+    values: dict[str, float],
+    is_state_densitymat: bool = False,
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
     outputs = [
-        __ad_expectation_single_observable(state, gates, observable, values)
+        __ad_expectation_single_observable(state, gates, observable, values, is_state_densitymat)
         for observable in observables
     ]
     return jnp.stack(outputs)
@@ -85,6 +100,7 @@ def expectation(
     diff_mode: DiffMode = DiffMode.AD,
     forward_mode: ForwardMode = ForwardMode.EXACT,
     n_shots: Optional[int] = None,
+    is_state_densitymat: bool = False,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """
@@ -105,4 +121,14 @@ def expectation(
         )
         # Type checking is disabled because mypy doesn't parse checkify.check.
         # type: ignore
-        return finite_shots_fwd(state, gates, observables, values, n_shots=n_shots, key=key)
+        if is_state_densitymat:
+            raise NotImplementedError("Expectation from density matrices is not yet supported!")
+        return finite_shots_fwd(
+            state,
+            gates,
+            observables,
+            values,
+            n_shots=n_shots,
+            is_state_densitymat=is_state_densitymat,
+            key=key,
+        )
