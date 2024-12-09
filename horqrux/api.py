@@ -28,9 +28,13 @@ def sample(
     gates: GateSequence,
     values: dict[str, float] = dict(),
     n_shots: int = 1000,
+    is_state_densitymat: bool = False,
 ) -> Counter:
     if n_shots < 1:
         raise ValueError("You can only call sample with n_shots>0.")
+
+    if is_state_densitymat:
+        raise NotImplementedError("Sampling with density matrices is not yet supported!")
 
     wf = apply_gate(state, gates, values)
     probs = jnp.abs(jnp.float_power(wf, 2.0)).ravel()
@@ -119,4 +123,12 @@ def expectation(
         # type: ignore
         if is_state_densitymat:
             raise NotImplementedError("Expectation from density matrices is not yet supported!")
-        return finite_shots_fwd(state, gates, observables, values, n_shots=n_shots, key=key)
+        return finite_shots_fwd(
+            state,
+            gates,
+            observables,
+            values,
+            n_shots=n_shots,
+            is_state_densitymat=is_state_densitymat,
+            key=key,
+        )

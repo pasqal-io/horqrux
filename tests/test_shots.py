@@ -20,11 +20,13 @@ def test_shots() -> None:
 
     def exact(x):
         values = {"theta": x}
-        return expectation(state, ops, observables, values, "ad")
+        return expectation(state, ops, observables, values, diff_mode="ad")
 
     def shots(x):
         values = {"theta": x}
-        return expectation(state, ops, observables, values, "gpsr", "shots", n_shots=N_SHOTS)
+        return expectation(
+            state, ops, observables, values, diff_mode="gpsr", forward_mode="shots", n_shots=N_SHOTS
+        )
 
     exp_exact = exact(x)
     exp_shots = shots(x)
