@@ -82,7 +82,7 @@ def ad_expectation(
     and compute the expectation given an observable.
     """
     outputs = [
-        __ad_expectation_single_observable(state, gates, observable, values)
+        __ad_expectation_single_observable(state, gates, observable, values, is_state_densitymat)
         for observable in observables
     ]
     return jnp.stack(outputs)
@@ -117,4 +117,6 @@ def expectation(
         )
         # Type checking is disabled because mypy doesn't parse checkify.check.
         # type: ignore
+        if is_state_densitymat:
+            raise NotImplementedError("Expectation from density matrices is not yet supported!")
         return finite_shots_fwd(state, gates, observables, values, n_shots=n_shots, key=key)
