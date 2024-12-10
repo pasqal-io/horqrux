@@ -48,20 +48,19 @@ def apply_operator(
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
     n_qubits_op = int(np.log2(operator.shape[1]))
-    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
-    op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
-    op_in_dims = tuple(np.arange(0, operator.ndim // 2, dtype=int))
+    operator_reshaped = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
+    op_out_dims = tuple(np.arange(operator_reshaped.ndim // 2, operator_reshaped.ndim, dtype=int))
+    op_in_dims = tuple(np.arange(0, operator_reshaped.ndim // 2, dtype=int))
     # Apply operator
-    state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, state_dims))
+    state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, state_dims))
     new_state_dims = tuple(i for i in range(len(state_dims)))
     if not is_state_densitymat:
         return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
     # Apply operator to density matrix: ρ' = O ρ O†
     state = _dagger(state)
-    state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, op_in_dims))
-    state = jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
+    state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, op_in_dims))
     state = _dagger(state)
-
+    state = jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
     return state
 
 

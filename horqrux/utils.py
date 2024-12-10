@@ -32,9 +32,10 @@ def density_mat(state: Array) -> Array:
     Returns:
         State: Density matrix representation.
     """
-    n_qubits = len(state.shape)
-    state = state.reshape(2**n_qubits)
-    return jnp.einsum("i,j->ij", state, state.conj()).reshape(tuple(2 for _ in range(2 * n_qubits)))
+    # Expand dimensions to enable broadcasting
+    ket = jnp.expand_dims(state, axis=tuple(range(state.ndim, 2 * state.ndim)))
+    bra = jnp.conj(jnp.expand_dims(state, axis=tuple(range(state.ndim))))
+    return ket * bra
 
 
 class StrEnum(str, Enum):
