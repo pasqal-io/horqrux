@@ -33,27 +33,37 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
     return reduce(lambda x, y: jnp.kron(x, y), ops[1:], ops[0])
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
+@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5, 6))
 def finite_shots_fwd(
     state: Array,
     gates: GateSequence,
     observables: list[Primitive],
     values: dict[str, float],
     n_shots: int = 100,
+    is_state_densitymat: bool = False,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    state = apply_gate(state, gates, values)
+    state = apply_gate(state, gates, values, is_state_densitymat=is_state_densitymat)
     n_qubits = len(state.shape)
-    mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
-    eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
-    eigvecs, eigvals = align_eigenvectors(eigs)
-    inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
-    probs = jnp.abs(inner_prod) ** 2
-    return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+    if not is_state_densitymat:
+        mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
+        eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
+        eigvecs, eigvals = align_eigenvectors(eigs)
+        inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
+        probs = jnp.abs(inner_prod) ** 2
+        return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+    else:
+        n_qubits = n_qubits // 2
+        mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
+        mat_obs = jnp.stack(mat_obs)
+        dim = 2**n_qubits
+        rho = state.reshape((dim, dim))
+        prod = jnp.matmul(mat_obs, rho)
+        return jnp.trace(prod, axis1=-2, axis2=-1).real
 
 
 def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:
@@ -100,6 +110,7 @@ def finite_shots_jvp(
     gates: GateSequence,
     observable: Primitive,
     n_shots: int,
+    is_state_densitymat: bool,
     key: Array,
     primals: tuple[dict[str, float]],
     tangents: tuple[dict[str, float]],
@@ -116,14 +127,18 @@ def finite_shots_jvp(
         up_key, down_key = random.split(key)
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
-        f_up = finite_shots_fwd(state, gates, observable, up_val, n_shots, up_key)
+        f_up = finite_shots_fwd(
+            state, gates, observable, up_val, n_shots, is_state_densitymat, up_key
+        )
         down_val = values.copy()
         down_val[param_name] = down_val[param_name] - shift
-        f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, down_key)
+        f_down = finite_shots_fwd(
+            state, gates, observable, down_val, n_shots, is_state_densitymat, down_key
+        )
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
         return grad * tangent_dict[param_name]
 
     params_with_keys = zip(values.keys(), random.split(key, len(values)))
-    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
+    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, is_state_densitymat, key)
     jvp = sum(jvp_component(param, key) for param, key in params_with_keys)
     return fwd, jvp.reshape(fwd.shape)

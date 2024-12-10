@@ -18,7 +18,49 @@ State = ArrayLike
 QubitSupport = Tuple[Any, ...]
 ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
 TargetQubits = Tuple[Tuple[int, ...], ...]
+ErrorProbabilities = Union[Tuple[float, ...], float]
+
 ATOL = 1e-014
+
+
+def density_mat(state: Array) -> Array:
+    """Convert state to density matrix
+
+    Args:
+        state (State): Input state.
+
+    Returns:
+        State: Density matrix representation.
+    """
+    # Expand dimensions to enable broadcasting
+    ket = jnp.expand_dims(state, axis=tuple(range(state.ndim, 2 * state.ndim)))
+    bra = jnp.conj(jnp.expand_dims(state, axis=tuple(range(state.ndim))))
+    return ket * bra
+
+
+def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> Array:
+    """Takes an operator tensor and permutes the rows and
+    columns according to the order of the qubit support.
+
+    Args:
+        operator (Tensor): Operator to permute over.
+        qubit_support (tuple): Qubit support.
+        inv (bool): Applies the inverse permutation instead.
+
+    Returns:
+        Tensor: Permuted operator.
+    """
+    ordered_support = np.argsort(qubit_support)
+    ranked_support = np.argsort(ordered_support)
+    n_qubits = len(qubit_support)
+    if all(a == b for a, b in zip(ranked_support, tuple(range(n_qubits)))):
+        return operator
+
+    perm = tuple(ranked_support) + tuple(ranked_support + n_qubits)
+    if inv:
+        perm = np.argsort(perm)
+    return jax.lax.transpose(operator, perm)
+    # return jnp.moveaxis(operator, source=tuple(range(operator.ndim)), destination=perm)
 
 
 class StrEnum(str, Enum):
@@ -57,7 +99,18 @@ class ForwardMode(StrEnum):
 
 
 def _dagger(operator: Array) -> Array:
-    return jnp.conjugate(operator.T)
+    # If the operator is a tensor with repeated 2D axes
+    if operator.ndim > 2:
+        # Conjugate and swap the last two axes
+        conjugated = operator.conj()
+
+        # Create the transpose axes: swap pairs of indices
+        half = operator.ndim // 2
+        axes = tuple(range(half, operator.ndim)) + tuple(range(half))
+        return jnp.transpose(conjugated, axes)
+    else:
+        # For standard matrices, use conjugate transpose
+        return jnp.conjugate(operator.T)
 
 
 def _unitary(generator: Array, theta: float) -> Array:
