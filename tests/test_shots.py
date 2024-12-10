@@ -22,6 +22,10 @@ def test_shots() -> None:
     def exact(x):
         values = {"theta": x}
         return expectation(state, ops, observables, values, diff_mode="ad")
+    
+    def exact_dm(x):
+        values = {"theta": x}
+        return expectation(density_mat(state), ops, observables, values, diff_mode="ad", is_state_densitymat=True)
 
     def shots(x):
         values = {"theta": x}
@@ -43,6 +47,9 @@ def test_shots() -> None:
         )
 
     exp_exact = exact(x)
+    exp_exact_dm = exact_dm(x)
+    assert jnp.allclose(exp_exact, exp_exact_dm)
+
     exp_shots = shots(x)
     exp_shots_dm = shots_dm(x)
 
