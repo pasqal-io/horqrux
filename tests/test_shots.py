@@ -22,10 +22,12 @@ def test_shots() -> None:
     def exact(x):
         values = {"theta": x}
         return expectation(state, ops, observables, values, diff_mode="ad")
-    
+
     def exact_dm(x):
         values = {"theta": x}
-        return expectation(density_mat(state), ops, observables, values, diff_mode="ad", is_state_densitymat=True)
+        return expectation(
+            density_mat(state), ops, observables, values, diff_mode="ad", is_state_densitymat=True
+        )
 
     def shots(x):
         values = {"theta": x}

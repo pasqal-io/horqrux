@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from jax import Array
 
-from horqrux.apply import apply_gate, apply_operator
+from horqrux.apply import apply_gate, apply_operator, apply_operator_dm
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
 from horqrux.utils import density_mat, equivalent_state, product_state, random_state
@@ -29,12 +29,11 @@ def test_primitive(gate_fn: Callable) -> None:
     )
 
     # test density matrix is similar to pure state
-    dm = apply_operator(
+    dm = apply_operator_dm(
         density_mat(orig_state),
         gate.unitary(),
         gate.target[0],
         gate.control[0],
-        is_state_densitymat=True,
     )
     assert jnp.allclose(dm, density_mat(state))
 
@@ -53,12 +52,11 @@ def test_controlled_primitive(gate_fn: Callable) -> None:
     )
 
     # test density matrix is similar to pure state
-    dm = apply_operator(
+    dm = apply_operator_dm(
         density_mat(orig_state),
         gate.unitary(),
         gate.target[0],
         gate.control[0],
-        is_state_densitymat=True,
     )
     assert jnp.allclose(dm, density_mat(state))
 
@@ -75,12 +73,11 @@ def test_parametric(gate_fn: Callable) -> None:
     )
 
     # test density matrix is similar to pure state
-    dm = apply_operator(
+    dm = apply_operator_dm(
         density_mat(orig_state),
         gate.unitary(values),
         gate.target[0],
         gate.control[0],
-        is_state_densitymat=True,
     )
     assert jnp.allclose(dm, density_mat(state))
 
@@ -100,12 +97,11 @@ def test_controlled_parametric(gate_fn: Callable) -> None:
     )
 
     # test density matrix is similar to pure state
-    dm = apply_operator(
+    dm = apply_operator_dm(
         density_mat(orig_state),
         gate.unitary(values),
         gate.target[0],
         gate.control[0],
-        is_state_densitymat=True,
     )
     assert jnp.allclose(dm, density_mat(state))
 
