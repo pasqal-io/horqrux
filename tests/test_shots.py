@@ -6,6 +6,7 @@ import jax.numpy as jnp
 from horqrux import expectation, random_state
 from horqrux.parametric import RX
 from horqrux.primitive import Z
+from horqrux.utils import density_mat
 
 N_QUBITS = 2
 SHOTS_ATOL = 0.01
@@ -28,10 +29,25 @@ def test_shots() -> None:
             state, ops, observables, values, diff_mode="gpsr", forward_mode="shots", n_shots=N_SHOTS
         )
 
+    def shots_dm(x):
+        values = {"theta": x}
+        return expectation(
+            density_mat(state),
+            ops,
+            observables,
+            values,
+            diff_mode="gpsr",
+            is_state_densitymat=True,
+            forward_mode="shots",
+            n_shots=N_SHOTS,
+        )
+
     exp_exact = exact(x)
     exp_shots = shots(x)
+    exp_shots_dm = shots_dm(x)
 
     assert jnp.allclose(exp_exact, exp_shots, atol=SHOTS_ATOL)
+    assert jnp.allclose(exp_exact, exp_shots_dm, atol=SHOTS_ATOL)
 
     d_exact = jax.grad(lambda x: exact(x).sum())
     d_shots = jax.grad(lambda x: shots(x).sum())
