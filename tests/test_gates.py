@@ -64,6 +64,16 @@ def test_parametric(gate_fn: Callable) -> None:
         apply_operator(state, gate.dagger(values), gate.target[0], gate.control[0]), orig_state
     )
 
+    # test density matrix is similar to pure state
+    dm = apply_operator(
+        density_mat(orig_state),
+        gate.unitary(values),
+        gate.target[0],
+        gate.control[0],
+        is_state_densitymat=True,
+    )
+    assert jnp.allclose(dm, density_mat(state))
+
 
 @pytest.mark.parametrize("gate_fn", PARAMETRIC_GATES)
 def test_controlled_parametric(gate_fn: Callable) -> None:
