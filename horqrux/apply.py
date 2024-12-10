@@ -61,15 +61,16 @@ def apply_operator(
     op_in_dims = tuple(np.arange(0, operator_reshaped.ndim // 2, dtype=int))
     # Apply operator
     state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, state_dims))
-    new_state_dims = tuple(i for i in range(len(state_dims)))
+   
     if not is_state_densitymat:
         # only return O ρ with correctly swaped axis for tensordot
+        new_state_dims = tuple(i for i in range(len(state_dims)))
         return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
     # Apply operator to density matrix: ρ' = O ρ O†
     state = _dagger(state)
     state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, op_in_dims))
     state = _dagger(state)
-    support_perm = target + tuple(set(new_state_dims) - set(target))
+    support_perm = target + tuple(set(tuple(range(state.ndim // 2))) - set(target))
     state = permute_basis(state, support_perm, True)
     return state
 
