@@ -73,7 +73,18 @@ class ForwardMode(StrEnum):
 
 
 def _dagger(operator: Array) -> Array:
-    return jnp.conjugate(operator.T)
+    # If the operator is a tensor with repeated 2D axes
+    if operator.ndim > 2:
+        # Conjugate and swap the last two axes
+        conjugated = operator.conj()
+
+        # Create the transpose axes: swap pairs of indices
+        half = operator.ndim // 2
+        axes = tuple(range(half, operator.ndim)) + tuple(range(half))
+        return jnp.transpose(conjugated, axes)
+    else:
+        # For standard matrices, use conjugate transpose
+        return jnp.conjugate(operator.T)
 
 
 def _unitary(generator: Array, theta: float) -> Array:
