@@ -12,7 +12,15 @@ from jax import Array
 from horqrux.primitive import Primitive
 
 from .noise import NoiseProtocol
-from .utils import OperationType, State, _controlled, _dagger, density_mat, is_controlled
+from .utils import (
+    OperationType,
+    State,
+    _controlled,
+    _dagger,
+    density_mat,
+    is_controlled,
+    permute_basis,
+)
 
 
 def apply_operator(
@@ -55,12 +63,14 @@ def apply_operator(
     state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, state_dims))
     new_state_dims = tuple(i for i in range(len(state_dims)))
     if not is_state_densitymat:
+        # only return O ρ with correctly swaped axis for tensordot
         return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
     # Apply operator to density matrix: ρ' = O ρ O†
     state = _dagger(state)
     state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, op_in_dims))
     state = _dagger(state)
-    state = jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
+    support_perm = target + tuple(set(new_state_dims) - set(target))
+    state = permute_basis(state, support_perm, True)
     return state
 
 

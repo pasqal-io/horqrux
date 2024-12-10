@@ -38,6 +38,30 @@ def density_mat(state: Array) -> Array:
     return ket * bra
 
 
+def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> Array:
+    """Takes an operator tensor and permutes the rows and
+    columns according to the order of the qubit support.
+
+    Args:
+        operator (Tensor): Operator to permute over.
+        qubit_support (tuple): Qubit support.
+        inv (bool): Applies the inverse permutation instead.
+
+    Returns:
+        Tensor: Permuted operator.
+    """
+    ordered_support = np.argsort(qubit_support)
+    ranked_support = np.argsort(ordered_support)
+    n_qubits = len(qubit_support)
+    if all(a == b for a, b in zip(ranked_support, list(range(n_qubits)))):
+        return operator
+
+    perm = tuple(ranked_support) + tuple(ranked_support + n_qubits)
+    if inv:
+        perm = np.argsort(perm)
+    return jnp.transpose(operator, perm)
+
+
 class StrEnum(str, Enum):
     def __str__(self) -> str:
         """Used when dumping enum fields in a schema."""
