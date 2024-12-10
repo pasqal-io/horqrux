@@ -19,8 +19,9 @@ def run(
     circuit: GateSequence,
     state: Array,
     values: dict[str, float] = dict(),
+    is_state_densitymat: bool = False,
 ) -> Array:
-    return apply_gate(state, circuit, values)
+    return apply_gate(state, circuit, values, is_state_densitymat=is_state_densitymat)
 
 
 def sample(
@@ -121,8 +122,8 @@ def expectation(
         )
         # Type checking is disabled because mypy doesn't parse checkify.check.
         # type: ignore
-        if is_state_densitymat:
-            raise NotImplementedError("Expectation from density matrices is not yet supported!")
+        # if is_state_densitymat:
+        #     raise NotImplementedError("Expectation with density matrices is not yet supported!")
         return finite_shots_fwd(
             state,
             gates,

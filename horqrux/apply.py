@@ -20,6 +20,7 @@ def apply_operator(
     operator: Array,
     target: Tuple[int, ...],
     control: Tuple[int | None, ...],
+    is_state_densitymat: bool = False,
 ) -> State:
     """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given state
        of shape [2 for _ in range(n_qubits)] for a given set of target and control qubits.
@@ -37,6 +38,7 @@ def apply_operator(
         operator: Array to contract over 'state'.
         target: Tuple of target qubits on which to apply the 'operator' to.
         control: Tuple of control qubits.
+        is_state_densitymat: Whether the state is provided as a density matrix.
 
     Returns:
         State after applying 'operator'.
@@ -45,12 +47,21 @@ def apply_operator(
     if is_controlled(control):
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
-    n_qubits = int(np.log2(operator.shape[1]))
-    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits)))
-    op_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
-    state = jnp.tensordot(a=operator, b=state, axes=(op_dims, state_dims))
+    n_qubits_op = int(np.log2(operator.shape[1]))
+    operator_reshaped = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
+    op_dims = tuple(np.arange(operator_reshaped.ndim // 2, operator_reshaped.ndim, dtype=int))
+    # Apply operator
+
     new_state_dims = tuple(i for i in range(len(state_dims)))
-    return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
+    state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_dims, state_dims))
+    if not is_state_densitymat:
+        return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
+    operator_dagger = _dagger(operator_reshaped)
+
+    # Apply operator to density matrix: ρ' = O ρ O†
+
+    state = jnp.tensordot(a=operator_dagger, b=state, axes=(op_dims, state_dims))
+    return state
 
 
 def apply_kraus_operator(
@@ -81,8 +92,9 @@ def apply_operator_with_noise(
     target: Tuple[int, ...],
     control: Tuple[int | None, ...],
     noise: NoiseProtocol,
+    is_state_densitymat: bool = False,
 ) -> State:
-    state_gate = apply_operator(state, operator, target, control)
+    state_gate = apply_operator(state, operator, target, control, is_state_densitymat)
     if len(noise) == 0:
         return state_gate
     else:
@@ -188,10 +200,11 @@ def apply_gate(
     has_noise = len(reduce(add, noise)) > 0
     if has_noise and not is_state_densitymat:
         state = density_mat(state)
+        is_state_densitymat = True
 
     output_state = reduce(
         lambda state, gate: apply_operator_with_noise(state, *gate),
-        zip(operator, target, control, noise),
+        zip(operator, target, control, noise, (is_state_densitymat,) * len(target)),
         state,
     )
 

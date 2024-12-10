@@ -49,12 +49,21 @@ def finite_shots_fwd(
     """
     state = apply_gate(state, gates, values, is_state_densitymat=is_state_densitymat)
     n_qubits = len(state.shape)
-    mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
-    eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
-    eigvecs, eigvals = align_eigenvectors(eigs)
-    inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
-    probs = jnp.abs(inner_prod) ** 2
-    return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+    if not is_state_densitymat:
+        mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
+        eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
+        eigvecs, eigvals = align_eigenvectors(eigs)
+        inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
+        probs = jnp.abs(inner_prod) ** 2
+        return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+    else:
+        n_qubits = n_qubits // 2
+        mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
+        mat_obs = jnp.stack(mat_obs)
+        dim = 2**n_qubits
+        rho = state.reshape((dim, dim))
+        prod = jnp.matmul(mat_obs, rho)
+        return jnp.trace(prod, axis1=-2, axis2=-1).real
 
 
 def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:
