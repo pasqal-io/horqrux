@@ -59,7 +59,8 @@ def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> A
     perm = tuple(ranked_support) + tuple(ranked_support + n_qubits)
     if inv:
         perm = np.argsort(perm)
-    return jnp.moveaxis(operator, source=tuple(range(operator.ndim)), destination=perm)
+    return jax.lax.transpose(operator, perm)
+    # return jnp.moveaxis(operator, source=tuple(range(operator.ndim)), destination=perm)
 
 
 class StrEnum(str, Enum):

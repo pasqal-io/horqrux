@@ -67,9 +67,7 @@ def apply_operator(
         return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
     # Apply operator to density matrix: ρ' = O ρ O†
-
     support_perm = target + tuple(set(tuple(range(state.ndim // 2))) - set(target))
-    # print("init 1", state.reshape((4, 4)).round(4))
     state = permute_basis(state, support_perm, False)
     state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, new_state_dims))
 
