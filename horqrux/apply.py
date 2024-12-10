@@ -61,17 +61,28 @@ def apply_operator(
     op_in_dims = tuple(np.arange(0, operator_reshaped.ndim // 2, dtype=int))
     # Apply operator
     state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, state_dims))
-   
+
     if not is_state_densitymat:
         # only return O ρ with correctly swaped axis for tensordot
+        state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, state_dims))
         new_state_dims = tuple(i for i in range(len(state_dims)))
         return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
-    # Apply operator to density matrix: ρ' = O ρ O†
-    state = _dagger(state)
-    state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, op_in_dims))
-    state = _dagger(state)
     support_perm = target + tuple(set(tuple(range(state.ndim // 2))) - set(target))
+    print("init 1", state.reshape((4, 4)).round(4))
+    state = permute_basis(state, support_perm, False)
+    print("permute 1", state.reshape((4, 4)).round(4))
+    state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, state_dims))
+    # Apply operator to density matrix: ρ' = O ρ O†
+    print("einsum 1", state.reshape((4, 4)).round(4))
+    state = _dagger(state)
+    print("dag 1", state.reshape((4, 4)).round(4))
+    state = jnp.tensordot(a=operator_reshaped, b=state, axes=(op_out_dims, op_in_dims))
+    print("einsum 2", state.reshape((4, 4)).round(4))
+    state = _dagger(state)
+    print("dag 2", state.reshape((4, 4)).round(4))
+
     state = permute_basis(state, support_perm, True)
+    print("permute", state.reshape((4, 4)).round(4))
     return state
 
 

@@ -10,7 +10,7 @@ from jax import Array
 from horqrux.apply import apply_gate, apply_operator
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
-from horqrux.utils import equivalent_state, product_state, random_state
+from horqrux.utils import density_mat, equivalent_state, product_state, random_state
 
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
@@ -22,10 +22,21 @@ def test_primitive(gate_fn: Callable) -> None:
     target = np.random.randint(0, MAX_QUBITS)
     gate = gate_fn(target)
     orig_state = random_state(MAX_QUBITS)
+    assert len(orig_state) == 2
     state = apply_gate(orig_state, gate)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
     )
+
+    # test density matrix is similar to pure state
+    dm = apply_operator(
+        density_mat(orig_state),
+        gate.unitary(),
+        gate.target[0],
+        gate.control[0],
+        is_state_densitymat=True,
+    )
+    assert jnp.allclose(dm, density_mat(state))
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
