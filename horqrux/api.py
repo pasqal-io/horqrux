@@ -34,13 +34,16 @@ def sample(
     if n_shots < 1:
         raise ValueError("You can only call sample with n_shots>0.")
 
+    output_circuit = apply_gate(state, gates, values, is_state_densitymat=is_state_densitymat)
     if is_state_densitymat:
-        raise NotImplementedError("Sampling with density matrices is not yet supported!")
-
-    wf = apply_gate(state, gates, values)
-    probs = jnp.abs(jnp.float_power(wf, 2.0)).ravel()
+        n_qubits = len(state.shape) // 2
+        d = 2**n_qubits
+        probs = jnp.diagonal(output_circuit.reshape((d, d))).real
+    else:
+        n_qubits = len(state.shape)
+        probs = jnp.abs(jnp.float_power(output_circuit, 2.0)).ravel()
     key = jax.random.PRNGKey(0)
-    n_qubits = len(state.shape)
+
     # JAX handles pseudo random number generation by tracking an explicit state via a random key
     # For more details, see https://jax.readthedocs.io/en/latest/random-numbers.html
     samples = jax.vmap(
