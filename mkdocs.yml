@@ -6,6 +6,8 @@ nav:
   - horqrux in a nutshell: index.md
   - Contribute: CONTRIBUTING.md
   - Code of Conduct: CODE_OF_CONDUCT.md
+  - Advanced Features:
+    - Noisy simulation: noise.md
 
 theme:
   name: material
