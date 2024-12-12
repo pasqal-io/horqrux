@@ -11,7 +11,7 @@ from jax.experimental import checkify
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate
 from horqrux.primitive import GateSequence, Primitive
-from horqrux.shots import finite_shots_fwd
+from horqrux.shots import finite_shots_fwd, observable_to_matrix
 from horqrux.utils import DiffMode, ForwardMode, OperationType, inner
 
 
@@ -70,12 +70,26 @@ def __ad_expectation_single_observable(
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    out_state = apply_gate(state, gates, values, OperationType.UNITARY)
-    projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
-    if not is_state_densitymat:
-        return inner(out_state, projected_state).real
+    out_state = apply_gate(
+        state, gates, values, OperationType.UNITARY, is_state_densitymat=is_state_densitymat
+    )
+    # in case we have noisy simulations
+    out_state_densitymat = is_state_densitymat or (out_state.shape != state.shape)
 
-    raise NotImplementedError("Expectation from density matrices is not yet supported!")
+    if not out_state_densitymat:
+        projected_state = apply_gate(
+            out_state,
+            observable,
+            values,
+            OperationType.UNITARY,
+            is_state_densitymat=out_state_densitymat,
+        )
+        return inner(out_state, projected_state).real
+    n_qubits = len(out_state.shape) // 2
+    mat_obs = observable_to_matrix(observable, n_qubits)
+    d = 2**n_qubits
+    prod = jnp.matmul(mat_obs, out_state.reshape((d, d)))
+    return jnp.trace(prod, axis1=-2, axis2=-1).real
 
 
 def ad_expectation(
@@ -125,8 +139,6 @@ def expectation(
         )
         # Type checking is disabled because mypy doesn't parse checkify.check.
         # type: ignore
-        # if is_state_densitymat:
-        #     raise NotImplementedError("Expectation with density matrices is not yet supported!")
         return finite_shots_fwd(
             state,
             gates,

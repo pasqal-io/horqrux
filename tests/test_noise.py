@@ -6,7 +6,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from horqrux.api import run, sample
+from horqrux.api import expectation, run, sample
 from horqrux.apply import apply_gate
 from horqrux.noise import NoiseInstance, NoiseType
 from horqrux.parametric import PHASE, RX, RY, RZ
@@ -96,6 +96,7 @@ def simple_depolarizing_test() -> None:
     state = product_state("00")
     state_output = run(ops, state)
 
+    # test run
     assert jnp.allclose(
         state_output,
         jnp.array(
@@ -113,6 +114,12 @@ def simple_depolarizing_test() -> None:
         ),
     )
 
-    sampling_output = sample(density_mat(state), ops, is_state_densitymat=True)
+    # test sampling
+    dm_state = density_mat(state)
+    sampling_output = sample(dm_state, ops, is_state_densitymat=True)
     assert "11" in sampling_output.keys()
     assert "01" in sampling_output.keys()
+
+    # test expectation
+    exp_dm = expectation(dm_state, ops, [Z(0)], {})
+    assert jnp.allclose(exp_dm, jnp.array([-0.86666667], dtype=jnp.float64))
