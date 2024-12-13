@@ -110,10 +110,11 @@ from operator import add
 from typing import Any, Callable
 from uuid import uuid4
 
-from horqrux.circuit import QuantumCircuit, hea, expectation
+from horqrux import expectation
+from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
+from horqrux.circuit import QuantumCircuit, hea
 from horqrux.primitive import Primitive
 from horqrux.parametric import Parametric
-from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
 from horqrux.utils import DiffMode
 
 
