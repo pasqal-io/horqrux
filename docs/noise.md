@@ -79,7 +79,7 @@ AmpD = NoiseInstance(NoiseType.AMPLITUDE_DAMPING, error_probability=noise_prob)
 
 ```
 
-Then a gate can be instantiated by providing a tuple of `NoiseInstance` instances. Let’s show this through the simulation of a realistic $X$ gate. 
+Then a gate can be instantiated by providing a tuple of `NoiseInstance` instances. Let’s show this through the simulation of a realistic $X$ gate.
 
 We know that an $X$ gate flips the state of the qubit, for instance $X|0\rangle = |1\rangle$. In practice, it's common for the target qubit to stay in its original state after applying $X$ due to the interactions between it and its environment. The possibility of failure can be represented by a `BitFlip` `NoiseInstance`, which flips the state again after the application of the $X$ gate, returning it to its original state with a probability `1 - gate_fidelity`.
 
