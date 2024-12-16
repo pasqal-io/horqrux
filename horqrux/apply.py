@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import partial, reduce
 from operator import add
-from typing import Iterable, Tuple
+from typing import Iterable
 
 import jax
 import jax.numpy as jnp
@@ -26,8 +26,8 @@ from .utils import (
 def apply_operator(
     state: State,
     operator: Array,
-    target: Tuple[int, ...],
-    control: Tuple[int | None, ...],
+    target: tuple[int, ...],
+    control: tuple[int | None, ...],
 ) -> State:
     """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given state
        of shape [2 for _ in range(n_qubits)] for a given set of target and control qubits.
@@ -43,14 +43,14 @@ def apply_operator(
     Arguments:
         state: State to operate on.
         operator: Array to contract over 'state'.
-        target: Tuple of target qubits on which to apply the 'operator' to.
-        control: Tuple of control qubits.
+        target: tuple of target qubits on which to apply the 'operator' to.
+        control: tuple of control qubits.
         is_density: Whether the state is provided as a density matrix.
 
     Returns:
         State after applying 'operator'.
     """
-    state_dims: Tuple[int, ...] = target
+    state_dims: tuple[int, ...] = target
     if is_controlled(control):
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
@@ -66,8 +66,8 @@ def apply_operator(
 def apply_operator_dm(
     state: State,
     operator: Array,
-    target: Tuple[int, ...],
-    control: Tuple[int | None, ...],
+    target: tuple[int, ...],
+    control: tuple[int | None, ...],
 ) -> State:
     """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given density matrix
        of shape [2 for _ in range(2 * n_qubits)] for a given set of target and control qubits.
@@ -76,14 +76,14 @@ def apply_operator_dm(
     Arguments:
         state: Density matrix to operate on.
         operator: Array to contract over 'state'.
-        target: Tuple of target qubits on which to apply the 'operator' to.
-        control: Tuple of control qubits.
+        target: tuple of target qubits on which to apply the 'operator' to.
+        control: tuple of control qubits.
         is_density: Whether the state is provided as a density matrix.
 
     Returns:
         Density matrix after applying 'operator'.
     """
-    state_dims: Tuple[int, ...] = target
+    state_dims: tuple[int, ...] = target
     if is_controlled(control):
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
@@ -109,9 +109,9 @@ def apply_operator_dm(
 def apply_kraus_operator(
     kraus: Array,
     state: State,
-    target: Tuple[int, ...],
+    target: tuple[int, ...],
 ) -> State:
-    state_dims: Tuple[int, ...] = target
+    state_dims: tuple[int, ...] = target
     n_qubits = int(np.log2(kraus.size))
     kraus = kraus.reshape(tuple(2 for _ in np.arange(n_qubits)))
     op_dims = tuple(np.arange(kraus.ndim // 2, kraus.ndim, dtype=int))
@@ -131,8 +131,8 @@ def apply_kraus_operator(
 def apply_operator_with_noise(
     state: State,
     operator: Array,
-    target: Tuple[int, ...],
-    control: Tuple[int | None, ...],
+    target: tuple[int, ...],
+    control: tuple[int | None, ...],
     noise: NoiseProtocol,
     is_density: bool = False,
 ) -> State:
@@ -227,7 +227,7 @@ def apply_gate(
     Returns:
         State or density matrix after applying 'gate'.
     """
-    operator: Tuple[Array, ...]
+    operator: tuple[Array, ...]
     noise = list()
     if isinstance(gate, Primitive):
         operator_fn = getattr(gate, op_type)

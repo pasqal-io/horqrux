@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Tuple
+from typing import Any, Iterable
 
 import jax.numpy as jnp
 from jax import Array
@@ -47,7 +47,7 @@ class Parametric(Primitive):
 
     def tree_flatten(  # type: ignore[override]
         self,
-    ) -> Tuple[Tuple, Tuple[str, Tuple, Tuple, NoiseProtocol, str | float]]:
+    ) -> tuple[tuple, tuple[str, tuple, tuple, NoiseProtocol, str | float]]:
         children = ()
         aux_data = (
             self.generator_name,
@@ -90,7 +90,7 @@ def RX(
 
     Arguments:
         param: Parameter denoting the Rotational angle.
-        target: Tuple of target qubits denoted as ints.
+        target: tuple of target qubits denoted as ints.
         control: Optional tuple of control qubits denoted as ints.
         noise: The noise instance. Defaults to None.
 
@@ -110,7 +110,7 @@ def RY(
 
     Arguments:
         param: Parameter denoting the Rotational angle.
-        target: Tuple of target qubits denoted as ints.
+        target: tuple of target qubits denoted as ints.
         control: Optional tuple of control qubits denoted as ints.
         noise: The noise instance. Defaults to None.
 
@@ -130,7 +130,7 @@ def RZ(
 
     Arguments:
         param: Parameter denoting the Rotational angle.
-        target: Tuple of target qubits denoted as ints.
+        target: tuple of target qubits denoted as ints.
         control: Optional tuple of control qubits denoted as ints.
         noise: The noise instance. Defaults to None.
 
@@ -167,7 +167,7 @@ def PHASE(
 
     Arguments:
         param: Parameter denoting the Rotational angle.
-        target: Tuple of target qubits denoted as ints.
+        target: tuple of target qubits denoted as ints.
         control: Optional tuple of control qubits denoted as ints.
         noise: The noise instance. Defaults to None.
 

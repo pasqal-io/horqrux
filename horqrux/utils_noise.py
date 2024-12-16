@@ -104,7 +104,7 @@ def PauliChannel(error_probability: tuple[float, ...]) -> tuple[Array, ...]:
             + pz Z \\rho Z^{\\dagger}
 
     Args:
-        error_probability (ErrorProbabilities): Tuple containing probabilities
+        error_probability (ErrorProbabilities): tuple containing probabilities
             of X, Y, and Z errors.
 
     Raises:

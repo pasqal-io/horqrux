@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Iterable, Tuple, Union
+from typing import Any, Iterable, Union
 
 import jax
 import jax.numpy as jnp
@@ -15,10 +15,10 @@ from ._misc import default_complex_dtype
 default_dtype = default_complex_dtype()
 
 State = ArrayLike
-QubitSupport = Tuple[Any, ...]
-ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
-TargetQubits = Tuple[Tuple[int, ...], ...]
-ErrorProbabilities = Union[Tuple[float, ...], float]
+QubitSupport = tuple[Any, ...]
+ControlQubits = tuple[Union[None, tuple[int, ...]], ...]
+TargetQubits = tuple[tuple[int, ...], ...]
+ErrorProbabilities = Union[tuple[float, ...], float]
 
 ATOL = 1e-014
 
@@ -153,14 +153,14 @@ def zero_state(n_qubits: int) -> Array:
     return product_state("0" * n_qubits)
 
 
-def none_like(x: Iterable) -> Tuple[None, ...]:
+def none_like(x: Iterable) -> tuple[None, ...]:
     """Generates a tuple of Nones with equal length to x. Useful for gates with multiple targets but no control.
 
     Args:
         x (Iterable): Iterable to be mimicked.
 
     Returns:
-        Tuple[None, ...]: Tuple of Nones of length x.
+        tuple[None, ...]: tuple of Nones of length x.
     """
     return tuple(map(lambda _: None, x))
 
@@ -208,7 +208,7 @@ def uniform_state(
     return state.reshape([2] * n_qubits)
 
 
-def is_controlled(qubit_support: Tuple[int | None, ...] | int | None) -> bool:
+def is_controlled(qubit_support: tuple[int | None, ...] | int | None) -> bool:
     if isinstance(qubit_support, int):
         return True
     elif isinstance(qubit_support, tuple):

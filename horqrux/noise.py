@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Tuple
+from typing import Any, Callable, Iterable
 
 from jax import Array
 from jax.tree_util import register_pytree_node_class
@@ -53,7 +53,7 @@ class NoiseInstance:
 
     def tree_flatten(
         self,
-    ) -> Tuple[Tuple, Tuple[NoiseType, ErrorProbabilities]]:
+    ) -> tuple[tuple, tuple[NoiseType, ErrorProbabilities]]:
         children = ()
         aux_data = (self.type, self.error_probability)
         return (children, aux_data)
@@ -71,4 +71,4 @@ class NoiseInstance:
         return self.type + f"(p={self.error_probability})"
 
 
-NoiseProtocol = Tuple[NoiseInstance, ...]
+NoiseProtocol = tuple[NoiseInstance, ...]

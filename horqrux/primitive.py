@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Tuple, Union
+from typing import Any, Iterable, Union
 
 import numpy as np
 from jax import Array
@@ -32,8 +32,8 @@ class Primitive:
 
     @staticmethod
     def parse_idx(
-        idx: Tuple,
-    ) -> Tuple:
+        idx: tuple,
+    ) -> tuple:
         if isinstance(idx, (int, np.int64)):
             return ((idx,),)
         elif isinstance(idx, tuple):
@@ -51,7 +51,7 @@ class Primitive:
     def __iter__(self) -> Iterable:
         return iter((self.generator_name, self.target, self.control, self.noise))
 
-    def tree_flatten(self) -> Tuple[Tuple, Tuple[str, TargetQubits, ControlQubits, NoiseProtocol]]:
+    def tree_flatten(self) -> tuple[tuple, tuple[str, TargetQubits, ControlQubits, NoiseProtocol]]:
         children = ()
         aux_data = (self.generator_name, self.target[0], self.control[0], self.noise)
         return (children, aux_data)
@@ -93,7 +93,7 @@ def I(
     Example usage: I(1) represents the instruction to apply I to qubit 1.
 
     Args:
-        target: Tuple of ints describing the qubits to apply to.
+        target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
 
@@ -113,7 +113,7 @@ def X(
     Example usage controlled: X(1, 0) represents the instruction to apply CX / CNOT to qubit 1 with controlled qubit 0.
 
     Args:
-        target: Tuple of ints describing the qubits to apply to.
+        target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
 
@@ -136,7 +136,7 @@ def Y(
     Example usage controlled: Y(1, 0) represents the instruction to apply CY to qubit 1 with controlled qubit 0.
 
     Args:
-        target: Tuple of ints describing the qubits to apply to.
+        target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
 
@@ -156,7 +156,7 @@ def Z(
     Example usage controlled: Z(1, 0) represents the instruction to apply CZ to qubit 1 with controlled qubit 0.
 
     Args:
-        target: Tuple of ints describing the qubits to apply to.
+        target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
 
@@ -175,7 +175,7 @@ def H(
     Example usage: H(1) represents the instruction to apply Hadamard to qubit 1.
 
     Args:
-        target: Tuple of ints describing the qubits to apply to.
+        target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
 
@@ -194,7 +194,7 @@ def S(
     Example usage: S(1) represents the instruction to apply S to qubit 1.
 
     Args:
-        target: Tuple of ints describing the qubits to apply to.
+        target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
 
@@ -213,7 +213,7 @@ def T(
     Example usage: T(1) represents the instruction to apply Hadamard to qubit 1.
 
     Args:
-        target: Tuple of ints describing the qubits to apply to.
+        target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
 
@@ -236,7 +236,7 @@ def SWAP(
     Example usage controlled: SWAP(((0, 1), ), ((2, ))) swaps qubits 0 and 1 with controlled bit 2.
 
     Args:
-        target: Tuple of ints describing the qubits to apply to.
+        target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints or None describing
         the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
