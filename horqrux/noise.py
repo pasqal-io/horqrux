@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Union
 
 from jax import Array
 from jax.tree_util import register_pytree_node_class
@@ -70,4 +70,4 @@ class NoiseInstance:
         return self.type + f"(p={self.error_probability})"
 
 
-NoiseProtocol = tuple[NoiseInstance, ...] | None
+NoiseProtocol = Union[tuple[NoiseInstance, ...], None]
