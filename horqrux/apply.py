@@ -58,7 +58,7 @@ def apply_operator(
     operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
     op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     # Apply operator
-    new_state_dims = tuple(i for i in range(len(state_dims)))
+    new_state_dims = tuple(range(len(state_dims)))
     state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, state_dims))
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
@@ -91,7 +91,7 @@ def apply_operator_dm(
     operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
     op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     op_in_dims = tuple(np.arange(0, operator.ndim // 2, dtype=int))
-    new_state_dims = tuple(i for i in range(len(state_dims)))
+    new_state_dims = tuple(range(len(state_dims)))
 
     # Apply operator to density matrix: ρ' = O ρ O†
     support_perm = state_dims + tuple(set(tuple(range(state.ndim // 2))) - set(state_dims))
