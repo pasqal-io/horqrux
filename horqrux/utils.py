@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from functools import singledispatch
+from functools import reduce
 from math import log
 from typing import Any, Iterable, Tuple, Union
 
@@ -13,6 +13,7 @@ from jax.typing import ArrayLike
 from numpy import log2
 
 from ._misc import default_complex_dtype
+from .matrices import _I
 
 default_dtype = default_complex_dtype()
 
@@ -77,7 +78,6 @@ def _jacobian(generator: Array, theta: float) -> Array:
     )
 
 
-@singledispatch
 def _controlled(operator: Array, n_control: int) -> Array:
     """
     Create a controlled quantum operator with specified number of control qubits.
@@ -95,11 +95,10 @@ def _controlled(operator: Array, n_control: int) -> Array:
     return control
 
 
-@_controlled.register
-def _(
+def controlled(
     operator: jnp.ndarray,
-    control_qubits: ControlQubits,
     target_qubits: TargetQubits,
+    control_qubits: ControlQubits,
 ) -> jnp.ndarray:
     """
     Create a controlled quantum operator with specified control and target qubit indices.
@@ -149,6 +148,27 @@ def _(
     controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(operator)
 
     return controlled_op
+
+
+def expand_operator(
+    operator: Array, qubit_support: TargetQubits, full_support: TargetQubits
+) -> Array:
+    """
+    Expands an operator acting on a given qubit_support to act on a larger full_support
+    by explicitly filling in identity matrices on all remaining qubits.
+    """
+    full_support = tuple(sorted(full_support))
+    qubit_support = tuple(sorted(qubit_support))
+    if not set(qubit_support).issubset(set(full_support)):
+        raise ValueError(
+            "Expanding tensor operation requires a `full_support` argument "
+            "larger than or equal to the `qubit_support`."
+        )
+
+    kron_qubits = set(full_support) - set(qubit_support)
+    kron_operator = reduce(jnp.kron, [operator] + [_I] * len(kron_qubits))
+    # TODO: Add permute_basis
+    return kron_operator
 
 
 def product_state(bitstring: str) -> Array:

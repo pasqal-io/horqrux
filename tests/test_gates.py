@@ -155,3 +155,14 @@ def test_cnot_product_state(bitstring: str):
     print("CNOT(1,0)", bitstring, flip_bit_wrt_control(bitstring, 1, 0))
     expected_state = product_state(flip_bit_wrt_control(bitstring, 1, 0))
     assert jnp.allclose(state, expected_state)
+
+
+def test_cnot_tensor() -> None:
+    cnot0 = NOT(target=1, control=0)
+    cnot1 = NOT(target=0, control=1)
+    assert jnp.allclose(
+        cnot0.tensor(), jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    )
+    assert jnp.allclose(
+        cnot1.tensor(), jnp.array([[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]])
+    )

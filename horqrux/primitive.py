@@ -13,6 +13,7 @@ from .utils import (
     QubitSupport,
     TargetQubits,
     _dagger,
+    controlled,
     is_controlled,
     none_like,
 )
@@ -59,10 +60,40 @@ class Primitive:
         return cls(*children, *aux_data)
 
     def unitary(self, values: dict[str, float] = dict()) -> Array:
+        """Obtain the base unitary from `generator_name`.
+
+        Args:
+            values (dict[str, float], optional): Parameter values. Defaults to dict().
+
+        Returns:
+            Array: The base unitary from `generator_name`.
+        """
         return OPERATIONS_DICT[self.generator_name]
 
     def dagger(self, values: dict[str, float] = dict()) -> Array:
+        """Obtain the dagger of the base unitary from `generator_name`.
+
+        Args:
+            values (dict[str, float], optional): Parameter values. Defaults to dict().
+
+        Returns:
+            Array: The base unitary daggered from `generator_name`.
+        """
         return _dagger(self.unitary(values))
+
+    def tensor(self, values: dict[str, float] = dict()) -> Array:
+        """Obtain the unitary from
+
+        Args:
+            values (dict[str, float], optional): _description_. Defaults to dict().
+
+        Returns:
+            Array: _description_
+        """
+        base_unitary = self.unitary(values)
+        if is_controlled(self.control):
+            return controlled(base_unitary, self.target, self.control)
+        return base_unitary
 
     @property
     def name(self) -> str:
