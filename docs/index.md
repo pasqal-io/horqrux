@@ -1,6 +1,6 @@
 # Welcome to horqrux
 
-**horqrux** is a state vector simulator designed for quantum machine learning written in [JAX](https://jax.readthedocs.io/).
+**horqrux** is a state vector and density matrix simulator designed for quantum machine learning written in [JAX](https://jax.readthedocs.io/).
 
 ## Setup
 
