@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from enum import Enum
+from functools import singledispatch
+from math import log
 from typing import Any, Iterable, Tuple, Union
 
 import jax
@@ -75,11 +77,78 @@ def _jacobian(generator: Array, theta: float) -> Array:
     )
 
 
+@singledispatch
 def _controlled(operator: Array, n_control: int) -> Array:
+    """
+    Create a controlled quantum operator with specified number of control qubits.
+
+    Args:
+        operator (jnp.ndarray): The base quantum operator to be controlled.
+        n_control (int): Number of control qubits.
+
+    Returns:
+        jnp.ndarray: The controlled quantum operator matrix
+    """
     n_qubits = int(log2(operator.shape[0]))
     control = jnp.eye(2 ** (n_control + n_qubits), dtype=default_dtype)
     control = control.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
     return control
+
+
+@_controlled.register
+def _(
+    operator: jnp.ndarray,
+    control_qubits: ControlQubits,
+    target_qubits: TargetQubits,
+) -> jnp.ndarray:
+    """
+    Create a controlled quantum operator with specified control and target qubit indices.
+
+    Args:
+        operator (jnp.ndarray): The base quantum operator to be controlled.
+            Note the operator is defined only on `target_qubits`.
+        control_qubits (int or tuple of ints): Index or indices of control qubits
+        target_qubits (int or tuple of ints): Index or indices of target qubits
+
+    Returns:
+        jnp.ndarray: The controlled quantum operator matrix
+    """
+    controls: tuple = tuple()
+    targets: tuple = tuple()
+    if isinstance(control_qubits[0], tuple):
+        controls = control_qubits[0]
+    if isinstance(target_qubits[0], tuple):
+        targets = target_qubits[0]
+    nqop = int(log(operator.shape[0], 2))
+    ntargets = len(targets)
+    if nqop != ntargets:
+        raise ValueError("`target_qubits` length should match the shape of operator.")
+    # Determine the total number of qubits and order of controls
+    ntotal_qubits = len(controls) + ntargets
+    qubit_support = sorted(controls + targets)
+    control_ind_support = tuple(i for i, q in enumerate(qubit_support) if q in controls)
+
+    # Create the full Hilbert space dimension
+    full_dim = 2**ntotal_qubits
+
+    # Initialize the controlled operator as an identity matrix
+    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
+
+    # Compute the control mask using bit manipulation
+    control_mask = jnp.sum(
+        jnp.array(
+            [1 << (ntotal_qubits - control_qubit - 1) for control_qubit in control_ind_support]
+        )
+    )
+
+    # Create indices for the controlled subspace
+    indices = jnp.arange(full_dim)
+    controlled_indices = indices[(indices & control_mask) == control_mask]
+
+    # Set the controlled subspace to the operator
+    controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(operator)
+
+    return controlled_op
 
 
 def product_state(bitstring: str) -> Array:
