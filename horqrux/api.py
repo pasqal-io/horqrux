@@ -19,9 +19,9 @@ def run(
     circuit: GateSequence,
     state: Array,
     values: dict[str, float] = dict(),
-    is_state_densitymat: bool = False,
+    is_density: bool = False,
 ) -> Array:
-    return apply_gate(state, circuit, values, is_state_densitymat=is_state_densitymat)
+    return apply_gate(state, circuit, values, is_density=is_density)
 
 
 def sample(
@@ -29,13 +29,13 @@ def sample(
     gates: GateSequence,
     values: dict[str, float] = dict(),
     n_shots: int = 1000,
-    is_state_densitymat: bool = False,
+    is_density: bool = False,
 ) -> Counter:
     if n_shots < 1:
         raise ValueError("You can only call sample with n_shots>0.")
 
-    output_circuit = apply_gate(state, gates, values, is_state_densitymat=is_state_densitymat)
-    if is_state_densitymat:
+    output_circuit = apply_gate(state, gates, values, is_density=is_density)
+    if is_density:
         n_qubits = len(state.shape) // 2
         d = 2**n_qubits
         probs = jnp.diagonal(output_circuit.reshape((d, d))).real
@@ -64,17 +64,15 @@ def __ad_expectation_single_observable(
     gates: GateSequence,
     observable: Primitive,
     values: dict[str, float],
-    is_state_densitymat: bool = False,
+    is_density: bool = False,
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    out_state = apply_gate(
-        state, gates, values, OperationType.UNITARY, is_state_densitymat=is_state_densitymat
-    )
+    out_state = apply_gate(state, gates, values, OperationType.UNITARY, is_density=is_density)
     # in case we have noisy simulations
-    out_state_densitymat = is_state_densitymat or (out_state.shape != state.shape)
+    out_state_densitymat = is_density or (out_state.shape != state.shape)
 
     if not out_state_densitymat:
         projected_state = apply_gate(
@@ -82,7 +80,7 @@ def __ad_expectation_single_observable(
             observable,
             values,
             OperationType.UNITARY,
-            is_state_densitymat=out_state_densitymat,
+            is_density=out_state_densitymat,
         )
         return inner(out_state, projected_state).real
     n_qubits = len(out_state.shape) // 2
@@ -97,14 +95,14 @@ def ad_expectation(
     gates: GateSequence,
     observables: list[Primitive],
     values: dict[str, float],
-    is_state_densitymat: bool = False,
+    is_density: bool = False,
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
     outputs = [
-        __ad_expectation_single_observable(state, gates, observable, values, is_state_densitymat)
+        __ad_expectation_single_observable(state, gates, observable, values, is_density)
         for observable in observables
     ]
     return jnp.stack(outputs)
@@ -118,7 +116,7 @@ def expectation(
     diff_mode: DiffMode = DiffMode.AD,
     forward_mode: ForwardMode = ForwardMode.EXACT,
     n_shots: Optional[int] = None,
-    is_state_densitymat: bool = False,
+    is_density: bool = False,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """
@@ -145,6 +143,6 @@ def expectation(
             observables,
             values,
             n_shots=n_shots,
-            is_state_densitymat=is_state_densitymat,
+            is_density=is_density,
             key=key,
         )

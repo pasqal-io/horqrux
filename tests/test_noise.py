@@ -56,7 +56,7 @@ def test_noisy_primitive(gate_fn: Callable, noise_type: NoiseType) -> None:
 
     orig_dm = density_mat(orig_state)
     assert len(orig_dm.shape) == dm_shape_len
-    output_dm2 = apply_gate(orig_dm, noisy_gate, is_state_densitymat=True)
+    output_dm2 = apply_gate(orig_dm, noisy_gate, is_density=True)
     assert jnp.allclose(output_dm2, output_dm)
 
     perfect_gate = gate_fn(target)
@@ -82,7 +82,7 @@ def test_noisy_parametric(gate_fn: Callable, noise_type: NoiseType) -> None:
     orig_dm = density_mat(orig_state)
     assert len(orig_dm.shape) == dm_shape_len
 
-    output_dm2 = apply_gate(orig_dm, noisy_gate, values, is_state_densitymat=True)
+    output_dm2 = apply_gate(orig_dm, noisy_gate, values, is_density=True)
     assert jnp.allclose(output_dm2, output_dm)
 
     perfect_gate = gate_fn("theta", target)
@@ -116,7 +116,7 @@ def simple_depolarizing_test() -> None:
 
     # test sampling
     dm_state = density_mat(state)
-    sampling_output = sample(dm_state, ops, is_state_densitymat=True)
+    sampling_output = sample(dm_state, ops, is_density=True)
     assert "11" in sampling_output.keys()
     assert "01" in sampling_output.keys()
 

@@ -40,16 +40,16 @@ def finite_shots_fwd(
     observables: list[Primitive],
     values: dict[str, float],
     n_shots: int = 100,
-    is_state_densitymat: bool = False,
+    is_density: bool = False,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    state = apply_gate(state, gates, values, is_state_densitymat=is_state_densitymat)
+    state = apply_gate(state, gates, values, is_density=is_density)
     n_qubits = len(state.shape)
-    if not is_state_densitymat:
+    if not is_density:
         mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
         eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
         eigvecs, eigvals = align_eigenvectors(eigs)
@@ -110,7 +110,7 @@ def finite_shots_jvp(
     gates: GateSequence,
     observable: Primitive,
     n_shots: int,
-    is_state_densitymat: bool,
+    is_density: bool,
     key: Array,
     primals: tuple[dict[str, float]],
     tangents: tuple[dict[str, float]],
@@ -127,18 +127,14 @@ def finite_shots_jvp(
         up_key, down_key = random.split(key)
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
-        f_up = finite_shots_fwd(
-            state, gates, observable, up_val, n_shots, is_state_densitymat, up_key
-        )
+        f_up = finite_shots_fwd(state, gates, observable, up_val, n_shots, is_density, up_key)
         down_val = values.copy()
         down_val[param_name] = down_val[param_name] - shift
-        f_down = finite_shots_fwd(
-            state, gates, observable, down_val, n_shots, is_state_densitymat, down_key
-        )
+        f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, is_density, down_key)
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
         return grad * tangent_dict[param_name]
 
     params_with_keys = zip(values.keys(), random.split(key, len(values)))
-    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, is_state_densitymat, key)
+    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, is_density, key)
     jvp = sum(jvp_component(param, key) for param, key in params_with_keys)
     return fwd, jvp.reshape(fwd.shape)

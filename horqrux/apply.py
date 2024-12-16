@@ -45,7 +45,7 @@ def apply_operator(
         operator: Array to contract over 'state'.
         target: Tuple of target qubits on which to apply the 'operator' to.
         control: Tuple of control qubits.
-        is_state_densitymat: Whether the state is provided as a density matrix.
+        is_density: Whether the state is provided as a density matrix.
 
     Returns:
         State after applying 'operator'.
@@ -78,7 +78,7 @@ def apply_operator_dm(
         operator: Array to contract over 'state'.
         target: Tuple of target qubits on which to apply the 'operator' to.
         control: Tuple of control qubits.
-        is_state_densitymat: Whether the state is provided as a density matrix.
+        is_density: Whether the state is provided as a density matrix.
 
     Returns:
         Density matrix after applying 'operator'.
@@ -134,11 +134,11 @@ def apply_operator_with_noise(
     target: Tuple[int, ...],
     control: Tuple[int | None, ...],
     noise: NoiseProtocol,
-    is_state_densitymat: bool = False,
+    is_density: bool = False,
 ) -> State:
     state_gate = (
         apply_operator(state, operator, target, control)
-        if not is_state_densitymat
+        if not is_density
         else apply_operator_dm(state, operator, target, control)
     )
     if len(noise) == 0:
@@ -212,7 +212,7 @@ def apply_gate(
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
-    is_state_densitymat: bool = False,
+    is_density: bool = False,
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
     Arguments:
@@ -222,7 +222,7 @@ def apply_gate(
         op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
         group_gates: Group gates together which are acting on the same qubit.
         merge_ops: Attempt to merge operators acting on the same qubit.
-        is_state_densitymat: If True, state is provided as a density matrix.
+        is_density: If True, state is provided as a density matrix.
 
     Returns:
         State or density matrix after applying 'gate'.
@@ -244,13 +244,13 @@ def apply_gate(
         noise = [g.noise for g in gate]
 
     has_noise = len(reduce(add, noise)) > 0
-    if has_noise and not is_state_densitymat:
+    if has_noise and not is_density:
         state = density_mat(state)
-        is_state_densitymat = True
+        is_density = True
 
     output_state = reduce(
         lambda state, gate: apply_operator_with_noise(state, *gate),
-        zip(operator, target, control, noise, (is_state_densitymat,) * len(target)),
+        zip(operator, target, control, noise, (is_density,) * len(target)),
         state,
     )
 

@@ -26,7 +26,7 @@ def test_shots() -> None:
     def exact_dm(x):
         values = {"theta": x}
         return expectation(
-            density_mat(state), ops, observables, values, diff_mode="ad", is_state_densitymat=True
+            density_mat(state), ops, observables, values, diff_mode="ad", is_density=True
         )
 
     def shots(x):
@@ -43,7 +43,7 @@ def test_shots() -> None:
             observables,
             values,
             diff_mode="gpsr",
-            is_state_densitymat=True,
+            is_density=True,
             forward_mode="shots",
             n_shots=N_SHOTS,
         )
