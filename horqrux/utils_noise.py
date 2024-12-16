@@ -104,7 +104,7 @@ def PauliChannel(error_probability: tuple[float, ...]) -> tuple[Array, ...]:
             + pz Z \\rho Z^{\\dagger}
 
     Args:
-        error_probability (ErrorProbabilities): tuple containing probabilities
+        error_probability (tuple[float, ...] | float): tuple containing probabilities
             of X, Y, and Z errors.
 
     Raises:
@@ -224,7 +224,7 @@ def GeneralizedAmplitudeDamping(error_probability: tuple[float, ...]) -> tuple[A
         K3 = sqrt(1-p) * [[0, 0], [sqrt(rate), 0]]
 
     Args:
-        error_probability (ErrorProbabilities): The first float must be the probability
+        error_probability (tuple[float, ...] | float): The first float must be the probability
             of amplitude damping error, and the second float is the damping rate, indicating
             the probability of generalized amplitude damping.
 

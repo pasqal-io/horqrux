@@ -7,7 +7,6 @@ from jax import Array
 from jax.tree_util import register_pytree_node_class
 
 from .utils import (
-    ErrorProbabilities,
     StrEnum,
 )
 from .utils_noise import (
@@ -46,14 +45,14 @@ PROTOCOL_TO_KRAUS_FN: dict[str, Callable] = {
 @dataclass
 class NoiseInstance:
     type: NoiseType
-    error_probability: ErrorProbabilities
+    error_probability: tuple[float, ...] | float
 
     def __iter__(self) -> Iterable:
         return iter((self.kraus, self.error_probability))
 
     def tree_flatten(
         self,
-    ) -> tuple[tuple, tuple[NoiseType, ErrorProbabilities]]:
+    ) -> tuple[tuple, tuple[NoiseType, tuple[float, ...] | float]]:
         children = ()
         aux_data = (self.type, self.error_probability)
         return (children, aux_data)
@@ -71,4 +70,4 @@ class NoiseInstance:
         return self.type + f"(p={self.error_probability})"
 
 
-NoiseProtocol = tuple[NoiseInstance, ...]
+NoiseProtocol = tuple[NoiseInstance, ...] | None

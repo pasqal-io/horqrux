@@ -141,7 +141,7 @@ def apply_operator_with_noise(
         if not is_density
         else apply_operator_dm(state, operator, target, control)
     )
-    if len(noise) == 0:
+    if noise is None:
         return state_gate
     else:
         kraus_ops = jnp.stack(tuple(reduce(add, tuple(n.kraus for n in noise))))
@@ -243,7 +243,8 @@ def apply_gate(
             operator, target, control = merge_operators(operator, target, control)
         noise = [g.noise for g in gate]
 
-    has_noise = len(reduce(add, noise)) > 0
+    # faster way to check has_noise
+    has_noise = noise != [None] * len(noise)
     if has_noise and not is_density:
         state = density_mat(state)
         is_density = True

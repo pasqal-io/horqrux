@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Iterable
 
 import jax.numpy as jnp
@@ -31,7 +31,7 @@ class Parametric(Primitive):
     generator_name: str
     target: QubitSupport
     control: QubitSupport
-    noise: NoiseProtocol = field(default_factory=tuple)
+    noise: NoiseProtocol = None
     param: str | float = ""
 
     def __post_init__(self) -> None:
@@ -84,7 +84,7 @@ def RX(
     param: float | str,
     target: TargetQubits,
     control: ControlQubits = (None,),
-    noise: NoiseProtocol = tuple(),
+    noise: NoiseProtocol = None,
 ) -> Parametric:
     """RX gate.
 
@@ -104,7 +104,7 @@ def RY(
     param: float | str,
     target: TargetQubits,
     control: ControlQubits = (None,),
-    noise: NoiseProtocol = tuple(),
+    noise: NoiseProtocol = None,
 ) -> Parametric:
     """RY gate.
 
@@ -124,7 +124,7 @@ def RZ(
     param: float | str,
     target: TargetQubits,
     control: ControlQubits = (None,),
-    noise: NoiseProtocol = tuple(),
+    noise: NoiseProtocol = None,
 ) -> Parametric:
     """RZ gate.
 
@@ -161,7 +161,7 @@ def PHASE(
     param: float,
     target: TargetQubits,
     control: ControlQubits = (None,),
-    noise: NoiseProtocol = tuple(),
+    noise: NoiseProtocol = None,
 ) -> Parametric:
     """Phase gate.
 
