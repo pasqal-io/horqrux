@@ -111,17 +111,25 @@ def apply_kraus_operator(
     state: State,
     target: tuple[int, ...],
 ) -> State:
+    """Apply K \\rho K^\\dagger.
+
+    Args:
+        kraus (Array): Kraus operator K.
+        state (State): Input density matrix.
+        target (tuple[int, ...]): Target qubits.
+
+    Returns:
+        State: Output density matrix.
+    """
     state_dims: tuple[int, ...] = target
     n_qubits = int(np.log2(kraus.size))
     kraus = kraus.reshape(tuple(2 for _ in np.arange(n_qubits)))
     op_dims = tuple(np.arange(kraus.ndim // 2, kraus.ndim, dtype=int))
 
-    # Ki rho
     state = jnp.tensordot(a=kraus, b=state, axes=(op_dims, state_dims))
     new_state_dims = tuple(i for i in range(len(state_dims)))
     state = jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
-    # dagger ops
     state = jnp.tensordot(a=kraus, b=_dagger(state), axes=(op_dims, state_dims))
     state = _dagger(state)
 
@@ -136,6 +144,25 @@ def apply_operator_with_noise(
     noise: NoiseProtocol,
     is_density: bool = False,
 ) -> State:
+    """Evolves the input state and applies a noisy quantum channel
+       on the evolved state :math:`\rho`.
+
+        The evolution is represented as a sum of Kraus operators:
+        .. math::
+            S(\\rho) = \\sum_i K_i \\rho K_i^\\dagger,
+
+    Args:
+        state (State): Input state
+        operator (Array): Operator to apply.
+        target (tuple[int, ...]): Target qubits.
+        control (tuple[int  |  None, ...]): Control qubits.
+        noise (NoiseProtocol): The noise protocol.
+        is_density (bool, optional): If true, state is provided as a density matrix.
+            Defaults to False.
+
+    Returns:
+        State: Output state or density matrix.
+    """
     state_gate = (
         apply_operator(state, operator, target, control)
         if not is_density
