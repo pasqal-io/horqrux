@@ -52,16 +52,19 @@ def test_noisy_primitive(gate_fn: Callable, noise_type: NoiseType) -> None:
     orig_state = random_state(MAX_QUBITS)
     output_dm = apply_gate(orig_state, noisy_gate)
     # check output is a density matrix
-    assert len(output_dm.shape) == dm_shape_len
+    assert len(output_dm.array.shape) == dm_shape_len
 
     orig_dm = density_mat(orig_state)
-    assert len(orig_dm.shape) == dm_shape_len
-    output_dm2 = apply_gate(orig_dm, noisy_gate, is_density=True)
-    assert jnp.allclose(output_dm2, output_dm)
+    assert len(orig_dm.array.shape) == dm_shape_len
+    output_dm2 = apply_gate(
+        orig_dm,
+        noisy_gate,
+    )
+    assert jnp.allclose(output_dm2.array, output_dm.array)
 
     perfect_gate = gate_fn(target)
     perfect_output = density_mat(apply_gate(orig_state, perfect_gate))
-    assert not jnp.allclose(perfect_output, output_dm)
+    assert not jnp.allclose(perfect_output.array, output_dm.array)
 
 
 @pytest.mark.parametrize("gate_fn", PARAMETRIC_GATES)
@@ -77,17 +80,21 @@ def test_noisy_parametric(gate_fn: Callable, noise_type: NoiseType) -> None:
 
     output_dm = apply_gate(orig_state, noisy_gate, values)
     # check output is a density matrix
-    assert len(output_dm.shape) == dm_shape_len
+    assert len(output_dm.array.shape) == dm_shape_len
 
     orig_dm = density_mat(orig_state)
-    assert len(orig_dm.shape) == dm_shape_len
+    assert len(orig_dm.array.shape) == dm_shape_len
 
-    output_dm2 = apply_gate(orig_dm, noisy_gate, values, is_density=True)
-    assert jnp.allclose(output_dm2, output_dm)
+    output_dm2 = apply_gate(
+        orig_dm,
+        noisy_gate,
+        values,
+    )
+    assert jnp.allclose(output_dm2.array, output_dm.array)
 
     perfect_gate = gate_fn("theta", target)
     perfect_output = density_mat(apply_gate(orig_state, perfect_gate, values))
-    assert not jnp.allclose(perfect_output, output_dm)
+    assert not jnp.allclose(perfect_output.array, output_dm.array)
 
 
 def simple_depolarizing_test() -> None:
@@ -116,7 +123,10 @@ def simple_depolarizing_test() -> None:
 
     # test sampling
     dm_state = density_mat(state)
-    sampling_output = sample(dm_state, ops, is_density=True)
+    sampling_output = sample(
+        dm_state,
+        ops,
+    )
     assert "11" in sampling_output.keys()
     assert "01" in sampling_output.keys()
 

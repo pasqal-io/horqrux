@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import partial, reduce
+from functools import partial, reduce, singledispatch
 from operator import add
 from typing import Iterable
 
@@ -13,8 +13,8 @@ from horqrux.primitive import Primitive
 
 from .noise import NoiseProtocol
 from .utils import (
+    DensityMatrix,
     OperationType,
-    State,
     _controlled,
     _dagger,
     density_mat,
@@ -23,12 +23,23 @@ from .utils import (
 )
 
 
+@singledispatch
 def apply_operator(
-    state: State,
+    state: Array,
     operator: Array,
     target: tuple[int, ...],
     control: tuple[int | None, ...],
-) -> State:
+) -> Array:
+    raise NotImplementedError("apply_operator is not implemented")
+
+
+@apply_operator.register
+def _(
+    state: Array,
+    operator: Array,
+    target: tuple[int, ...],
+    control: tuple[int | None, ...],
+) -> Array:
     """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given state
        of shape [2 for _ in range(n_qubits)] for a given set of target and control qubits.
        In case of a controlled operation, the 'operator' array will be embedded into a controlled array.
@@ -41,14 +52,14 @@ def apply_operator(
        are moved to their original positions and the state is returned.
 
     Arguments:
-        state: State to operate on.
+        state: Array to operate on.
         operator: Array to contract over 'state'.
         target: tuple of target qubits on which to apply the 'operator' to.
         control: tuple of control qubits.
         is_density: Whether the state is provided as a density matrix.
 
     Returns:
-        State after applying 'operator'.
+        Array after applying 'operator'.
     """
     state_dims: tuple[int, ...] = target
     if is_controlled(control):
@@ -63,12 +74,13 @@ def apply_operator(
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
 
-def apply_operator_dm(
-    state: State,
+@apply_operator.register
+def _(
+    state: DensityMatrix,
     operator: Array,
     target: tuple[int, ...],
     control: tuple[int | None, ...],
-) -> State:
+) -> DensityMatrix:
     """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given density matrix
        of shape [2 for _ in range(2 * n_qubits)] for a given set of target and control qubits.
        In case of a controlled operation, the 'operator' array will be embedded into a controlled array.
@@ -94,32 +106,32 @@ def apply_operator_dm(
     new_state_dims = tuple(range(len(state_dims)))
 
     # Apply operator to density matrix: ρ' = O ρ O†
-    support_perm = state_dims + tuple(set(tuple(range(state.ndim // 2))) - set(state_dims))
-    state = permute_basis(state, support_perm, False)
-    state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, new_state_dims))
+    support_perm = state_dims + tuple(set(tuple(range(state.array.ndim // 2))) - set(state_dims))
+    out_state = permute_basis(state.array, support_perm, False)
+    out_state = jnp.tensordot(a=operator, b=out_state, axes=(op_out_dims, new_state_dims))
 
-    state = _dagger(state)
-    state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, op_in_dims))
-    state = _dagger(state)
+    out_state = _dagger(out_state)
+    out_state = jnp.tensordot(a=operator, b=out_state, axes=(op_out_dims, op_in_dims))
+    out_state = _dagger(out_state)
 
-    state = permute_basis(state, support_perm, True)
-    return state
+    out_state = permute_basis(out_state, support_perm, True)
+    return DensityMatrix(out_state)
 
 
 def apply_kraus_operator(
     kraus: Array,
-    state: State,
+    state: Array,
     target: tuple[int, ...],
-) -> State:
+) -> Array:
     """Apply K \\rho K^\\dagger.
 
     Args:
         kraus (Array): Kraus operator K.
-        state (State): Input density matrix.
+        state (Array): Input density matrix.
         target (tuple[int, ...]): Target qubits.
 
     Returns:
-        State: Output density matrix.
+        Array: Output density matrix.
     """
     state_dims: tuple[int, ...] = target
     n_qubits = int(np.log2(kraus.size))
@@ -137,13 +149,12 @@ def apply_kraus_operator(
 
 
 def apply_operator_with_noise(
-    state: State,
+    state: Array | DensityMatrix,
     operator: Array,
     target: tuple[int, ...],
     control: tuple[int | None, ...],
     noise: NoiseProtocol,
-    is_density: bool = False,
-) -> State:
+) -> Array:
     """Evolves the input state and applies a noisy quantum channel
        on the evolved state :math:`\rho`.
 
@@ -152,27 +163,27 @@ def apply_operator_with_noise(
             S(\\rho) = \\sum_i K_i \\rho K_i^\\dagger,
 
     Args:
-        state (State): Input state
+        state (Array | DensityMatrix): Input state or density matrix.
         operator (Array): Operator to apply.
         target (tuple[int, ...]): Target qubits.
         control (tuple[int  |  None, ...]): Control qubits.
         noise (NoiseProtocol): The noise protocol.
-        is_density (bool, optional): If true, state is provided as a density matrix.
-            Defaults to False.
 
     Returns:
-        State: Output state or density matrix.
+        Array: Output state or density matrix.
     """
-    state_gate = (
-        apply_operator(state, operator, target, control)
-        if not is_density
-        else apply_operator_dm(state, operator, target, control)
-    )
+    state_gate = apply_operator(state, operator, target, control)
     if noise is None:
         return state_gate
     else:
         kraus_ops = jnp.stack(tuple(reduce(add, tuple(n.kraus for n in noise))))
-        apply_one_kraus = jax.vmap(partial(apply_kraus_operator, state=state_gate, target=target))
+        apply_one_kraus = jax.vmap(
+            partial(
+                apply_kraus_operator,
+                state=state_gate.array if isinstance(state_gate, DensityMatrix) else state_gate,
+                target=target,
+            )
+        )
         kraus_evol = apply_one_kraus(kraus_ops)
         output_dm = jnp.sum(kraus_evol, 0)
         return output_dm
@@ -232,18 +243,30 @@ def merge_operators(
     return merged_operators[::-1], merged_targets[::-1], merged_controls[::-1]
 
 
+@singledispatch
 def apply_gate(
-    state: State,
+    state: Array,
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
-    is_density: bool = False,
-) -> State:
+) -> Array | DensityMatrix:
+    raise NotImplementedError("apply_gate is not implemented")
+
+
+@apply_gate.register
+def _(
+    state: Array,
+    gate: Primitive | Iterable[Primitive],
+    values: dict[str, float] = dict(),
+    op_type: OperationType = OperationType.UNITARY,
+    group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
+    merge_ops: bool = True,
+) -> Array | DensityMatrix:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
     Arguments:
-        state: State or DensityMatrix to operate on.
+        state: Array or DensityMatrix to operate on.
         gate: Gate(s) to apply.
         values: A dictionary with parameter values.
         op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
@@ -252,7 +275,7 @@ def apply_gate(
         is_density: If True, state is provided as a density matrix.
 
     Returns:
-        State or density matrix after applying 'gate'.
+        Array or density matrix after applying 'gate'.
     """
     operator: tuple[Array, ...]
     noise = list()
@@ -272,14 +295,67 @@ def apply_gate(
 
     # faster way to check has_noise
     has_noise = noise != [None] * len(noise)
-    if has_noise and not is_density:
+    if has_noise:
         state = density_mat(state)
-        is_density = True
+
+        output_state = reduce(
+            lambda state, gate: apply_operator_with_noise(state, *gate),
+            zip(operator, target, control, noise),
+            state.array,
+        )
+        output_state = DensityMatrix(output_state)
+    else:
+        output_state = reduce(
+            lambda state, gate: apply_operator_with_noise(state, *gate),
+            zip(operator, target, control, noise),
+            state,
+        )
+
+    return output_state
+
+
+@apply_gate.register
+def _(
+    state: DensityMatrix,
+    gate: Primitive | Iterable[Primitive],
+    values: dict[str, float] = dict(),
+    op_type: OperationType = OperationType.UNITARY,
+    group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
+    merge_ops: bool = True,
+) -> DensityMatrix:
+    """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
+    Arguments:
+        state: Array or DensityMatrix to operate on.
+        gate: Gate(s) to apply.
+        values: A dictionary with parameter values.
+        op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
+        group_gates: Group gates together which are acting on the same qubit.
+        merge_ops: Attempt to merge operators acting on the same qubit.
+        is_density: If True, state is provided as a density matrix.
+
+    Returns:
+        Array or density matrix after applying 'gate'.
+    """
+    operator: tuple[Array, ...]
+    noise = list()
+    if isinstance(gate, Primitive):
+        operator_fn = getattr(gate, op_type)
+        operator, target, control = (operator_fn(values),), gate.target, gate.control
+        noise += [gate.noise]
+    else:
+        if group_gates:
+            gate = group_by_index(gate)
+        operator = tuple(getattr(g, op_type)(values) for g in gate)
+        target = reduce(add, [g.target for g in gate])
+        control = reduce(add, [g.control for g in gate])
+        if merge_ops:
+            operator, target, control = merge_operators(operator, target, control)
+        noise = [g.noise for g in gate]
 
     output_state = reduce(
         lambda state, gate: apply_operator_with_noise(state, *gate),
-        zip(operator, target, control, noise, (is_density,) * len(target)),
-        state,
+        zip(operator, target, control, noise),
+        state.array,
     )
 
-    return output_state
+    return DensityMatrix(output_state)

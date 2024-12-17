@@ -10,7 +10,7 @@ from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
 from horqrux.primitive import GateSequence, Primitive
-from horqrux.utils import none_like
+from horqrux.utils import DensityMatrix, none_like
 
 
 def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
@@ -33,37 +33,41 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
     return reduce(lambda x, y: jnp.kron(x, y), ops[1:], ops[0])
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5, 6))
-def finite_shots_fwd(
+def eigenval_decomposition_sampling(
     state: Array,
+    observables: list[Primitive],
+    n_qubits: int,
+    n_shots: int,
+    key: Any = jax.random.PRNGKey(0),
+) -> Array:
+    mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
+    eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
+    eigvecs, eigvals = align_eigenvectors(eigs)
+    inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
+    probs = jnp.abs(inner_prod) ** 2
+    return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+
+
+@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
+def finite_shots_fwd(
+    state: Array | DensityMatrix,
     gates: GateSequence,
     observables: list[Primitive],
     values: dict[str, float],
     n_shots: int = 100,
-    is_density: bool = False,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    state = apply_gate(state, gates, values, is_density=is_density)
-    n_qubits = len(state.shape)
-    if not is_density:
-        mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
-        eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
-        eigvecs, eigvals = align_eigenvectors(eigs)
-        inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
-        probs = jnp.abs(inner_prod) ** 2
-        return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+    if isinstance(state, DensityMatrix):
+        output_gates = apply_gate(state, gates, values).array
+        n_qubits = len(output_gates.array.shape) // 2
     else:
-        n_qubits = n_qubits // 2
-        mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
-        mat_obs = jnp.stack(mat_obs)
-        dim = 2**n_qubits
-        rho = state.reshape((dim, dim))
-        prod = jnp.matmul(mat_obs, rho)
-        return jnp.trace(prod, axis1=-2, axis2=-1).real
+        output_gates = apply_gate(state, gates, values)
+        n_qubits = len(state.shape)
+    return eigenval_decomposition_sampling(output_gates, observables, n_qubits, n_shots, key)
 
 
 def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:
@@ -110,7 +114,6 @@ def finite_shots_jvp(
     gates: GateSequence,
     observable: Primitive,
     n_shots: int,
-    is_density: bool,
     key: Array,
     primals: tuple[dict[str, float]],
     tangents: tuple[dict[str, float]],
@@ -127,14 +130,14 @@ def finite_shots_jvp(
         up_key, down_key = random.split(key)
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
-        f_up = finite_shots_fwd(state, gates, observable, up_val, n_shots, is_density, up_key)
+        f_up = finite_shots_fwd(state, gates, observable, up_val, n_shots, up_key)
         down_val = values.copy()
         down_val[param_name] = down_val[param_name] - shift
-        f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, is_density, down_key)
+        f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, down_key)
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
         return grad * tangent_dict[param_name]
 
     params_with_keys = zip(values.keys(), random.split(key, len(values)))
-    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, is_density, key)
+    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
     jvp = sum(jvp_component(param, key) for param, key in params_with_keys)
     return fwd, jvp.reshape(fwd.shape)

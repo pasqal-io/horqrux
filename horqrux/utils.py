@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Iterable, Union
 
@@ -7,6 +8,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from numpy import log2
 
@@ -21,7 +23,24 @@ TargetQubits = tuple[tuple[int, ...], ...]
 ATOL = 1e-014
 
 
-def density_mat(state: Array) -> Array:
+@register_pytree_node_class
+@dataclass
+class DensityMatrix:
+    """Dataclass to identify density matrices from states."""
+
+    array: Array
+
+    def tree_flatten(self) -> tuple[tuple, tuple[Array]]:
+        children = ()
+        aux_data = self.array
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
+        return cls(*children, *aux_data)
+
+
+def density_mat(state: Array | DensityMatrix) -> DensityMatrix:
     """Convert state to density matrix
 
     Args:
@@ -31,9 +50,11 @@ def density_mat(state: Array) -> Array:
         State: Density matrix representation.
     """
     # Expand dimensions to enable broadcasting
+    if isinstance(state, DensityMatrix):
+        return state
     ket = jnp.expand_dims(state, axis=tuple(range(state.ndim, 2 * state.ndim)))
     bra = jnp.conj(jnp.expand_dims(state, axis=tuple(range(state.ndim))))
-    return ket * bra
+    return DensityMatrix(ket * bra)
 
 
 def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> Array:
