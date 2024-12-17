@@ -32,7 +32,7 @@ class DensityMatrix:
 
     def tree_flatten(self) -> tuple[tuple, tuple[Array]]:
         children = ()
-        aux_data = self.array
+        aux_data = (self.array,)
         return (children, aux_data)
 
     @classmethod

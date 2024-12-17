@@ -63,7 +63,9 @@ def finite_shots_fwd(
     """
     if isinstance(state, DensityMatrix):
         output_gates = apply_gate(state, gates, values).array
-        n_qubits = len(output_gates.array.shape) // 2
+        n_qubits = len(output_gates.shape) // 2
+        d = 2**n_qubits
+        output_gates = output_gates.reshape((d, d))
     else:
         output_gates = apply_gate(state, gates, values)
         n_qubits = len(state.shape)
