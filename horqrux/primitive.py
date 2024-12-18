@@ -28,7 +28,7 @@ class Primitive:
     generator_name: str
     target: QubitSupport
     control: QubitSupport
-    noise: NoiseProtocol | None = None
+    noise: NoiseProtocol = None
 
     @staticmethod
     def parse_idx(
