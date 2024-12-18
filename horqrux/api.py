@@ -73,7 +73,7 @@ def __ad_expectation_single_observable(
     state: Any,
     observable: Primitive,
     values: dict[str, float],
-) -> Array:
+) -> Any:
     raise NotImplementedError("__ad_expectation_single_observable is not implemented")
 
 

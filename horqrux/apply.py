@@ -30,7 +30,7 @@ def apply_operator(
     operator: Array,
     target: tuple[int, ...],
     control: tuple[int | None, ...],
-) -> Array:
+) -> Any:
     """Apply an operator on a state or density matrix.
 
     Args:
@@ -288,7 +288,7 @@ def apply_gate(
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
-) -> State:
+) -> Any:
     raise NotImplementedError("apply_gate is not implemented")
 
 

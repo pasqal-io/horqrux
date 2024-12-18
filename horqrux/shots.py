@@ -43,7 +43,7 @@ def probs_from_eigenvectors_state(state: Any, eigvecs: Array) -> Array:
        of an observable.
 
     Args:
-        state (Array): Input array.
+        state (Any): Input.
         eigvecs (Array): Eigenvectors of the observables.
 
     Returns:

@@ -44,14 +44,14 @@ class DensityMatrix:
 State = Union[ArrayLike, DensityMatrix]
 
 
-def density_mat(state: State) -> DensityMatrix:
+def density_mat(state: ArrayLike) -> DensityMatrix:
     """Convert state to density matrix
 
     Args:
-        state (State): Input state.
+        state (ArrayLike): Input state.
 
     Returns:
-        State: Density matrix representation.
+        DensityMatrix: Density matrix representation.
     """
     # Expand dimensions to enable broadcasting
     if isinstance(state, DensityMatrix):
