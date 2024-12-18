@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import partial, reduce, singledispatch
 from operator import add
-from typing import Any, Iterable
+from typing import Any, Iterable, Union
 
 import jax
 import jax.numpy as jnp
@@ -29,7 +29,7 @@ def apply_operator(
     state: Any,
     operator: Array,
     target: tuple[int, ...],
-    control: tuple[int | None, ...],
+    control: tuple[Union[int, None], ...],
 ) -> Any:
     """Apply an operator on a state or density matrix.
 
@@ -53,7 +53,7 @@ def _(
     state: Array,
     operator: Array,
     target: tuple[int, ...],
-    control: tuple[int | None, ...],
+    control: tuple[Union[int, None], ...],
 ) -> Array:
     """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given state
        of shape [2 for _ in range(n_qubits)] for a given set of target and control qubits.
@@ -93,7 +93,7 @@ def _(
     state: DensityMatrix,
     operator: Array,
     target: tuple[int, ...],
-    control: tuple[int | None, ...],
+    control: tuple[Union[int, None], ...],
 ) -> DensityMatrix:
     """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given density matrix
        of shape [2 for _ in range(2 * n_qubits)] for a given set of target and control qubits.
@@ -197,7 +197,7 @@ def apply_operator_with_noise(
     state: DensityMatrix,
     operator: Array,
     target: tuple[int, ...],
-    control: tuple[int | None, ...],
+    control: tuple[Union[int, None], ...],
     noise: NoiseProtocol,
 ) -> State:
     """Evolves the input state and applies a noisy quantum channel
