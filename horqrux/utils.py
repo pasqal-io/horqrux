@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
+from functools import singledispatch
 from typing import Any, Iterable, Union
 
 import jax
@@ -251,3 +253,47 @@ def random_state(n_qubits: int) -> Array:
 
 def is_normalized(state: Array) -> bool:
     return equivalent_state(state, state)
+
+
+def sample_from_probs(probs: Array, n_qubits: int, n_shots: int) -> Counter:
+    key = jax.random.PRNGKey(0)
+
+    # JAX handles pseudo random number generation by tracking an explicit state via a random key
+    # For more details, see https://jax.readthedocs.io/en/latest/random-numbers.html
+    samples = jax.vmap(
+        lambda subkey: jax.random.choice(key=subkey, a=jnp.arange(0, 2**n_qubits), p=probs)
+    )(jax.random.split(key, n_shots))
+
+    return Counter(
+        {
+            format(k, "0{}b".format(n_qubits)): count.item()
+            for k, count in enumerate(jnp.bincount(samples))
+            if count > 0
+        }
+    )
+
+
+@singledispatch
+def get_probas(state: Array) -> Array:
+    """Extract probabilities from state or density matrix.
+
+    Args:
+        state (Array): Input array.
+
+    Raises:
+        NotImplementedError: If not implemented for given types.
+
+    Returns:
+        Array: Vector of probabilities.
+    """
+    raise NotImplementedError("get_probas is not implemented")
+
+
+@get_probas.register
+def _(state: Array) -> Array:
+    return jnp.abs(jnp.float_power(state, 2.0)).ravel()
+
+
+@get_probas.register
+def _(state: DensityMatrix) -> Array:
+    return jnp.diagonal(state.array).real

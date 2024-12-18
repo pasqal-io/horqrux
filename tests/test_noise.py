@@ -51,6 +51,7 @@ def test_noisy_primitive(gate_fn: Callable, noise_type: NoiseType) -> None:
 
     orig_state = random_state(MAX_QUBITS)
     output_dm = apply_gate(orig_state, noisy_gate)
+
     # check output is a density matrix
     assert len(output_dm.array.shape) == dm_shape_len
 

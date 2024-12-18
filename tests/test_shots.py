@@ -3,7 +3,7 @@ from __future__ import annotations
 import jax
 import jax.numpy as jnp
 
-from horqrux import expectation, random_state
+from horqrux import expectation, random_state, run
 from horqrux.parametric import RX
 from horqrux.primitive import Z
 from horqrux.utils import density_mat
@@ -45,17 +45,20 @@ def test_shots() -> None:
             n_shots=N_SHOTS,
         )
 
+    expected_dm = density_mat(run(ops, state, {"theta": x}))
+    output_dm = run(ops, density_mat(state), {"theta": x})
+    assert jnp.allclose(expected_dm.array, output_dm.array)
+
     exp_exact = exact(x)
-    # FIXME: DM expectation not working
-    # exp_exact_dm = exact_dm(x)
-    # assert jnp.allclose(exp_exact, exp_exact_dm)
+    exp_exact_dm = exact_dm(x)
+    assert jnp.allclose(exp_exact, exp_exact_dm)
 
     exp_shots = shots(x)
-    # FIXME: DM expectation not working
-    # exp_shots_dm = shots_dm(x)
+    # # FIXME: DM expectation not working
+    # # exp_shots_dm = shots_dm(x)
 
-    assert jnp.allclose(exp_exact, exp_shots, atol=SHOTS_ATOL)
-    # assert jnp.allclose(exp_exact, exp_shots_dm, atol=SHOTS_ATOL)
+    # assert jnp.allclose(exp_exact, exp_shots, atol=SHOTS_ATOL)
+    # # assert jnp.allclose(exp_exact, exp_shots_dm, atol=SHOTS_ATOL)
 
     d_exact = jax.grad(lambda x: exact(x).sum())
     d_shots = jax.grad(lambda x: shots(x).sum())
