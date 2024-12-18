@@ -231,7 +231,7 @@ def uniform_state(
     return state.reshape([2] * n_qubits)
 
 
-def is_controlled(qubit_support: tuple[Union[int, None], ...] | Union[int, None]) -> bool:
+def is_controlled(qubit_support: Union[tuple[Union[int, None], ...], int, None]) -> bool:
     if isinstance(qubit_support, int):
         return True
     elif isinstance(qubit_support, tuple):
