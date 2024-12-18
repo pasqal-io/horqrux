@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import partial, reduce, singledispatch
 from operator import add
-from typing import Iterable
+from typing import Any, Iterable
 
 import jax
 import jax.numpy as jnp
@@ -15,6 +15,7 @@ from .noise import NoiseProtocol
 from .utils import (
     DensityMatrix,
     OperationType,
+    State,
     _controlled,
     _dagger,
     density_mat,
@@ -25,7 +26,7 @@ from .utils import (
 
 @singledispatch
 def apply_operator(
-    state: Array,
+    state: Any,
     operator: Array,
     target: tuple[int, ...],
     control: tuple[int | None, ...],
@@ -33,7 +34,7 @@ def apply_operator(
     """Apply an operator on a state or density matrix.
 
     Args:
-        state (Array): Array to operate on.
+        state (Any): Array to operate on.
         operator (Array): Array to contract over 'state'.
         target (tuple[int, ...]): tuple of target qubits on which to apply the 'operator' to.
         control (tuple[int  |  None, ...]): tuple of control qubits.
@@ -99,7 +100,7 @@ def _(
        In case of a controlled operation, the 'operator' array will be embedded into a controlled array.
 
     Args:
-        state (Array): Array to operate on.
+        state (DensityMatrix): Array to operate on.
         operator (Array): Array to contract over 'state'.
         target (tuple[int, ...]): tuple of target qubits on which to apply the 'operator' to.
         control (tuple[int  |  None, ...]): tuple of control qubits.
@@ -145,7 +146,7 @@ def apply_kraus_operator(
         target (tuple[int, ...]): Target qubits.
 
     Returns:
-        Array: Output density matrix.
+        Array: K \\rho K^\\dagger.
     """
     state_dims: tuple[int, ...] = target
     n_qubits = int(np.log2(kraus.size))
@@ -163,7 +164,7 @@ def apply_kraus_operator(
 
 
 def apply_kraus_sum(
-    kraus_ops: NoiseProtocol,
+    kraus_ops: Array,
     array: Array,
     target: tuple[int, ...],
 ) -> DensityMatrix:
@@ -172,8 +173,8 @@ def apply_kraus_sum(
             S(\\rho) = \\sum_i K_i \\rho K_i^\\dagger
 
     Args:
-        noise (NoiseProtocol): Noise containing the K_i
-        state (Array): Input array
+        kraus_ops (Array): Stacked K_i.
+        state (Array): Input array.
         target (tuple[int, ...]): Qubits the operator is defined on.
 
     Returns:
@@ -198,7 +199,7 @@ def apply_operator_with_noise(
     target: tuple[int, ...],
     control: tuple[int | None, ...],
     noise: NoiseProtocol,
-) -> Array | DensityMatrix:
+) -> State:
     """Evolves the input state and applies a noisy quantum channel
        on the evolved state :math:`\rho`.
 
@@ -207,7 +208,7 @@ def apply_operator_with_noise(
             S(\\rho) = \\sum_i K_i \\rho K_i^\\dagger,
 
     Args:
-        state (Array | DensityMatrix): Input state or density matrix.
+        state (State): Input state or density matrix.
         operator (Array): Operator to apply.
         target (tuple[int, ...]): Target qubits.
         control (tuple[int  |  None, ...]): Control qubits.
@@ -255,9 +256,9 @@ def merge_operators(
         operators: The arrays representing the unitaries to be merged.
         targets: The corresponding target qubits.
         controls: The corresponding control qubits.
+
     Returns:
         A tuple of merged operators, targets and controls.
-
     """
     if len(operators) < 2:
         return operators, targets, controls
@@ -281,36 +282,37 @@ def merge_operators(
 
 @singledispatch
 def apply_gate(
-    state: Array,
+    state: Any,
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
-) -> Array | DensityMatrix:
+) -> State:
     raise NotImplementedError("apply_gate is not implemented")
 
 
-@apply_gate.register
-def _(
-    state: Array,
+def prepare_sequence_reduce(
     gate: Primitive | Iterable[Primitive],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
-) -> Array | DensityMatrix:
-    """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
-    Arguments:
-        state: Array or DensityMatrix to operate on.
-        gate: Gate(s) to apply.
-        values: A dictionary with parameter values.
-        op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
-        group_gates: Group gates together which are acting on the same qubit.
-        merge_ops: Attempt to merge operators acting on the same qubit.
+) -> tuple[tuple[Array, ...], tuple, tuple, list[NoiseProtocol]]:
+    """Prepare the tuples to be used when applying operations.
+
+    Args:
+        gate (Primitive | Iterable[Primitive]): Gate(s) to apply.
+        values (dict[str, float], optional): A dictionary with parameter values.
+            Defaults to dict().
+        op_type (OperationType, optional): The type of operation to perform: Unitary, Dagger or Jacobian.
+            Defaults to OperationType.UNITARY.
+        group_gates (bool, optional): Group gates together which are acting on the same qubit.
+            Defaults to False.
 
     Returns:
-        Array or density matrix after applying 'gate'.
+        tuple[tuple[Array, ...], tuple, tuple, list[NoiseProtocol]]: Operators, targets,
+            controls and noise.
     """
     operator: tuple[Array, ...]
     noise = list()
@@ -327,6 +329,34 @@ def _(
         if merge_ops:
             operator, target, control = merge_operators(operator, target, control)
         noise = [g.noise for g in gate]
+
+    return operator, target, control, noise
+
+
+@apply_gate.register
+def _(
+    state: Array,
+    gate: Primitive | Iterable[Primitive],
+    values: dict[str, float] = dict(),
+    op_type: OperationType = OperationType.UNITARY,
+    group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
+    merge_ops: bool = True,
+) -> State:
+    """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
+    Arguments:
+        state: Array or DensityMatrix to operate on.
+        gate: Gate(s) to apply.
+        values: A dictionary with parameter values.
+        op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
+        group_gates: Group gates together which are acting on the same qubit.
+        merge_ops: Attempt to merge operators acting on the same qubit.
+
+    Returns:
+        Array or density matrix after applying 'gate'.
+    """
+    operator, target, control, noise = prepare_sequence_reduce(
+        gate, values, op_type, group_gates, merge_ops
+    )
 
     # faster way to check has_noise
     has_noise = noise != [None] * len(noise)
@@ -368,21 +398,9 @@ def _(
     Returns:
         Array or density matrix after applying 'gate'.
     """
-    operator: tuple[Array, ...]
-    noise = list()
-    if isinstance(gate, Primitive):
-        operator_fn = getattr(gate, op_type)
-        operator, target, control = (operator_fn(values),), gate.target, gate.control
-        noise += [gate.noise]
-    else:
-        if group_gates:
-            gate = group_by_index(gate)
-        operator = tuple(getattr(g, op_type)(values) for g in gate)
-        target = reduce(add, [g.target for g in gate])
-        control = reduce(add, [g.control for g in gate])
-        if merge_ops:
-            operator, target, control = merge_operators(operator, target, control)
-        noise = [g.noise for g in gate]
+    operator, target, control, noise = prepare_sequence_reduce(
+        gate, values, op_type, group_gates, merge_ops
+    )
     output_state = reduce(
         lambda state, gate: apply_operator_with_noise(state, *gate),
         zip(operator, target, control, noise),

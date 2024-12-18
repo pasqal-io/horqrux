@@ -10,7 +10,7 @@ from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
 from horqrux.primitive import GateSequence, Primitive
-from horqrux.utils import DensityMatrix, none_like
+from horqrux.utils import DensityMatrix, State, none_like
 
 
 def observable_to_matrix(
@@ -38,7 +38,7 @@ def observable_to_matrix(
 
 
 @singledispatch
-def probs_from_eigenvectors_state(state: Array, eigvecs: Array) -> Array:
+def probs_from_eigenvectors_state(state: Any, eigvecs: Array) -> Array:
     """Obtain the probabilities using an input state and the eigenvectors decomposition
        of an observable.
 
@@ -76,7 +76,7 @@ def _(state: DensityMatrix, eigvecs: Array) -> Array:
         of an observable.
 
     Args:
-        state (DensityMatrix): Input array.
+        state (DensityMatrix): Input density matrix.
         eigvecs (Array): Eigenvectors of the observables.
 
     Returns:
@@ -87,7 +87,7 @@ def _(state: DensityMatrix, eigvecs: Array) -> Array:
 
 
 def eigenval_decomposition_sampling(
-    state: Array | DensityMatrix,
+    state: State,
     observables: list[Primitive],
     values: dict[str, float],
     n_qubits: int,
@@ -103,7 +103,7 @@ def eigenval_decomposition_sampling(
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
 def finite_shots_fwd(
-    state: Array | DensityMatrix,
+    state: State,
     gates: GateSequence,
     observables: list[Primitive],
     values: dict[str, float],

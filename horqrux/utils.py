@@ -18,7 +18,6 @@ from ._misc import default_complex_dtype
 
 default_dtype = default_complex_dtype()
 
-State = ArrayLike
 QubitSupport = tuple[Any, ...]
 ControlQubits = tuple[Union[None, tuple[int, ...]], ...]
 TargetQubits = tuple[tuple[int, ...], ...]
@@ -42,7 +41,10 @@ class DensityMatrix:
         return cls(*children, *aux_data)
 
 
-def density_mat(state: Array | DensityMatrix) -> DensityMatrix:
+State = Union[ArrayLike, DensityMatrix]
+
+
+def density_mat(state: State) -> DensityMatrix:
     """Convert state to density matrix
 
     Args:
