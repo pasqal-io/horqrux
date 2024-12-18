@@ -13,7 +13,11 @@ from horqrux.primitive import GateSequence, Primitive
 from horqrux.utils import DensityMatrix, none_like
 
 
-def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
+def observable_to_matrix(
+    observable: Primitive,
+    n_qubits: int,
+    values: dict[str, float],
+) -> Array:
     """For finite shot sampling we need to calculate the eigenvalues/vectors of
     an observable. This helper function takes an observable and system size
     (n_qubits) and returns the overall action of the observable on the whole
@@ -25,7 +29,7 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
         observable.control == observable.parse_idx(none_like(observable.target)),
         "Controlled gates cannot be promoted from observables to operations on the whole state vector",
     )
-    unitary = observable.unitary()
+    unitary = observable.unitary(values=values)
     target = observable.target[0][0]
     identity = jnp.eye(2, dtype=unitary.dtype)
     ops = [identity for _ in range(n_qubits)]
@@ -36,11 +40,12 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
 def eigenval_decomposition_sampling(
     state: Array,
     observables: list[Primitive],
+    values: dict[str, float],
     n_qubits: int,
     n_shots: int,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
-    mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
+    mat_obs = [observable_to_matrix(observable, n_qubits, values) for observable in observables]
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
     inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
@@ -69,7 +74,9 @@ def finite_shots_fwd(
     else:
         output_gates = apply_gate(state, gates, values)
         n_qubits = len(state.shape)
-    return eigenval_decomposition_sampling(output_gates, observables, n_qubits, n_shots, key)
+    return eigenval_decomposition_sampling(
+        output_gates, observables, values, n_qubits, n_shots, key
+    )
 
 
 def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:

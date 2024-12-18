@@ -84,7 +84,7 @@ def _(
     values: dict[str, float],
 ) -> Array:
     n_qubits = len(state.array.shape) // 2
-    mat_obs = observable_to_matrix(observable, n_qubits)
+    mat_obs = observable_to_matrix(observable, n_qubits, values)
     d = 2**n_qubits
     prod = jnp.matmul(mat_obs, state.array.reshape((d, d)))
     return jnp.trace(prod, axis1=-2, axis2=-1).real
