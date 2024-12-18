@@ -62,7 +62,7 @@ def sample(
         d = 2**n_qubits
         output_circuit.array = output_circuit.array.reshape((d, d))
     else:
-        n_qubits = len(output_circuit.array.shape)
+        n_qubits = len(output_circuit.shape)
 
     probs = get_probas(output_circuit)
     return sample_from_probs(probs, n_qubits, n_shots)
