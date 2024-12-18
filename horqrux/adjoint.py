@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Tuple
-
 from jax import Array, custom_vjp
 
 from horqrux.apply import apply_gate
@@ -37,14 +35,14 @@ def adjoint_expectation(
 
 def adjoint_expectation_single_observable_fwd(
     state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
-) -> Tuple[Array, Tuple[Array, Array, list[Primitive], dict[str, float]]]:
+) -> tuple[Array, tuple[Array, Array, list[Primitive], dict[str, float]]]:
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
     projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
     return inner(out_state, projected_state).real, (out_state, projected_state, gates, values)
 
 
 def adjoint_expectation_single_observable_bwd(
-    res: Tuple[Array, Array, list[Primitive], dict[str, float]], tangent: Array
+    res: tuple[Array, Array, list[Primitive], dict[str, float]], tangent: Array
 ) -> tuple:
     """Implementation of Algorithm 1 of https://arxiv.org/abs/2009.02823
     which computes the vector-jacobian product in O(P) time using O(1) state vectors
