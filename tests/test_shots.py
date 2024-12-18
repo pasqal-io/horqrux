@@ -54,11 +54,10 @@ def test_shots() -> None:
     assert jnp.allclose(exp_exact, exp_exact_dm)
 
     exp_shots = shots(x)
-    # FIXME: DM expectation not working
-    # exp_shots_dm = shots_dm(x)
+    exp_shots_dm = shots_dm(x)
 
     assert jnp.allclose(exp_exact, exp_shots, atol=SHOTS_ATOL)
-    # assert jnp.allclose(exp_exact, exp_shots_dm, atol=SHOTS_ATOL)
+    assert jnp.allclose(exp_exact, exp_shots_dm, atol=SHOTS_ATOL)
 
     d_exact = jax.grad(lambda x: exact(x).sum())
     d_shots = jax.grad(lambda x: shots(x).sum())

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import partial, reduce
+from functools import partial, reduce, singledispatch
 from typing import Any
 
 import jax
@@ -37,8 +37,57 @@ def observable_to_matrix(
     return reduce(lambda x, y: jnp.kron(x, y), ops[1:], ops[0])
 
 
+@singledispatch
+def probs_from_eigenvectors_state(state: Array, eigvecs: Array) -> Array:
+    """Obtain the probabilities using an input state and the eigenvectors decomposition
+       of an observable.
+
+    Args:
+        state (Array): Input array.
+        eigvecs (Array): Eigenvectors of the observables.
+
+    Returns:
+        Array: The probabilities.
+    """
+    raise NotImplementedError("prod_eigenvectors_state is not implemented")
+
+
+@probs_from_eigenvectors_state.register
+def _(state: Array, eigvecs: Array) -> Array:
+    """Obtain the probabilities using an input quantum state vector
+        and the eigenvectors decomposition
+        of an observable.
+
+    Args:
+        state (Array): Input array.
+        eigvecs (Array): Eigenvectors of the observables.
+
+    Returns:
+        Array: The probabilities.
+    """
+    inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
+    return jnp.abs(inner_prod) ** 2
+
+
+@probs_from_eigenvectors_state.register
+def _(state: DensityMatrix, eigvecs: Array) -> Array:
+    """Obtain the probabilities using an input quantum density matrix
+        and the eigenvectors decomposition
+        of an observable.
+
+    Args:
+        state (DensityMatrix): Input array.
+        eigvecs (Array): Eigenvectors of the observables.
+
+    Returns:
+        Array: The probabilities.
+    """
+    mat_prob = jnp.conjugate(eigvecs.T) @ state.array @ eigvecs
+    return mat_prob.diagonal().real
+
+
 def eigenval_decomposition_sampling(
-    state: Array,
+    state: Array | DensityMatrix,
     observables: list[Primitive],
     values: dict[str, float],
     n_qubits: int,
@@ -48,8 +97,7 @@ def eigenval_decomposition_sampling(
     mat_obs = [observable_to_matrix(observable, n_qubits, values) for observable in observables]
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
-    inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
-    probs = jnp.abs(inner_prod) ** 2
+    probs = probs_from_eigenvectors_state(state, eigvecs)
     return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
 
 
@@ -67,10 +115,10 @@ def finite_shots_fwd(
     and compute the expectation given an observable.
     """
     if isinstance(state, DensityMatrix):
-        output_gates = apply_gate(state, gates, values).array
-        n_qubits = len(output_gates.shape) // 2
+        output_gates = apply_gate(state, gates, values)
+        n_qubits = len(output_gates.array.shape) // 2
         d = 2**n_qubits
-        output_gates = output_gates.reshape((d, d))
+        output_gates.array = output_gates.array.reshape((d, d))
     else:
         output_gates = apply_gate(state, gates, values)
         n_qubits = len(state.shape)
