@@ -336,7 +336,7 @@ def prepare_sequence_reduce(
 @apply_gate.register
 def _(
     state: Array,
-    gate: Primitive | Iterable[Primitive],
+    gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
@@ -380,7 +380,7 @@ def _(
 @apply_gate.register
 def _(
     state: DensityMatrix,
-    gate: Primitive | Iterable[Primitive],
+    gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
