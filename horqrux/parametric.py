@@ -60,8 +60,8 @@ class Parametric(Primitive):
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def unitary(self, values: dict[str, float] = dict()) -> Array:
-        return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
+    def unitary(self, values: dict[str, float] = dict(), shift: float = 0.0) -> Array:
+        return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(values) + shift)
 
     def jacobian(self, values: dict[str, float] = dict()) -> Array:
         return _jacobian(OPERATIONS_DICT[self.generator_name], self.parse_values(values))

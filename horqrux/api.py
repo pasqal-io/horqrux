@@ -6,7 +6,6 @@ from typing import Any, Optional
 import jax
 import jax.numpy as jnp
 from jax import Array
-from jax.experimental import checkify
 
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate
@@ -96,13 +95,4 @@ def expectation(
     elif diff_mode == DiffMode.ADJOINT:
         return adjoint_expectation(state, gates, observables, values)
     elif diff_mode == DiffMode.GPSR:
-        checkify.check(
-            forward_mode == ForwardMode.SHOTS, "Finite shots and GPSR must be used together"
-        )
-        checkify.check(
-            type(n_shots) is int,
-            "Number of shots must be an integer for finite shots.",
-        )
-        # Type checking is disabled because mypy doesn't parse checkify.check.
-        # type: ignore
-        return finite_shots_fwd(state, gates, observables, values, n_shots=n_shots, key=key)
+        return finite_shots_fwd(state=state, gates=gates, observables=observables, values=values, n_shots=n_shots, key=key)

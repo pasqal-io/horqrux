@@ -58,7 +58,7 @@ class Primitive:
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def unitary(self, values: dict[str, float] = dict()) -> Array:
+    def unitary(self, values: dict[str, float] = dict(), shift: float = 0.0) -> Array:
         return OPERATIONS_DICT[self.generator_name]
 
     def dagger(self, values: dict[str, float] = dict()) -> Array:

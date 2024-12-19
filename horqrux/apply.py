@@ -112,6 +112,8 @@ def apply_gate(
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
+    shift_up_gates=jnp.array([], dtype=int),
+    shift_down_gates=jnp.array([], dtype=int),
 ) -> State:
     """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
     Arguments:
@@ -126,13 +128,17 @@ def apply_gate(
         State after applying 'gate'.
     """
     operator: Tuple[Array, ...]
+
+    def gate_shift(index):
+        return jnp.pi * ((shift_up_gates == index).sum() - (shift_down_gates == index).sum()) / 2
+
     if isinstance(gate, Primitive):
         operator_fn = getattr(gate, op_type)
-        operator, target, control = (operator_fn(values),), gate.target, gate.control
+        operator, target, control = (operator_fn(values, gate_shift(0)),), gate.target, gate.control
     else:
         if group_gates:
             gate = group_by_index(gate)
-        operator = tuple(getattr(g, op_type)(values) for g in gate)
+        operator = tuple(getattr(g, op_type)(values, gate_shift(i)) for i, g in enumerate(gate))
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
         if merge_ops:
