@@ -96,6 +96,6 @@ state = product_state("0")
 
 noiseless_samples = sample(state, ops)
 noisy_samples = sample(density_mat(state), noisy_ops)
-print("Noiseless samples", noiseless_samples) # markdown-exec: hide
-print("Noiseless samples", noisy_samples) # markdown-exec: hide
+print(f"Noiseless samples: {noiseless_samples}") # markdown-exec: hide
+print(f"Noiseless samples: {noisy_samples}") # markdown-exec: hide
 ```
