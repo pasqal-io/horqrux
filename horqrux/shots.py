@@ -49,7 +49,7 @@ def probs_from_eigenvectors_state(state: Any, eigvecs: Array) -> Array:
     Returns:
         Array: The probabilities.
     """
-    raise NotImplementedError("prod_eigenvectors_state is not implemented")
+    raise NotImplementedError(f"prod_eigenvectors_state is not implemented for the state type {type(state)}.")
 
 
 @probs_from_eigenvectors_state.register
