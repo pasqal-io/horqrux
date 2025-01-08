@@ -2,7 +2,7 @@
 
 In the description of closed quantum systems, the complete quantum state is a pure quantum state represented by a state vector $|\psi \rangle $.
 
-However, this description is not sufficient to study open quantum systems. When the system interacts with its environment, quantum systems can be in a mixed state, where quantum information is no longer entirely contained in a single state vector but is distributed probabilistically.
+However, this description is not sufficient to describe open quantum systems. When the system interacts with its surrounding environment, it transitions into a mixed state where quantum information is no longer entirely contained in a single state vector but is distributed probabilistically.
 
 To address these more general cases, we consider a probabilistic combination $p_i$ of possible pure states $|\psi_i \rangle$. Thus, the system is described by a density matrix $\rho$ defined as follows:
 
