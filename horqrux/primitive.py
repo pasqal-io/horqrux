@@ -107,7 +107,7 @@ def X(
     target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
 ) -> Primitive:
     """The definition for the X gate.
-    
+
     This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 

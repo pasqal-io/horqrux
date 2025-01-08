@@ -175,10 +175,10 @@ def expectation(
         # Type checking is disabled because mypy doesn't parse checkify.check.
         # type: ignore
         return finite_shots_fwd(
-            state,
-            gates,
-            observables,
-            values,
+            state=state,
+            gates=gates,
+            observables=observables,
+            values=values,
             n_shots=n_shots,
             key=key,
         )
