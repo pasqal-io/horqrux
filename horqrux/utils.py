@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from collections import Counter
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Iterable, Tuple, Union
+from functools import singledispatch
+from typing import Any, Iterable, Union
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from numpy import log2
 
@@ -14,11 +18,71 @@ from ._misc import default_complex_dtype
 
 default_dtype = default_complex_dtype()
 
-State = ArrayLike
-QubitSupport = Tuple[Any, ...]
-ControlQubits = Tuple[Union[None, Tuple[int, ...]], ...]
-TargetQubits = Tuple[Tuple[int, ...], ...]
+QubitSupport = tuple[Any, ...]
+ControlQubits = tuple[Union[None, tuple[int, ...]], ...]
+TargetQubits = tuple[tuple[int, ...], ...]
 ATOL = 1e-014
+
+
+@register_pytree_node_class
+@dataclass
+class DensityMatrix:
+    """Dataclass to identify density matrices from states."""
+
+    array: Array
+
+    def tree_flatten(self) -> tuple[tuple, tuple[Array]]:
+        children = ()
+        aux_data = (self.array,)
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
+        return cls(*children, *aux_data)
+
+
+State = Union[ArrayLike, DensityMatrix]
+
+
+def density_mat(state: ArrayLike) -> DensityMatrix:
+    """Convert state to density matrix
+
+    Args:
+        state (ArrayLike): Input state.
+
+    Returns:
+        DensityMatrix: Density matrix representation.
+    """
+    # Expand dimensions to enable broadcasting
+    if isinstance(state, DensityMatrix):
+        return state
+    ket = jnp.expand_dims(state, axis=tuple(range(state.ndim, 2 * state.ndim)))
+    bra = jnp.conj(jnp.expand_dims(state, axis=tuple(range(state.ndim))))
+    return DensityMatrix(ket * bra)
+
+
+def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> Array:
+    """Takes an operator tensor and permutes the rows and
+    columns according to the order of the qubit support.
+
+    Args:
+        operator (Tensor): Operator to permute over.
+        qubit_support (tuple): Qubit support.
+        inv (bool): Applies the inverse permutation instead.
+
+    Returns:
+        Tensor: Permuted operator.
+    """
+    ordered_support = np.argsort(qubit_support)
+    ranked_support = np.argsort(ordered_support)
+    n_qubits = len(qubit_support)
+    if all(a == b for a, b in zip(ranked_support, tuple(range(n_qubits)))):
+        return operator
+
+    perm = tuple(ranked_support) + tuple(ranked_support + n_qubits)
+    if inv:
+        perm = np.argsort(perm)
+    return jax.lax.transpose(operator, perm)
 
 
 class StrEnum(str, Enum):
@@ -57,7 +121,18 @@ class ForwardMode(StrEnum):
 
 
 def _dagger(operator: Array) -> Array:
-    return jnp.conjugate(operator.T)
+    # If the operator is a tensor with repeated 2D axes
+    if operator.ndim > 2:
+        # Conjugate and swap the last two axes
+        conjugated = operator.conj()
+
+        # Create the transpose axes: swap pairs of indices
+        half = operator.ndim // 2
+        axes = tuple(range(half, operator.ndim)) + tuple(range(half))
+        return jnp.transpose(conjugated, axes)
+    else:
+        # For standard matrices, use conjugate transpose
+        return jnp.conjugate(operator.T)
 
 
 def _unitary(generator: Array, theta: float) -> Array:
@@ -101,14 +176,14 @@ def zero_state(n_qubits: int) -> Array:
     return product_state("0" * n_qubits)
 
 
-def none_like(x: Iterable) -> Tuple[None, ...]:
+def none_like(x: Iterable) -> tuple[None, ...]:
     """Generates a tuple of Nones with equal length to x. Useful for gates with multiple targets but no control.
 
     Args:
         x (Iterable): Iterable to be mimicked.
 
     Returns:
-        Tuple[None, ...]: Tuple of Nones of length x.
+        tuple[None, ...]: tuple of Nones of length x.
     """
     return tuple(map(lambda _: None, x))
 
@@ -156,7 +231,7 @@ def uniform_state(
     return state.reshape([2] * n_qubits)
 
 
-def is_controlled(qubit_support: Tuple[int | None, ...] | int | None) -> bool:
+def is_controlled(qubit_support: Union[tuple[Union[int, None], ...], int, None]) -> bool:
     if isinstance(qubit_support, int):
         return True
     elif isinstance(qubit_support, tuple):
@@ -180,3 +255,70 @@ def random_state(n_qubits: int) -> Array:
 
 def is_normalized(state: Array) -> bool:
     return equivalent_state(state, state)
+
+
+def sample_from_probs(probs: Array, n_qubits: int, n_shots: int) -> Counter:
+    key = jax.random.PRNGKey(0)
+
+    # JAX handles pseudo random number generation by tracking an explicit state via a random key
+    # For more details, see https://jax.readthedocs.io/en/latest/random-numbers.html
+    samples = jax.vmap(
+        lambda subkey: jax.random.choice(key=subkey, a=jnp.arange(0, 2**n_qubits), p=probs)
+    )(jax.random.split(key, n_shots))
+
+    return Counter(
+        {
+            format(k, f"0{n_qubits}b"): count.item()
+            for k, count in enumerate(jnp.bincount(samples))
+            if count > 0
+        }
+    )
+
+
+@singledispatch
+def probabilities(state: Any) -> Array:
+    """Extract probabilities from state or density matrix.
+
+    Args:
+        state (Array): Input array.
+
+    Raises:
+        NotImplementedError: If not implemented for given types.
+
+    Returns:
+        Array: Vector of probabilities.
+    """
+    raise NotImplementedError(f"Probabilities is not implemented for the input type {type(state)}.")
+
+
+@probabilities.register
+def _(state: Array) -> Array:
+    return jnp.abs(jnp.float_power(state, 2.0)).ravel()
+
+
+@probabilities.register
+def _(state: DensityMatrix) -> Array:
+    return jnp.diagonal(state.array).real
+
+
+@singledispatch
+def num_qubits(state: Any) -> int:
+    """Returns the number of qubits of a state.
+
+    Args:
+        state (Any): state.
+
+    Returns:
+        int: Number of qubits.
+    """
+    raise NotImplementedError(f"num_qubits is not implemented for the state type {type(state)}.")
+
+
+@num_qubits.register
+def _(state: Array) -> int:
+    return len(state.shape)
+
+
+@num_qubits.register
+def _(state: DensityMatrix) -> int:
+    return len(state.array.shape) // 2

@@ -4,8 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import Array, grad
 
-from horqrux import random_state
-from horqrux.circuit import expectation
+from horqrux import expectation, random_state
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, H, I, S, T, X, Y, Z
 from horqrux.utils import DiffMode
@@ -27,7 +26,7 @@ def test_gradcheck() -> None:
     state = random_state(MAX_QUBITS)
 
     def exp_fn(values: dict, diff_mode: DiffMode = "ad") -> Array:
-        return expectation(state, ops, observable, values, diff_mode)
+        return expectation(state, ops, observable, values, diff_mode).item()
 
     grads_adjoint = grad(exp_fn)(values, "adjoint")
     grad_ad = grad(exp_fn)(values)
