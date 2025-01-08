@@ -106,7 +106,9 @@ def I(
 def X(
     target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
 ) -> Primitive:
-    """X gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
+    """The definition for the X gate.
+    
+    This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
 
     Example usage: X(1) represents the instruction to apply X to qubit 1.
