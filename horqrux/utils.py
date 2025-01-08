@@ -288,7 +288,7 @@ def probabilities(state: Any) -> Array:
     Returns:
         Array: Vector of probabilities.
     """
-    raise NotImplementedError("probabilities is not implemented")
+    raise NotImplementedError(f"Probabilities is not implemented for the input type {type(state)}.")
 
 
 @probabilities.register
