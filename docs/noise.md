@@ -1,6 +1,6 @@
 ## Digital Noise
 
-In the description of closed quantum systems, a pure state vector is used to represent the complete quantum state. Thus, pure quantum states are represented by state vectors $|\psi \rangle $.
+In the description of closed quantum systems, the complete quantum state is a pure quantum state represented by a state vector $|\psi \rangle $.
 
 However, this description is not sufficient to study open quantum systems. When the system interacts with its environment, quantum systems can be in a mixed state, where quantum information is no longer entirely contained in a single state vector but is distributed probabilistically.
 
