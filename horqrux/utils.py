@@ -276,7 +276,7 @@ def sample_from_probs(probs: Array, n_qubits: int, n_shots: int) -> Counter:
 
 
 @singledispatch
-def probabilities(state: Array) -> Array:
+def probabilities(state: Any) -> Array:
     """Extract probabilities from state or density matrix.
 
     Args:
@@ -299,3 +299,26 @@ def _(state: Array) -> Array:
 @probabilities.register
 def _(state: DensityMatrix) -> Array:
     return jnp.diagonal(state.array).real
+
+
+@singledispatch
+def num_qubits(state: Any) -> int:
+    """Returns the number of qubits of a state.
+
+    Args:
+        state (Any): state.
+
+    Returns:
+        int: Number of qubits.
+    """
+    raise NotImplementedError(f"num_qubits is not implemented for the state type {type(state)}.")
+
+
+@num_qubits.register
+def _(state: Array) -> int:
+    return len(state.shape)
+
+
+@num_qubits.register
+def _(state: DensityMatrix) -> int:
+    return len(state.array.shape) // 2

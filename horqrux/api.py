@@ -20,6 +20,7 @@ from horqrux.utils import (
     OperationType,
     State,
     inner,
+    num_qubits,
     probabilities,
     sample_from_probs,
 )
@@ -56,13 +57,10 @@ def sample(
     if n_shots < 1:
         raise ValueError("You can only sample with non-negative 'n_shots'.")
     output_circuit = apply_gate(state, gates, values)
-
+    n_qubits = num_qubits(output_circuit)
     if isinstance(output_circuit, DensityMatrix):
-        n_qubits = len(output_circuit.array.shape) // 2
         d = 2**n_qubits
         output_circuit.array = output_circuit.array.reshape((d, d))
-    else:
-        n_qubits = len(output_circuit.shape)
 
     probs = probabilities(output_circuit)
     return sample_from_probs(probs, n_qubits, n_shots)
@@ -98,7 +96,7 @@ def _(
     observable: Primitive,
     values: dict[str, float],
 ) -> Array:
-    n_qubits = len(state.array.shape) // 2
+    n_qubits = num_qubits(state)
     mat_obs = to_matrix(observable, n_qubits, values)
     d = 2**n_qubits
     prod = jnp.matmul(mat_obs, state.array.reshape((d, d)))

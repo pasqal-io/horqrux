@@ -10,7 +10,7 @@ from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
 from horqrux.primitive import GateSequence, Primitive
-from horqrux.utils import DensityMatrix, State, none_like
+from horqrux.utils import DensityMatrix, State, none_like, num_qubits
 
 
 def to_matrix(
@@ -96,6 +96,20 @@ def eigen_sample(
     n_shots: int,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
+    """Sample eigenvalues of observable given the probability distribution
+        defined by applying the eigenvectors to the state.
+
+    Args:
+        state (State): Input state or density matrix.
+        observables (list[Primitive]): list of observables.
+        values (dict[str, float]): Parameter values.
+        n_qubits (int): Number of qubits
+        n_shots (int): Number of samples
+        key (Any, optional): Random seed key. Defaults to jax.random.PRNGKey(0).
+
+    Returns:
+        Array: Sampled eigenvalues.
+    """
     mat_obs = [to_matrix(observable, n_qubits, values) for observable in observables]
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
@@ -116,14 +130,11 @@ def finite_shots_fwd(
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
+    output_gates = apply_gate(state, gates, values)
+    n_qubits = num_qubits(output_gates)
     if isinstance(state, DensityMatrix):
-        output_gates = apply_gate(state, gates, values)
-        n_qubits = len(output_gates.array.shape) // 2
         d = 2**n_qubits
         output_gates.array = output_gates.array.reshape((d, d))
-    else:
-        output_gates = apply_gate(state, gates, values)
-        n_qubits = len(state.shape)
     return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
 
 
