@@ -119,7 +119,7 @@ def PauliChannel(error_probability: tuple[float, ...]) -> tuple[Array, ...]:
         raise ValueError("The sum of probabilities can't be greater than 1.0")
     for probability in error_probability:
         if (probability > 1.0) or (probability < 0.0):
-            raise ValueError("The probability values are not correct probabilities")
+            raise ValueError(f"The error probability values are incorrect. Got {probability}.")
     px, py, pz = (
         error_probability[0],
         error_probability[1],
