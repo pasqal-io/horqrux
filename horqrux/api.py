@@ -162,7 +162,7 @@ def expectation(
         return ad_expectation(state, gates, observables, values)
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
-            raise ValueError("Adjoint does not support density matrices.")
+            raise TypeError("Adjoint does not support density matrices.")
         return adjoint_expectation(state, gates, observables, values)
     elif diff_mode == DiffMode.GPSR:
         checkify.check(
