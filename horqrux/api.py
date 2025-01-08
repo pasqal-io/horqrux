@@ -12,14 +12,14 @@ from jax.experimental import checkify
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate
 from horqrux.primitive import GateSequence, Primitive
-from horqrux.shots import finite_shots_fwd, observable_to_matrix
+from horqrux.shots import finite_shots_fwd, to_matrix
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
     ForwardMode,
     OperationType,
     State,
-    get_probas,
+    probabilities,
     inner,
     sample_from_probs,
 )
@@ -64,7 +64,7 @@ def sample(
     else:
         n_qubits = len(output_circuit.shape)
 
-    probs = get_probas(output_circuit)
+    probs = probabilities(output_circuit)
     return sample_from_probs(probs, n_qubits, n_shots)
 
 
@@ -99,7 +99,7 @@ def _(
     values: dict[str, float],
 ) -> Array:
     n_qubits = len(state.array.shape) // 2
-    mat_obs = observable_to_matrix(observable, n_qubits, values)
+    mat_obs = to_matrix(observable, n_qubits, values)
     d = 2**n_qubits
     prod = jnp.matmul(mat_obs, state.array.reshape((d, d)))
     return jnp.trace(prod, axis1=-2, axis2=-1).real

@@ -268,7 +268,7 @@ def sample_from_probs(probs: Array, n_qubits: int, n_shots: int) -> Counter:
 
     return Counter(
         {
-            format(k, "0{}b".format(n_qubits)): count.item()
+            format(k, f"0{n_qubits}b"): count.item()
             for k, count in enumerate(jnp.bincount(samples))
             if count > 0
         }
@@ -276,7 +276,7 @@ def sample_from_probs(probs: Array, n_qubits: int, n_shots: int) -> Counter:
 
 
 @singledispatch
-def get_probas(state: Array) -> Array:
+def probabilities(state: Array) -> Array:
     """Extract probabilities from state or density matrix.
 
     Args:
@@ -288,14 +288,14 @@ def get_probas(state: Array) -> Array:
     Returns:
         Array: Vector of probabilities.
     """
-    raise NotImplementedError("get_probas is not implemented")
+    raise NotImplementedError("probabilities is not implemented")
 
 
-@get_probas.register
+@probabilities.register
 def _(state: Array) -> Array:
     return jnp.abs(jnp.float_power(state, 2.0)).ravel()
 
 
-@get_probas.register
+@probabilities.register
 def _(state: DensityMatrix) -> Array:
     return jnp.diagonal(state.array).real

@@ -13,7 +13,7 @@ from horqrux.primitive import GateSequence, Primitive
 from horqrux.utils import DensityMatrix, State, none_like
 
 
-def observable_to_matrix(
+def to_matrix(
     observable: Primitive,
     n_qubits: int,
     values: dict[str, float],
@@ -50,7 +50,7 @@ def eigen_probabilities(state: Any, eigvecs: Array) -> Array:
         Array: The probabilities.
     """
     raise NotImplementedError(
-        f"prod_eigenvectors_state is not implemented for the state type {type(state)}."
+        f"eigen_probabilities is not implemented for the state type {type(state)}."
     )
 
 
@@ -88,7 +88,7 @@ def _(state: DensityMatrix, eigvecs: Array) -> Array:
     return mat_prob.diagonal().real
 
 
-def eigenval_decomposition_sampling(
+def eigen_sample(
     state: State,
     observables: list[Primitive],
     values: dict[str, float],
@@ -96,7 +96,7 @@ def eigenval_decomposition_sampling(
     n_shots: int,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
-    mat_obs = [observable_to_matrix(observable, n_qubits, values) for observable in observables]
+    mat_obs = [to_matrix(observable, n_qubits, values) for observable in observables]
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
     probs = eigen_probabilities(state, eigvecs)
@@ -124,7 +124,7 @@ def finite_shots_fwd(
     else:
         output_gates = apply_gate(state, gates, values)
         n_qubits = len(state.shape)
-    return eigenval_decomposition_sampling(
+    return eigen_sample(
         output_gates, observables, values, n_qubits, n_shots, key
     )
 
