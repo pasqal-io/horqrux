@@ -54,7 +54,7 @@ def sample(
         Counter: Bitstrings and frequencies.
     """
     if n_shots < 1:
-        raise ValueError("You can only call sample with n_shots>0.")
+        raise ValueError("You can only sample with non-negative 'n_shots'.")
     output_circuit = apply_gate(state, gates, values)
 
     if isinstance(output_circuit, DensityMatrix):
