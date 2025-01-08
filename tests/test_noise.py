@@ -17,7 +17,7 @@ MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
 PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
-NOISE_oneproba = (
+NOISE_single_prob = (
     NoiseType.BITFLIP,
     NoiseType.PHASEFLIP,
     NoiseType.DEPOLARIZING,
@@ -28,7 +28,7 @@ ALL_NOISES = list(NoiseType)
 
 
 def noise_instance(noise_type: NoiseType) -> NoiseInstance:
-    if noise_type in NOISE_oneproba:
+    if noise_type in NOISE_single_prob:
         errors = 0.1
     elif noise_type == NoiseType.PAULI_CHANNEL:
         errors = (0.4, 0.5, 0.1)
@@ -36,6 +36,47 @@ def noise_instance(noise_type: NoiseType) -> NoiseInstance:
         errors = (0.2, 0.8)
 
     return NoiseInstance(noise_type, error_probability=errors)
+
+
+@pytest.mark.parametrize("noise_type", NOISE_single_prob)
+def test_error_prob(noise_type: NoiseType):
+    with pytest.raises(ValueError):
+        noise = NoiseInstance(noise_type, error_probability=-0.5).kraus
+    with pytest.raises(ValueError):
+        noise = NoiseInstance(noise_type, error_probability=1.1).kraus
+
+
+def test_error_paulichannel():
+    with pytest.raises(ValueError):
+        noise = NoiseInstance(NoiseType.PAULI_CHANNEL, error_probability=(0.4, 0.5, 1.1)).kraus
+
+    for p in range(3):
+        probas = [1.0 / 3.0] * 3
+        probas[p] = -0.1
+        with pytest.raises(ValueError):
+            noise = NoiseInstance(NoiseType.PAULI_CHANNEL, error_probability=probas).kraus
+
+        probas = [0.0] * 3
+        probas[p] = 1.1
+        with pytest.raises(ValueError):
+            noise = NoiseInstance(NoiseType.PAULI_CHANNEL, error_probability=probas).kraus
+
+
+def test_error_prob_GeneralizedAmplitudeDamping():
+    for p in range(2):
+        probas = [1.0 / 2.0] * 2
+        probas[p] = -0.1
+        with pytest.raises(ValueError):
+            noise = NoiseInstance(
+                NoiseType.GENERALIZED_AMPLITUDE_DAMPING, error_probability=probas
+            ).kraus
+
+        probas = [0.0] * 2
+        probas[p] = 1.1
+        with pytest.raises(ValueError):
+            noise = NoiseInstance(
+                NoiseType.GENERALIZED_AMPLITUDE_DAMPING, error_probability=probas
+            ).kraus
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
