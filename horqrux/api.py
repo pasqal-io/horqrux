@@ -69,15 +69,15 @@ def sample(
 
 
 @singledispatch
-def __ad_expectation_single_observable(
+def _ad_expectation_single_observable(
     state: Any,
     observable: Primitive,
     values: dict[str, float],
 ) -> Any:
-    raise NotImplementedError("__ad_expectation_single_observable is not implemented")
+    raise NotImplementedError("_ad_expectation_single_observable is not implemented")
 
 
-@__ad_expectation_single_observable.register
+@_ad_expectation_single_observable.register
 def _(
     state: Array,
     observable: Primitive,
@@ -92,7 +92,7 @@ def _(
     return inner(state, projected_state).real
 
 
-@__ad_expectation_single_observable.register
+@_ad_expectation_single_observable.register
 def _(
     state: DensityMatrix,
     observable: Primitive,
@@ -124,7 +124,7 @@ def ad_expectation(
         Array: Expectation values.
     """
     outputs = [
-        __ad_expectation_single_observable(
+        _ad_expectation_single_observable(
             apply_gate(state, gates, values, OperationType.UNITARY), observable, values
         )
         for observable in observables
