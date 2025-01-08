@@ -10,7 +10,7 @@ $$
 \rho = \sum_i p_i |\psi_i\rangle \langle \psi_i|
 $$
 
-The transformations of the density operator of an open quantum system interacting with its environment (noise) are represented by the super-operator $S: \rho \rightarrow S(\rho)$, often referred to as a quantum channel.
+The transformations of the density operator of an open quantum system interacting with its noisy environment are represented by the super-operator $S: \rho \rightarrow S(\rho)$, often referred to as a quantum channel.
 Quantum channels, due to the conservation of the probability distribution, must be CPTP (Completely Positive and Trace Preserving). Any CPTP super-operator can be written in the following form:
 
 $$
