@@ -17,7 +17,7 @@ $$
 S(\rho) = \sum_i K_i \rho K^{\dagger}_i
 $$
 
-Where $K_i$ are the Kraus operators, and satisfy the property $\sum_i K_i K^{\dagger}_i = \mathbb{I}$. As noise is the result of system interactions with its environment, it is therefore possible to simulate noisy quantum circuit with noise type gates.
+Where $K_i$ are Kraus operators satisfying the closure property $\sum_i K_i K^{\dagger}_i = \mathbb{I}$. As noise is the result of system interactions with its environment, it is therefore possible to simulate noisy quantum circuit with noise type gates.
 
 Thus, `horqrux` implements a large selection of single qubit noise gates such as:
 
