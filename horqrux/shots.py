@@ -124,9 +124,7 @@ def finite_shots_fwd(
     else:
         output_gates = apply_gate(state, gates, values)
         n_qubits = len(state.shape)
-    return eigen_sample(
-        output_gates, observables, values, n_qubits, n_shots, key
-    )
+    return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
 
 
 def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:

@@ -19,8 +19,8 @@ from horqrux.utils import (
     ForwardMode,
     OperationType,
     State,
-    probabilities,
     inner,
+    probabilities,
     sample_from_probs,
 )
 

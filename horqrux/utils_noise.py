@@ -25,7 +25,7 @@ def BitFlip(error_probability: float) -> tuple[Array, ...]:
         tuple[Array, ...]: Kraus operators for this protocol.
     """
     if (error_probability > 1.0) or (error_probability < 0.0):
-        raise ValueError("The error_probability value is not a correct probability")
+        ValueError(f"The 'error_probability' value is incorrect. Got {error_probability}.")
     K0: Array = jnp.sqrt(1.0 - error_probability) * OPERATIONS_DICT["I"]
     K1: Array = jnp.sqrt(error_probability) * OPERATIONS_DICT["X"]
     kraus: tuple[Array, ...] = (K0, K1)
@@ -82,7 +82,7 @@ def Depolarizing(error_probability: float) -> tuple[Array, ...]:
     """
 
     if (error_probability > 1.0) or (error_probability < 0.0):
-        raise ValueError("The error_probability value is not a correct probability")
+        ValueError(f"The 'error_probability' value is incorrect. Got {error_probability}.")
     K0: Array = jnp.sqrt(1.0 - error_probability) * OPERATIONS_DICT["I"]
     K1: Array = jnp.sqrt(error_probability / 3.0) * OPERATIONS_DICT["X"]
     K2: Array = jnp.sqrt(error_probability / 3.0) * OPERATIONS_DICT["Y"]
@@ -119,7 +119,9 @@ def PauliChannel(error_probability: tuple[float, ...]) -> tuple[Array, ...]:
         raise ValueError("The sum of probabilities can't be greater than 1.0")
     for probability in error_probability:
         if (probability > 1.0) or (probability < 0.0):
-            raise ValueError(f"The error probability values are incorrect. Got {probability}.")
+            raise ValueError(
+                f"The 'error_probability' values are incorrect. Change value {probability}."
+            )
     px, py, pz = (
         error_probability[0],
         error_probability[1],
@@ -161,7 +163,7 @@ def AmplitudeDamping(error_probability: float) -> tuple[Array, ...]:
     """
 
     if (error_probability > 1.0) or (error_probability < 0.0):
-        raise ValueError("The damping rate is not a correct probability")
+        ValueError(f"The 'error_probability' value is incorrect. Got {error_probability}.")
     K0: Array = jnp.array([[1, 0], [0, jnp.sqrt(1 - error_probability)]], dtype=jnp.complex128)
     K1: Array = jnp.array([[0, jnp.sqrt(error_probability)], [0, 0]], dtype=jnp.complex128)
     kraus: tuple[Array, ...] = (K0, K1)
@@ -195,7 +197,7 @@ def PhaseDamping(error_probability: float) -> tuple[Array, ...]:
     """
 
     if (error_probability > 1.0) or (error_probability < 0.0):
-        raise ValueError("The damping rate is not a correct probability")
+        ValueError(f"The 'error_probability' value is incorrect. Got {error_probability}.")
     K0: Array = jnp.array([[1, 0], [0, jnp.sqrt(1 - error_probability)]], dtype=jnp.complex128)
     K1: Array = jnp.array([[0, 0], [0, jnp.sqrt(error_probability)]], dtype=jnp.complex128)
     kraus: tuple[Array, ...] = (K0, K1)
@@ -236,9 +238,11 @@ def GeneralizedAmplitudeDamping(error_probability: tuple[float, ...]) -> tuple[A
     probability = error_probability[0]
     rate = error_probability[1]
     if (probability > 1.0) or (probability < 0.0):
-        raise ValueError("The probability value is not a correct probability")
+        raise ValueError(
+            f"The first value of 'error_probability' value is incorrect. Got {probability}."
+        )
     if (rate > 1.0) or (rate < 0.0):
-        raise ValueError("The damping rate is not a correct probability")
+        raise ValueError(f"The second value of 'error_probability' value is incorrect. Got {rate}.")
 
     K0: Array = jnp.sqrt(probability) * jnp.array(
         [[1, 0], [0, jnp.sqrt(1 - rate)]], dtype=jnp.complex128
