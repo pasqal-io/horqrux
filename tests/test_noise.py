@@ -8,7 +8,7 @@ import pytest
 
 from horqrux.api import expectation, run, sample
 from horqrux.apply import apply_gate
-from horqrux.noise import NoiseInstance, NoiseType
+from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, H, I, S, T, X, Y, Z
 from horqrux.utils import ForwardMode, density_mat, product_state, random_state
@@ -18,48 +18,54 @@ PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
 PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 NOISE_single_prob = (
-    NoiseType.BITFLIP,
-    NoiseType.PHASEFLIP,
-    NoiseType.DEPOLARIZING,
-    NoiseType.AMPLITUDE_DAMPING,
-    NoiseType.PHASE_DAMPING,
+    DigitalNoiseType.BITFLIP,
+    DigitalNoiseType.PHASEFLIP,
+    DigitalNoiseType.DEPOLARIZING,
+    DigitalNoiseType.AMPLITUDE_DAMPING,
+    DigitalNoiseType.PHASE_DAMPING,
 )
-ALL_NOISES = list(NoiseType)
+ALL_NOISES = list(DigitalNoiseType)
 
 
-def noise_instance(noise_type: NoiseType) -> NoiseInstance:
+def noise_instance(noise_type: DigitalNoiseType) -> DigitalNoiseInstance:
     if noise_type in NOISE_single_prob:
         errors = 0.1
-    elif noise_type == NoiseType.PAULI_CHANNEL:
+    elif noise_type == DigitalNoiseType.PAULI_CHANNEL:
         errors = (0.4, 0.5, 0.1)
     else:
         errors = (0.2, 0.8)
 
-    return NoiseInstance(noise_type, error_probability=errors)
+    return DigitalNoiseInstance(noise_type, error_probability=errors)
 
 
 @pytest.mark.parametrize("noise_type", NOISE_single_prob)
-def test_error_prob(noise_type: NoiseType):
+def test_error_prob(noise_type: DigitalNoiseType):
     with pytest.raises(ValueError):
-        noise = NoiseInstance(noise_type, error_probability=-0.5).kraus
+        noise = DigitalNoiseInstance(noise_type, error_probability=-0.5).kraus
     with pytest.raises(ValueError):
-        noise = NoiseInstance(noise_type, error_probability=1.1).kraus
+        noise = DigitalNoiseInstance(noise_type, error_probability=1.1).kraus
 
 
 def test_error_paulichannel():
     with pytest.raises(ValueError):
-        noise = NoiseInstance(NoiseType.PAULI_CHANNEL, error_probability=(0.4, 0.5, 1.1)).kraus
+        noise = DigitalNoiseInstance(
+            DigitalNoiseType.PAULI_CHANNEL, error_probability=(0.4, 0.5, 1.1)
+        ).kraus
 
     for p in range(3):
         probas = [1.0 / 3.0] * 3
         probas[p] = -0.1
         with pytest.raises(ValueError):
-            noise = NoiseInstance(NoiseType.PAULI_CHANNEL, error_probability=probas).kraus
+            noise = DigitalNoiseInstance(
+                DigitalNoiseType.PAULI_CHANNEL, error_probability=probas
+            ).kraus
 
         probas = [0.0] * 3
         probas[p] = 1.1
         with pytest.raises(ValueError):
-            noise = NoiseInstance(NoiseType.PAULI_CHANNEL, error_probability=probas).kraus
+            noise = DigitalNoiseInstance(
+                DigitalNoiseType.PAULI_CHANNEL, error_probability=probas
+            ).kraus
 
 
 def test_error_prob_GeneralizedAmplitudeDamping():
@@ -67,21 +73,21 @@ def test_error_prob_GeneralizedAmplitudeDamping():
         probas = [1.0 / 2.0] * 2
         probas[p] = -0.1
         with pytest.raises(ValueError):
-            noise = NoiseInstance(
-                NoiseType.GENERALIZED_AMPLITUDE_DAMPING, error_probability=probas
+            noise = DigitalNoiseInstance(
+                DigitalNoiseType.GENERALIZED_AMPLITUDE_DAMPING, error_probability=probas
             ).kraus
 
         probas = [0.0] * 2
         probas[p] = 1.1
         with pytest.raises(ValueError):
-            noise = NoiseInstance(
-                NoiseType.GENERALIZED_AMPLITUDE_DAMPING, error_probability=probas
+            noise = DigitalNoiseInstance(
+                DigitalNoiseType.GENERALIZED_AMPLITUDE_DAMPING, error_probability=probas
             ).kraus
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
 @pytest.mark.parametrize("noise_type", ALL_NOISES)
-def test_noisy_primitive(gate_fn: Callable, noise_type: NoiseType) -> None:
+def test_noisy_primitive(gate_fn: Callable, noise_type: DigitalNoiseType) -> None:
     target = np.random.randint(0, MAX_QUBITS)
     noise = noise_instance(noise_type)
 
@@ -111,7 +117,7 @@ def test_noisy_primitive(gate_fn: Callable, noise_type: NoiseType) -> None:
 
 @pytest.mark.parametrize("gate_fn", PARAMETRIC_GATES)
 @pytest.mark.parametrize("noise_type", ALL_NOISES)
-def test_noisy_parametric(gate_fn: Callable, noise_type: NoiseType) -> None:
+def test_noisy_parametric(gate_fn: Callable, noise_type: DigitalNoiseType) -> None:
     target = np.random.randint(0, MAX_QUBITS)
     noise = noise_instance(noise_type)
     noisy_gate = gate_fn("theta", target, noise=(noise,))
@@ -140,7 +146,7 @@ def test_noisy_parametric(gate_fn: Callable, noise_type: NoiseType) -> None:
 
 
 def simple_depolarizing_test() -> None:
-    noise = (NoiseInstance(NoiseType.DEPOLARIZING, 0.1),)
+    noise = (DigitalNoiseInstance(DigitalNoiseType.DEPOLARIZING, 0.1),)
     ops = [X(0, noise=noise), X(1)]
     state = product_state("00")
     state_output = run(ops, state)

@@ -20,7 +20,7 @@ from .utils_noise import (
 )
 
 
-class NoiseType(StrEnum):
+class DigitalNoiseType(StrEnum):
     BITFLIP = "BitFlip"
     PHASEFLIP = "PhaseFlip"
     DEPOLARIZING = "Depolarizing"
@@ -43,8 +43,8 @@ PROTOCOL_TO_KRAUS_FN: dict[str, Callable] = {
 
 @register_pytree_node_class
 @dataclass
-class NoiseInstance:
-    type: NoiseType
+class DigitalNoiseInstance:
+    type: DigitalNoiseType
     error_probability: tuple[float, ...] | float
 
     def __iter__(self) -> Iterable:
@@ -52,7 +52,7 @@ class NoiseInstance:
 
     def tree_flatten(
         self,
-    ) -> tuple[tuple, tuple[NoiseType, tuple[float, ...] | float]]:
+    ) -> tuple[tuple, tuple[DigitalNoiseType, tuple[float, ...] | float]]:
         children = ()
         aux_data = (self.type, self.error_probability)
         return (children, aux_data)
@@ -70,4 +70,4 @@ class NoiseInstance:
         return self.type + f"(p={self.error_probability})"
 
 
-NoiseProtocol = Union[tuple[NoiseInstance, ...], None]
+NoiseProtocol = Union[tuple[DigitalNoiseInstance, ...], None]

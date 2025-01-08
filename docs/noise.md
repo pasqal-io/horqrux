@@ -69,27 +69,27 @@ K_{2} \ =\sqrt{1\ -p} \ \begin{pmatrix}
 \end{pmatrix}
 \end{cases}$
 
-Noise protocols can be added to gates by instantiating `NoiseInstance` providing the `NoiseType` and the `error_probability` (either float or tuple of float):
+Noise protocols can be added to gates by instantiating `DigitalNoiseInstance` providing the `DigitalNoiseType` and the `error_probability` (either float or tuple of float):
 
 ```python exec="on" source="material-block" html="1"
-from horqrux.noise import NoiseInstance, NoiseType
+from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
 
 noise_prob = 0.3
-AmpD = NoiseInstance(NoiseType.AMPLITUDE_DAMPING, error_probability=noise_prob)
+AmpD = DigitalNoiseInstance(DigitalNoiseType.AMPLITUDE_DAMPING, error_probability=noise_prob)
 
 ```
 
-Then a gate can be instantiated by providing a tuple of `NoiseInstance` instances. Let’s show this through the simulation of a realistic $X$ gate.
+Then a gate can be instantiated by providing a tuple of `DigitalNoiseInstance` instances. Let’s show this through the simulation of a realistic $X$ gate.
 
-For instance, an $X$ gate flips the state of the qubit: $X|0\rangle = |1\rangle$. In practice, it's common for the target qubit to stay in its original state after applying $X$ due to the interactions between it and its environment. The possibility of failure can be represented by the `BitFlip` subclass of `NoiseInstance`, which flips the state again after the application of the $X$ gate, returning it to its original state with a probability `1 - gate_fidelity`.
+For instance, an $X$ gate flips the state of the qubit: $X|0\rangle = |1\rangle$. In practice, it's common for the target qubit to stay in its original state after applying $X$ due to the interactions between it and its environment. The possibility of failure can be represented by the `BitFlip` subclass of `DigitalNoiseInstance`, which flips the state again after the application of the $X$ gate, returning it to its original state with a probability `1 - gate_fidelity`.
 
 ```python exec="on" source="material-block"
 from horqrux.api import sample
-from horqrux.noise import NoiseInstance, NoiseType
+from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
 from horqrux.utils import density_mat, product_state
 from horqrux.primitive import X
 
-noise = (NoiseInstance(NoiseType.BITFLIP, 0.1),)
+noise = (DigitalNoiseInstance(DigitalNoiseType.BITFLIP, 0.1),)
 ops = [X(0)]
 noisy_ops = [X(0, noise=noise)]
 state = product_state("0")

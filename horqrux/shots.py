@@ -38,7 +38,7 @@ def observable_to_matrix(
 
 
 @singledispatch
-def probs_from_eigenvectors_state(state: Any, eigvecs: Array) -> Array:
+def eigen_probabilities(state: Any, eigvecs: Array) -> Array:
     """Obtain the probabilities using an input state and the eigenvectors decomposition
        of an observable.
 
@@ -52,7 +52,7 @@ def probs_from_eigenvectors_state(state: Any, eigvecs: Array) -> Array:
     raise NotImplementedError("prod_eigenvectors_state is not implemented")
 
 
-@probs_from_eigenvectors_state.register
+@eigen_probabilities.register
 def _(state: Array, eigvecs: Array) -> Array:
     """Obtain the probabilities using an input quantum state vector
         and the eigenvectors decomposition
@@ -69,7 +69,7 @@ def _(state: Array, eigvecs: Array) -> Array:
     return jnp.abs(inner_prod) ** 2
 
 
-@probs_from_eigenvectors_state.register
+@eigen_probabilities.register
 def _(state: DensityMatrix, eigvecs: Array) -> Array:
     """Obtain the probabilities using an input quantum density matrix
         and the eigenvectors decomposition
@@ -97,7 +97,7 @@ def eigenval_decomposition_sampling(
     mat_obs = [observable_to_matrix(observable, n_qubits, values) for observable in observables]
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
-    probs = probs_from_eigenvectors_state(state, eigvecs)
+    probs = eigen_probabilities(state, eigvecs)
     return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
 
 
