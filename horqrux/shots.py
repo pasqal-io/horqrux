@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import partial, reduce
+from functools import partial, reduce, singledispatch
 from typing import Any
 
 import jax
@@ -10,10 +10,14 @@ from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
 from horqrux.primitive import GateSequence, Primitive
-from horqrux.utils import none_like
+from horqrux.utils import DensityMatrix, State, none_like, num_qubits
 
 
-def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
+def to_matrix(
+    observable: Primitive,
+    n_qubits: int,
+    values: dict[str, float],
+) -> Array:
     """For finite shot sampling we need to calculate the eigenvalues/vectors of
     an observable. This helper function takes an observable and system size
     (n_qubits) and returns the overall action of the observable on the whole
@@ -25,7 +29,7 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
         observable.control == observable.parse_idx(none_like(observable.target)),
         "Controlled gates cannot be promoted from observables to operations on the whole state vector",
     )
-    unitary = observable.unitary()
+    unitary = observable.unitary(values=values)
     target = observable.target[0][0]
     identity = jnp.eye(2, dtype=unitary.dtype)
     ops = [identity for _ in range(n_qubits)]
@@ -33,9 +37,89 @@ def observable_to_matrix(observable: Primitive, n_qubits: int) -> Array:
     return reduce(lambda x, y: jnp.kron(x, y), ops[1:], ops[0])
 
 
+@singledispatch
+def eigen_probabilities(state: Any, eigvecs: Array) -> Array:
+    """Obtain the probabilities using an input state and the eigenvectors decomposition
+       of an observable.
+
+    Args:
+        state (Any): Input.
+        eigvecs (Array): Eigenvectors of the observables.
+
+    Returns:
+        Array: The probabilities.
+    """
+    raise NotImplementedError(
+        f"eigen_probabilities is not implemented for the state type {type(state)}."
+    )
+
+
+@eigen_probabilities.register
+def _(state: Array, eigvecs: Array) -> Array:
+    """Obtain the probabilities using an input quantum state vector
+        and the eigenvectors decomposition
+        of an observable.
+
+    Args:
+        state (Array): Input array.
+        eigvecs (Array): Eigenvectors of the observables.
+
+    Returns:
+        Array: The probabilities.
+    """
+    inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
+    return jnp.abs(inner_prod) ** 2
+
+
+@eigen_probabilities.register
+def _(state: DensityMatrix, eigvecs: Array) -> Array:
+    """Obtain the probabilities using an input quantum density matrix
+        and the eigenvectors decomposition
+        of an observable.
+
+    Args:
+        state (DensityMatrix): Input density matrix.
+        eigvecs (Array): Eigenvectors of the observables.
+
+    Returns:
+        Array: The probabilities.
+    """
+    mat_prob = jnp.conjugate(eigvecs.T) @ state.array @ eigvecs
+    return mat_prob.diagonal().real
+
+
+def eigen_sample(
+    state: State,
+    observables: list[Primitive],
+    values: dict[str, float],
+    n_qubits: int,
+    n_shots: int,
+    key: Any = jax.random.PRNGKey(0),
+) -> Array:
+    """Sample eigenvalues of observable given the probability distribution
+        defined by applying the eigenvectors to the state.
+
+    Args:
+        state (State): Input state or density matrix.
+        observables (list[Primitive]): list of observables.
+        values (dict[str, float]): Parameter values.
+        n_qubits (int): Number of qubits
+        n_shots (int): Number of samples
+        key (Any, optional): Random seed key. Defaults to jax.random.PRNGKey(0).
+
+    Returns:
+        Array: Sampled eigenvalues.
+    """
+    mat_obs = [to_matrix(observable, n_qubits, values) for observable in observables]
+    eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
+    eigvecs, eigvals = align_eigenvectors(eigs)
+    probs = eigen_probabilities(state, eigvecs)
+    return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+
+
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
 def finite_shots_fwd(
-    state: Array,
+    state: State,
     gates: GateSequence,
     observables: list[Primitive],
     values: dict[str, float],
@@ -46,14 +130,12 @@ def finite_shots_fwd(
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    state = apply_gate(state, gates, values)
-    n_qubits = len(state.shape)
-    mat_obs = [observable_to_matrix(observable, n_qubits) for observable in observables]
-    eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
-    eigvecs, eigvals = align_eigenvectors(eigs)
-    inner_prod = jnp.matmul(jnp.conjugate(eigvecs.T), state.flatten())
-    probs = jnp.abs(inner_prod) ** 2
-    return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
+    output_gates = apply_gate(state, gates, values)
+    n_qubits = num_qubits(output_gates)
+    if isinstance(state, DensityMatrix):
+        d = 2**n_qubits
+        output_gates.array = output_gates.array.reshape((d, d))
+    return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
 
 
 def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:

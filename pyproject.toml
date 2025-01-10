@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "horqrux"
-description = "Jax-based quantum state vector simulator."
+description = "Jax-based quantum state vector and noisy simulator."
 authors = [
     { name = "Gert-Jan Both" , email = "gert-jan.both@pasqal.com" },
     { name = "Dominik Seitz", email = "dominik.seitz@pasqal.com" },
@@ -12,7 +12,7 @@ authors = [
 requires-python = ">=3.8,<3.13"
 license = {text = "Apache 2.0"}
 
-version = "0.6.2"
+version = "0.7.0"
 
 classifiers=[
     "License :: Other/Proprietary License",
