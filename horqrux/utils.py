@@ -3,9 +3,8 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
-from functools import reduce
+from functools import reduce, singledispatch
 from math import log
-from functools import singledispatch
 from typing import Any, Iterable, Union
 
 import jax
