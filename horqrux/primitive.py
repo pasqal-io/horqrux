@@ -84,13 +84,13 @@ class Primitive:
         return _dagger(self.unitary(values))
 
     def tensor(self, values: dict[str, float] = dict()) -> Array:
-        """Obtain the unitary from
+        """Obtain the unitary taking into account the qubit support for controlled operations.
 
         Args:
             values (dict[str, float], optional): _description_. Defaults to dict().
 
         Returns:
-            Array: _description_
+            Array: Unitary representation taking into account the qubit support.
         """
         base_unitary = self.unitary(values)
         if is_controlled(self.control):
