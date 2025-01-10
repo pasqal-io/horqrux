@@ -189,7 +189,6 @@ def test_cnot_product_state(bitstring: str):
     cnot1 = NOT(target=0, control=1)
     state = product_state(bitstring)
     state = apply_gate(state, cnot1)
-    print("CNOT(1,0)", bitstring, flip_bit_wrt_control(bitstring, 1, 0))
     expected_state = product_state(flip_bit_wrt_control(bitstring, 1, 0))
     assert jnp.allclose(state, expected_state)
 
@@ -202,4 +201,19 @@ def test_cnot_tensor() -> None:
     )
     assert jnp.allclose(
         cnot1.tensor(), jnp.array([[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]])
+    )
+
+
+def test_crx_tensor() -> None:
+    crx0 = RX(0.2, target=1, control=0)
+    crx1 = RX(0.2, target=0, control=1)
+    assert jnp.allclose(
+        crx0.tensor(),
+        jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0.9950, -0.0998j], [0, 0, -0.0998j, 0.9950]]),
+        atol=1e-3,
+    )
+    assert jnp.allclose(
+        crx1.tensor(),
+        jnp.array([[1, 0, 0, 0], [0, 0.9950, 0, -0.0998j], [0, 0, 1, 0], [0, -0.0998j, 0, 0.9950]]),
+        atol=1e-3,
     )
