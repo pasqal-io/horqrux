@@ -87,7 +87,7 @@ class Primitive:
         """Obtain the unitary taking into account the qubit support for controlled operations.
 
         Args:
-            values (dict[str, float], optional): _description_. Defaults to dict().
+            values (dict[str, float], optional): Parameter values. Defaults to dict().
 
         Returns:
             Array: Unitary representation taking into account the qubit support.
