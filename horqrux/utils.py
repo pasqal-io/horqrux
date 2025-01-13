@@ -192,12 +192,12 @@ def controlled(
         controls = control_qubits[0]
     if isinstance(target_qubits[0], tuple):
         targets = target_qubits[0]
-    nqop = int(log(operator.shape[0], 2))
-    ntargets = len(targets)
-    if nqop != ntargets:
+    n_qop = int(log(operator.shape[0], 2))
+    n_targets = len(targets)
+    if n_qop != n_targets:
         raise ValueError("`target_qubits` length should match the shape of operator.")
     # Determine the total number of qubits and order of controls
-    ntotal_qubits = len(controls) + ntargets
+    ntotal_qubits = len(controls) + n_targets
     qubit_support = sorted(controls + targets)
     control_ind_support = tuple(i for i, q in enumerate(qubit_support) if q in controls)
 
