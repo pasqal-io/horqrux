@@ -230,6 +230,17 @@ def expand_operator(
     """
     Expands an operator acting on a given qubit_support to act on a larger full_support
     by explicitly filling in identity matrices on all remaining qubits.
+
+    Args:
+        operator (Array): Operator to expand
+        qubit_support (TargetQubits): Qubit support the operator is initially defined over.
+        full_support (TargetQubits): Qubit support the operator will be defined over.
+
+    Raises:
+        ValueError: When `full_support` larger than or equal to the `qubit_support`
+
+    Returns:
+        Array: Expanded operator.
     """
     full_support = tuple(sorted(full_support))
     qubit_support = tuple(sorted(qubit_support))
