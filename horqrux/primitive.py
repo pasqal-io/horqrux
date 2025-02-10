@@ -61,7 +61,7 @@ class Primitive:
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def unitary(self, values: dict[str, float] = dict()) -> Array:
+    def _unitary(self, values: dict[str, float] = dict()) -> Array:
         """Obtain the base unitary from `generator_name`.
 
         Args:
@@ -81,7 +81,7 @@ class Primitive:
         Returns:
             Array: The base unitary daggered from `generator_name`.
         """
-        return _dagger(self.unitary(values))
+        return _dagger(self._unitary(values))
 
     def tensor(self, values: dict[str, float] = dict()) -> Array:
         """Obtain the unitary taking into account the qubit support for controlled operations.
@@ -92,7 +92,7 @@ class Primitive:
         Returns:
             Array: Unitary representation taking into account the qubit support.
         """
-        base_unitary = self.unitary(values)
+        base_unitary = self._unitary(values)
         if is_controlled(self.control):
             return controlled(base_unitary, self.target, self.control)
         return base_unitary

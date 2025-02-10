@@ -99,7 +99,7 @@ class StrEnum(str, Enum):
 
 
 class OperationType(StrEnum):
-    UNITARY = "unitary"
+    UNITARY = "_unitary"
     DAGGER = "dagger"
     JACOBIAN = "jacobian"
 

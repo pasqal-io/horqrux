@@ -21,7 +21,7 @@ class _HamiltonianEvolution(Primitive):
     target: QubitSupport
     control: QubitSupport
 
-    def unitary(self, values: dict[str, Array] = dict()) -> Array:
+    def _unitary(self, values: dict[str, Array] = dict()) -> Array:
         return expm(values["hamiltonian"] * (-1j * values["time_evolution"]))
 
 
