@@ -44,7 +44,7 @@ features = [
 ]
 
 [tool.hatch.envs.tests.scripts]
-test = "pytest -n auto {args} && hatch -e docs run docs:build"
+test = "pytest -n auto --cov-report=xml --cov-config=pyproject.toml --cov=horqrux --cov=tests {args}"
 
 [tool.hatch.envs.docs]
 dependencies = [
