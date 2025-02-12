@@ -14,6 +14,7 @@ from .utils import (
     QubitSupport,
     TargetQubits,
     _dagger,
+    controlled,
     is_controlled,
     none_like,
 )
@@ -60,11 +61,41 @@ class Primitive:
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def unitary(self, values: dict[str, float] = dict()) -> Array:
+    def _unitary(self, values: dict[str, float] = dict()) -> Array:
+        """Obtain the base unitary from `generator_name`.
+
+        Args:
+            values (dict[str, float], optional): Parameter values. Defaults to dict().
+
+        Returns:
+            Array: The base unitary from `generator_name`.
+        """
         return OPERATIONS_DICT[self.generator_name]
 
     def dagger(self, values: dict[str, float] = dict()) -> Array:
-        return _dagger(self.unitary(values))
+        """Obtain the dagger of the base unitary from `generator_name`.
+
+        Args:
+            values (dict[str, float], optional): Parameter values. Defaults to dict().
+
+        Returns:
+            Array: The base unitary daggered from `generator_name`.
+        """
+        return _dagger(self._unitary(values))
+
+    def tensor(self, values: dict[str, float] = dict()) -> Array:
+        """Obtain the unitary taking into account the qubit support for controlled operations.
+
+        Args:
+            values (dict[str, float], optional): Parameter values. Defaults to dict().
+
+        Returns:
+            Array: Unitary representation taking into account the qubit support.
+        """
+        base_unitary = self._unitary(values)
+        if is_controlled(self.control):
+            return controlled(base_unitary, self.target, self.control)
+        return base_unitary
 
     @property
     def name(self) -> str:

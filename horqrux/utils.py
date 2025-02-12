@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
-from functools import singledispatch
+from functools import reduce, singledispatch
+from math import log
 from typing import Any, Iterable, Union
 
 import jax
@@ -15,6 +16,7 @@ from jax.typing import ArrayLike
 from numpy import log2
 
 from ._misc import default_complex_dtype
+from .matrices import _I
 
 default_dtype = default_complex_dtype()
 
@@ -97,7 +99,7 @@ class StrEnum(str, Enum):
 
 
 class OperationType(StrEnum):
-    UNITARY = "unitary"
+    UNITARY = "_unitary"
     DAGGER = "dagger"
     JACOBIAN = "jacobian"
 
@@ -151,10 +153,107 @@ def _jacobian(generator: Array, theta: float) -> Array:
 
 
 def _controlled(operator: Array, n_control: int) -> Array:
+    """
+    Create a controlled quantum operator with specified number of control qubits.
+
+    Args:
+        operator (jnp.ndarray): The base quantum operator to be controlled.
+        n_control (int): Number of control qubits.
+
+    Returns:
+        jnp.ndarray: The controlled quantum operator matrix
+    """
     n_qubits = int(log2(operator.shape[0]))
     control = jnp.eye(2 ** (n_control + n_qubits), dtype=default_dtype)
     control = control.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
     return control
+
+
+def controlled(
+    operator: jnp.ndarray,
+    target_qubits: TargetQubits,
+    control_qubits: ControlQubits,
+) -> jnp.ndarray:
+    """
+    Create a controlled quantum operator with specified control and target qubit indices.
+
+    Args:
+        operator (jnp.ndarray): The base quantum operator to be controlled.
+            Note the operator is defined only on `target_qubits`.
+        control_qubits (int or tuple of ints): Index or indices of control qubits
+        target_qubits (int or tuple of ints): Index or indices of target qubits
+
+    Returns:
+        jnp.ndarray: The controlled quantum operator matrix
+    """
+    controls: tuple = tuple()
+    targets: tuple = tuple()
+    if isinstance(control_qubits[0], tuple):
+        controls = control_qubits[0]
+    if isinstance(target_qubits[0], tuple):
+        targets = target_qubits[0]
+    n_qop = int(log(operator.shape[0], 2))
+    n_targets = len(targets)
+    if n_qop != n_targets:
+        raise ValueError("`target_qubits` length should match the shape of operator.")
+    # Determine the total number of qubits and order of controls
+    ntotal_qubits = len(controls) + n_targets
+    qubit_support = sorted(controls + targets)
+    control_ind_support = tuple(i for i, q in enumerate(qubit_support) if q in controls)
+
+    # Create the full Hilbert space dimension
+    full_dim = 2**ntotal_qubits
+
+    # Initialize the controlled operator as an identity matrix
+    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
+
+    # Compute the control mask using bit manipulation
+    control_mask = jnp.sum(
+        jnp.array(
+            [1 << (ntotal_qubits - control_qubit - 1) for control_qubit in control_ind_support]
+        )
+    )
+
+    # Create indices for the controlled subspace
+    indices = jnp.arange(full_dim)
+    controlled_indices = indices[(indices & control_mask) == control_mask]
+
+    # Set the controlled subspace to the operator
+    controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(operator)
+
+    return controlled_op
+
+
+def expand_operator(
+    operator: Array, qubit_support: TargetQubits, full_support: TargetQubits
+) -> Array:
+    """
+    Expands an operator acting on a given qubit_support to act on a larger full_support
+    by explicitly filling in identity matrices on all remaining qubits.
+
+    Args:
+        operator (Array): Operator to expand
+        qubit_support (TargetQubits): Qubit support the operator is initially defined over.
+        full_support (TargetQubits): Qubit support the operator will be defined over.
+
+    Raises:
+        ValueError: When `full_support` larger than or equal to the `qubit_support`
+
+    Returns:
+        Array: Expanded operator.
+    """
+    full_support = tuple(sorted(full_support))
+    qubit_support = tuple(sorted(qubit_support))
+    if not set(qubit_support).issubset(set(full_support)):
+        raise ValueError(
+            "Expanding tensor operation requires a `full_support` argument "
+            "larger than or equal to the `qubit_support`."
+        )
+
+    kron_qubits = set(full_support) - set(qubit_support)
+    kron_operator = reduce(jnp.kron, [operator] + [_I] * len(kron_qubits))
+    # TODO: Add permute_basis
+    return kron_operator
 
 
 def product_state(bitstring: str) -> Array:

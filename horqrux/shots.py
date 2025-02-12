@@ -29,7 +29,7 @@ def to_matrix(
         observable.control == observable.parse_idx(none_like(observable.target)),
         "Controlled gates cannot be promoted from observables to operations on the whole state vector",
     )
-    unitary = observable.unitary(values=values)
+    unitary = observable._unitary(values=values)
     target = observable.target[0][0]
     identity = jnp.eye(2, dtype=unitary.dtype)
     ops = [identity for _ in range(n_qubits)]

@@ -65,7 +65,7 @@ class Parametric(Primitive):
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def unitary(self, values: dict[str, float] = dict()) -> Array:
+    def _unitary(self, values: dict[str, float] = dict()) -> Array:
         return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
 
     def jacobian(self, values: dict[str, float] = dict()) -> Array:
@@ -141,7 +141,7 @@ def RZ(
 
 
 class _PHASE(Parametric):
-    def unitary(self, values: dict[str, float] = dict()) -> Array:
+    def _unitary(self, values: dict[str, float] = dict()) -> Array:
         u = jnp.eye(2, 2, dtype=default_dtype)
         u = u.at[(1, 1)].set(jnp.exp(1.0j * self.parse_values(values)))
         return u

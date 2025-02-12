@@ -10,7 +10,7 @@ from jax import Array
 from horqrux.apply import apply_gate, apply_operator
 from horqrux.parametric import PHASE, RX, RY, RZ
 from horqrux.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
-from horqrux.utils import density_mat, equivalent_state, product_state, random_state
+from horqrux.utils import OperationType, density_mat, equivalent_state, product_state, random_state
 
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
@@ -31,7 +31,7 @@ def test_primitive(gate_fn: Callable) -> None:
     # test density matrix is similar to pure state
     dm = apply_operator(
         density_mat(orig_state),
-        gate.unitary(),
+        gate._unitary(),
         gate.target[0],
         gate.control[0],
     )
@@ -54,7 +54,7 @@ def test_controlled_primitive(gate_fn: Callable) -> None:
     # test density matrix is similar to pure state
     dm = apply_operator(
         density_mat(orig_state),
-        gate.unitary(),
+        gate._unitary(),
         gate.target[0],
         gate.control[0],
     )
@@ -75,7 +75,7 @@ def test_parametric(gate_fn: Callable) -> None:
     # test density matrix is similar to pure state
     dm = apply_operator(
         density_mat(orig_state),
-        gate.unitary(values),
+        gate._unitary(values),
         gate.target[0],
         gate.control[0],
     )
@@ -99,7 +99,7 @@ def test_controlled_parametric(gate_fn: Callable) -> None:
     # test density matrix is similar to pure state
     dm = apply_operator(
         density_mat(orig_state),
-        gate.unitary(values),
+        gate._unitary(values),
         gate.target[0],
         gate.control[0],
     )
@@ -149,9 +149,81 @@ def test_merge_gates() -> None:
         "c": np.random.uniform(0.1, 2 * np.pi),
     }
     state_grouped = apply_gate(
-        product_state("0000"), gates, values, "unitary", group_gates=True, merge_ops=True
+        product_state("0000"),
+        gates,
+        values,
+        OperationType.UNITARY,
+        group_gates=True,
+        merge_ops=True,
     )
     state = apply_gate(
-        product_state("0000"), gates, values, "unitary", group_gates=False, merge_ops=False
+        product_state("0000"),
+        gates,
+        values,
+        OperationType.UNITARY,
+        group_gates=False,
+        merge_ops=False,
     )
     assert jnp.allclose(state_grouped, state)
+
+
+def flip_bit_wrt_control(bitstring: str, control: int, target: int) -> str:
+    # Convert bitstring to list for easier manipulation
+    bits = list(bitstring)
+
+    # Flip the bit at the specified index
+    if bits[control] == "1":
+        bits[target] = "0" if bits[target] == "1" else "1"
+
+    # Convert back to string
+    return "".join(bits)
+
+
+@pytest.mark.parametrize(
+    "bitstring",
+    [
+        "00",
+        "01",
+        "11",
+        "10",
+    ],
+)
+def test_cnot_product_state(bitstring: str):
+    cnot0 = NOT(target=1, control=0)
+    state = product_state(bitstring)
+    state = apply_gate(state, cnot0)
+    expected_state = product_state(flip_bit_wrt_control(bitstring, 0, 1))
+    assert jnp.allclose(state, expected_state)
+
+    # reverse control and target
+    cnot1 = NOT(target=0, control=1)
+    state = product_state(bitstring)
+    state = apply_gate(state, cnot1)
+    expected_state = product_state(flip_bit_wrt_control(bitstring, 1, 0))
+    assert jnp.allclose(state, expected_state)
+
+
+def test_cnot_tensor() -> None:
+    cnot0 = NOT(target=1, control=0)
+    cnot1 = NOT(target=0, control=1)
+    assert jnp.allclose(
+        cnot0.tensor(), jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    )
+    assert jnp.allclose(
+        cnot1.tensor(), jnp.array([[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]])
+    )
+
+
+def test_crx_tensor() -> None:
+    crx0 = RX(0.2, target=1, control=0)
+    crx1 = RX(0.2, target=0, control=1)
+    assert jnp.allclose(
+        crx0.tensor(),
+        jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0.9950, -0.0998j], [0, 0, -0.0998j, 0.9950]]),
+        atol=1e-3,
+    )
+    assert jnp.allclose(
+        crx1.tensor(),
+        jnp.array([[1, 0, 0, 0], [0, 0.9950, 0, -0.0998j], [0, 0, 1, 0], [0, -0.0998j, 0, 0.9950]]),
+        atol=1e-3,
+    )
