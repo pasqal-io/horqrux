@@ -280,13 +280,19 @@ def SWAP(
     return Primitive("SWAP", target, control, noise)
 
 
-def SQSWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
-    return Primitive("SQSWAP", target, control)
+def SQSWAP(
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+) -> Primitive:
+    return Primitive("SQSWAP", target, control, noise)
 
 
-def ISWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
-    return Primitive("ISWAP", target, control)
+def ISWAP(
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+) -> Primitive:
+    return Primitive("ISWAP", target, control, noise)
 
 
-def ISQSWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
-    return Primitive("ISQSWAP", target, control)
+def ISQSWAP(
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+) -> Primitive:
+    return Primitive("ISQSWAP", target, control, noise)
