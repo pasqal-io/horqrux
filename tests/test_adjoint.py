@@ -5,8 +5,8 @@ import numpy as np
 from jax import Array, grad
 
 from horqrux import expectation, random_state
-from horqrux.parametric import PHASE, RX, RY, RZ
-from horqrux.primitive import NOT, H, I, S, T, X, Y, Z
+from horqrux.primitives.parametric import PHASE, RX, RY, RZ
+from horqrux.primitives.primitive import NOT, H, I, S, T, X, Y, Z
 from horqrux.utils import DiffMode
 
 MAX_QUBITS = 7

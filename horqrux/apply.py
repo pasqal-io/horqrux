@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import Array
 
-from horqrux.primitive import Primitive
+from horqrux.primitives.primitive import Primitive
 
 from .noise import NoiseProtocol
 from .utils import (

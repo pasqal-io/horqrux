@@ -7,9 +7,9 @@ import numpy as np
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from .matrices import OPERATIONS_DICT
-from .noise import NoiseProtocol
-from .utils import (
+from ..matrices import OPERATIONS_DICT
+from ..noise import NoiseProtocol
+from ..utils import (
     ControlQubits,
     QubitSupport,
     TargetQubits,

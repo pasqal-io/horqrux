@@ -11,7 +11,7 @@ from jax.experimental import checkify
 
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate
-from horqrux.primitive import GateSequence, Primitive
+from horqrux.primitives.primitive import GateSequence, Primitive
 from horqrux.shots import finite_shots_fwd, to_matrix
 from horqrux.utils import (
     DensityMatrix,

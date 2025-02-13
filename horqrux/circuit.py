@@ -8,8 +8,8 @@ from jax import Array
 from jax.tree_util import register_pytree_node_class
 
 from horqrux.apply import apply_gate
-from horqrux.parametric import RX, RY, Parametric
-from horqrux.primitive import NOT, Primitive
+from horqrux.primitives.parametric import RX, RY, Parametric
+from horqrux.primitives.primitive import NOT, Primitive
 from horqrux.utils import zero_state
 
 

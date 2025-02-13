@@ -9,7 +9,7 @@ from jax import Array, random
 from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
-from horqrux.primitive import GateSequence, Primitive
+from horqrux.primitives.primitive import GateSequence, Primitive
 from horqrux.utils import DensityMatrix, State, none_like, num_qubits
 
 

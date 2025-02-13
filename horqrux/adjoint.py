@@ -3,8 +3,8 @@ from __future__ import annotations
 from jax import Array, custom_vjp
 
 from horqrux.apply import apply_gate
-from horqrux.parametric import Parametric
-from horqrux.primitive import GateSequence, Primitive
+from horqrux.primitives.parametric import Parametric
+from horqrux.primitives.primitive import GateSequence, Primitive
 from horqrux.utils import OperationType, inner
 
 

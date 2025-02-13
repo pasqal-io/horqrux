@@ -4,8 +4,8 @@ import jax
 import jax.numpy as jnp
 
 from horqrux import expectation, random_state, run
-from horqrux.parametric import RX
-from horqrux.primitive import Z
+from horqrux.primitives.parametric import RX
+from horqrux.primitives.primitive import Z
 from horqrux.utils import density_mat
 
 N_QUBITS = 2

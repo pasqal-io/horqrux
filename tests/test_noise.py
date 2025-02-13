@@ -9,8 +9,8 @@ import pytest
 from horqrux.api import expectation, run, sample
 from horqrux.apply import apply_gate
 from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
-from horqrux.parametric import PHASE, RX, RY, RZ
-from horqrux.primitive import NOT, H, I, S, T, X, Y, Z
+from horqrux.primitives.parametric import PHASE, RX, RY, RZ
+from horqrux.primitives.primitive import NOT, H, I, S, T, X, Y, Z
 from horqrux.utils import ForwardMode, density_mat, product_state, random_state
 
 MAX_QUBITS = 7

@@ -8,8 +8,8 @@ import pytest
 from jax import Array
 
 from horqrux.apply import apply_gate, apply_operator
-from horqrux.parametric import PHASE, RX, RY, RZ
-from horqrux.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
+from horqrux.primitives.parametric import PHASE, RX, RY, RZ
+from horqrux.primitives.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
 from horqrux.utils import OperationType, density_mat, equivalent_state, product_state, random_state
 
 MAX_QUBITS = 7
