@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import reduce
+from operator import add
 from typing import Any
 
 import jax.numpy as jnp
@@ -10,7 +11,7 @@ from jax.tree_util import register_pytree_node_class
 
 from horqrux.apply import apply_gate
 from horqrux.primitives import Primitive
-from horqrux.utils import State, add, zero_state
+from horqrux.utils import State, zero_state
 
 from .sequence import Sequence
 
@@ -83,7 +84,7 @@ class Add(Sequence):
     def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
         if state is None:
             state = zero_state(len(self.qubit_support))
-        return reduce(add, (apply_gate(state, op, values) for op in self.operations))
+        return reduce(add, map(lambda op: apply_gate(state, op, values), self.operations))
 
     def tensor(self, values: dict[str, float] = dict()) -> Array:
         """Obtain the unitary.

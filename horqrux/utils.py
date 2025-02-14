@@ -421,8 +421,3 @@ def _(state: Array) -> int:
 @num_qubits.register
 def _(state: DensityMatrix) -> int:
     return len(state.array.shape) // 2
-
-
-def add(a: Any, b: Any) -> Any:
-    "Same as a + b."
-    return a + b
