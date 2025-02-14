@@ -68,9 +68,10 @@ class Add(Sequence):
         operations: List of operations to add up.
     """
 
-    def __init__(self, operations: Primitive | Sequence) -> None:
-        op_list = [operations] if isinstance(operations, Primitive) else operations.operations
-        super().__init__(op_list)
+    def __init__(self, operations: list[Primitive | Sequence]) -> None:
+        primitives = [[op] if isinstance(op, Primitive) else op.operations for op in operations]
+        merged_primitives: list[Primitive] = reduce(add, primitives)
+        super().__init__(merged_primitives)
 
     def tree_flatten(self) -> tuple:
         children = (self.operations,)
@@ -112,5 +113,5 @@ class Observable(Add):
         operations: List of operations.
     """
 
-    def __init__(self, operations: Primitive | Sequence) -> None:
+    def __init__(self, operations: list[Primitive | Sequence]) -> None:
         super().__init__(operations)
