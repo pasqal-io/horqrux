@@ -108,6 +108,20 @@ class Primitive:
             n_qubits += len(self.control)
         return n_qubits
 
+    @property
+    def qubit_support(self) -> tuple:
+        return tuple(
+            sorted(
+                tuple(
+                    set(
+                        self.target[0] + self.control[0]
+                        if is_controlled(self.control)
+                        else self.target[0]
+                    )
+                )
+            )
+        )
+
     def __repr__(self) -> str:
         return self.name + f"(target={self.target}, control={self.control})"
 

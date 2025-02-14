@@ -1,21 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable
 from uuid import uuid4
 
-from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.apply import apply_gate
+from horqrux.composite.sequence import Sequence
 from horqrux.primitives.parametric import RX, RY, Parametric
 from horqrux.primitives.primitive import NOT, Primitive
-from horqrux.utils import zero_state
 
 
 @register_pytree_node_class
 @dataclass
-class QuantumCircuit:
+class QuantumCircuit(Sequence):
     """A minimalistic circuit class to store a sequence of gates.
 
     Attributes:
@@ -26,14 +24,10 @@ class QuantumCircuit:
                 The corresponding operations compose the `feature map`.
     """
 
-    n_qubits: int
-    operations: list[Primitive]
-    fparams: list[str] = field(default_factory=list)
-
-    def __call__(self, state: Array, values: dict[str, Array]) -> Array:
-        if state is None:
-            state = zero_state(self.n_qubits)
-        return apply_gate(state, self.operations, values)
+    def __init__(self, n_qubits: int, operations: list[Primitive], fparams: list[str] = list()):
+        super().__init__(operations)
+        self.n_qubits = n_qubits
+        self.fparams = fparams
 
     @property
     def param_names(self) -> list[str]:

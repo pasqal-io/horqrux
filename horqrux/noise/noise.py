@@ -9,6 +9,7 @@ from jax.tree_util import register_pytree_node_class
 from horqrux.utils import (
     StrEnum,
 )
+
 from .utils_noise import (
     AmplitudeDamping,
     BitFlip,
