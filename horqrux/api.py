@@ -11,7 +11,8 @@ from jax.experimental import checkify
 
 from horqrux.adjoint import adjoint_expectation
 from horqrux.apply import apply_gate
-from horqrux.primitives.primitive import GateSequence, Primitive
+from horqrux.composite import Sequence
+from horqrux.primitives.primitive import Primitive
 from horqrux.shots import finite_shots_fwd, to_matrix
 from horqrux.utils import (
     DensityMatrix,
@@ -27,16 +28,16 @@ from horqrux.utils import (
 
 
 def run(
-    circuit: GateSequence,
+    circuit: Sequence,
     state: State,
     values: dict[str, float] = dict(),
 ) -> State:
-    return apply_gate(state, circuit, values)
+    return circuit(state, values)
 
 
 def sample(
     state: State,
-    gates: GateSequence,
+    circuit: Sequence,
     values: dict[str, float] = dict(),
     n_shots: int = 1000,
 ) -> Counter:
@@ -56,7 +57,7 @@ def sample(
     """
     if n_shots < 1:
         raise ValueError("You can only sample with non-negative 'n_shots'.")
-    output_circuit = apply_gate(state, gates, values)
+    output_circuit = circuit(state, values)
     n_qubits = num_qubits(output_circuit)
     if isinstance(output_circuit, DensityMatrix):
         d = 2**n_qubits
@@ -105,7 +106,7 @@ def _(
 
 def ad_expectation(
     state: State,
-    gates: GateSequence,
+    circuit: Sequence,
     observables: list[Primitive],
     values: dict[str, float],
 ) -> Array:
@@ -123,7 +124,7 @@ def ad_expectation(
     """
     outputs = [
         _ad_expectation_single_observable(
-            apply_gate(state, gates, values, OperationType.UNITARY), observable, values
+            apply_gate(state, circuit.operations, values, OperationType.UNITARY), observable, values
         )
         for observable in observables
     ]
@@ -132,7 +133,7 @@ def ad_expectation(
 
 def expectation(
     state: State,
-    gates: GateSequence,
+    circuit: Sequence,
     observables: list[Primitive],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
@@ -145,7 +146,7 @@ def expectation(
 
     Args:
         state (State): Input state vector or density matrix.
-        gates (GateSequence): Sequence of gates.
+        circuit (Sequence): Sequence of gates.
         observables (list[Primitive]): List of observables.
         values (dict[str, float]): Parameter values.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
@@ -157,11 +158,11 @@ def expectation(
         Array: Expectation values.
     """
     if diff_mode == DiffMode.AD:
-        return ad_expectation(state, gates, observables, values)
+        return ad_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
-        return adjoint_expectation(state, gates, observables, values)
+        return adjoint_expectation(state, circuit.operations, observables, values)
     elif diff_mode == DiffMode.GPSR:
         checkify.check(
             forward_mode == ForwardMode.SHOTS, "Finite shots and GPSR must be used together"
@@ -174,7 +175,7 @@ def expectation(
         # type: ignore
         return finite_shots_fwd(
             state=state,
-            gates=gates,
+            gates=circuit.operations,
             observables=observables,
             values=values,
             n_shots=n_shots,
