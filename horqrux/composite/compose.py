@@ -85,6 +85,17 @@ class Add(Sequence):
             state = zero_state(len(self.qubit_support))
         return reduce(add, (apply_gate(state, op, values) for op in self.operations))
 
+    def tensor(self, values: dict[str, float] = dict()) -> Array:
+        """Obtain the unitary.
+
+        Args:
+            values (dict[str, float], optional): Parameter values. Defaults to dict().
+
+        Returns:
+            Array: Unitary representation.
+        """
+        return reduce(add, map(lambda op: op.tensor(values), self.operations))
+
 
 @register_pytree_node_class
 @dataclass
