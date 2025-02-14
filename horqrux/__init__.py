@@ -3,6 +3,7 @@ from __future__ import annotations
 from .api import expectation, run, sample
 from .apply import apply_gate, apply_operator
 from .circuit import QuantumCircuit
+from .composite import Add, Observable, Scale
 from .primitives.parametric import PHASE, RX, RY, RZ
 from .primitives.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
 from .utils import (
