@@ -4,9 +4,9 @@ import jax
 import jax.numpy as jnp
 
 from horqrux import expectation, random_state, run
+from horqrux.circuit import QuantumCircuit
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
-from horqrux.circuit import QuantumCircuit
 from horqrux.utils import density_mat
 
 N_QUBITS = 2
@@ -32,7 +32,13 @@ def test_shots() -> None:
     def shots(x):
         values = {"theta": x}
         return expectation(
-            state, circuit, observables, values, diff_mode="gpsr", forward_mode="shots", n_shots=N_SHOTS
+            state,
+            circuit,
+            observables,
+            values,
+            diff_mode="gpsr",
+            forward_mode="shots",
+            n_shots=N_SHOTS,
         )
 
     def shots_dm(x):

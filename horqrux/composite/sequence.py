@@ -9,7 +9,7 @@ from jax.tree_util import register_pytree_node_class
 
 from horqrux.apply import apply_gate
 from horqrux.primitives import Primitive
-from horqrux.utils import DensityMatrix, zero_state
+from horqrux.utils import State, zero_state
 
 
 @register_pytree_node_class
@@ -33,9 +33,7 @@ class Sequence:
         )  # type:ignore[operator]
         return tuple(set(all_qubits))
 
-    def __call__(
-        self, state: Array | DensityMatrix | None = None, values: dict[str, Array] = dict()
-    ) -> Array:
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
         if state is None:
             state = zero_state(len(self.qubit_support))
         return apply_gate(state, self.operations, values)
