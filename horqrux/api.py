@@ -119,12 +119,16 @@ def ad_expectation(
     Returns:
         Array: Expectation values.
     """
-    outputs = [
-        _ad_expectation_single_observable(
-            apply_gate(state, circuit.operations, values, OperationType.UNITARY), observable, values
+    outputs = list(
+        map(
+            lambda observable: _ad_expectation_single_observable(
+                apply_gate(state, circuit.operations, values, OperationType.UNITARY),
+                observable,
+                values,
+            ),
+            observables,
         )
-        for observable in observables
-    ]
+    )
     return jnp.stack(outputs)
 
 
@@ -146,9 +150,12 @@ def adjoint_expectation(
     Returns:
         Array: Expectation values.
     """
-    outputs = [
-        apply_adjoint(state, circuit.operations, observable, values) for observable in observables
-    ]
+    outputs = list(
+        map(
+            lambda observable: apply_adjoint(state, circuit.operations, observable, values),
+            observables,
+        )
+    )
     return jnp.stack(outputs)
 
 
