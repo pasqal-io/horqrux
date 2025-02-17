@@ -250,9 +250,10 @@ def expand_operator(
             "larger than or equal to the `qubit_support`."
         )
 
-    kron_qubits = set(full_support) - set(qubit_support)
+    kron_qubits = tuple(sorted(set(full_support) - set(qubit_support)))
     kron_operator = reduce(jnp.kron, [operator] + [_I] * len(kron_qubits))
-    # TODO: Add permute_basis
+    kron_operator = hilbert_reshape(kron_operator)
+    kron_operator = permute_basis(kron_operator, qubit_support + kron_qubits, True)
     return kron_operator
 
 

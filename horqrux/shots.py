@@ -10,31 +10,8 @@ from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
 from horqrux.primitives.primitive import GateSequence, Primitive
-from horqrux.utils import DensityMatrix, State, none_like, num_qubits
-
-
-def to_matrix(
-    observable: Primitive,
-    n_qubits: int,
-    values: dict[str, float],
-) -> Array:
-    """For finite shot sampling we need to calculate the eigenvalues/vectors of
-    an observable. This helper function takes an observable and system size
-    (n_qubits) and returns the overall action of the observable on the whole
-    system.
-
-    LIMITATION: currently only works for observables which are not controlled.
-    """
-    checkify.check(
-        observable.control == observable.parse_idx(none_like(observable.target)),
-        "Controlled gates cannot be promoted from observables to operations on the whole state vector",
-    )
-    unitary = observable._unitary(values=values)
-    target = observable.target[0][0]
-    identity = jnp.eye(2, dtype=unitary.dtype)
-    ops = [identity for _ in range(n_qubits)]
-    ops[target] = unitary
-    return reduce(lambda x, y: jnp.kron(x, y), ops[1:], ops[0])
+from horqrux.composite import Observable
+from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
 
 
 @singledispatch
@@ -90,7 +67,7 @@ def _(state: DensityMatrix, eigvecs: Array) -> Array:
 
 def eigen_sample(
     state: State,
-    observables: list[Primitive],
+    observables: list[Observable],
     values: dict[str, float],
     n_qubits: int,
     n_shots: int,
@@ -101,7 +78,7 @@ def eigen_sample(
 
     Args:
         state (State): Input state or density matrix.
-        observables (list[Primitive]): list of observables.
+        observables (list[Observable]): list of observables.
         values (dict[str, float]): Parameter values.
         n_qubits (int): Number of qubits
         n_shots (int): Number of samples
@@ -110,7 +87,8 @@ def eigen_sample(
     Returns:
         Array: Sampled eigenvalues.
     """
-    mat_obs = [to_matrix(observable, n_qubits, values) for observable in observables]
+    qubits = list(range(n_qubits))
+    mat_obs = [expand_operator(observable.tensor(values), observable.qubit_support, qubits).reshape((2**n_qubits, 2**n_qubits)) for observable in observables]
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
     probs = eigen_probabilities(state, eigvecs)
@@ -121,7 +99,7 @@ def eigen_sample(
 def finite_shots_fwd(
     state: State,
     gates: GateSequence,
-    observables: list[Primitive],
+    observables: list[Observable],
     values: dict[str, float],
     n_shots: int = 100,
     key: Any = jax.random.PRNGKey(0),
@@ -180,7 +158,7 @@ def validate_permutation_matrix(P: Array) -> Array:
 def finite_shots_jvp(
     state: Array,
     gates: GateSequence,
-    observable: Primitive,
+    observable: Observable,
     n_shots: int,
     key: Array,
     primals: tuple[dict[str, float]],

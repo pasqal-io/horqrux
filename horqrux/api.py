@@ -10,10 +10,9 @@ from jax import Array
 from jax.experimental import checkify
 
 from horqrux.adjoint import adjoint_expectation
-from horqrux.apply import apply_gate
-from horqrux.composite import Sequence
-from horqrux.primitives.primitive import Primitive
-from horqrux.shots import finite_shots_fwd, to_matrix
+from horqrux.apply import apply_gate, apply_operator
+from horqrux.composite import Sequence, Observable
+from horqrux.shots import finite_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
@@ -70,7 +69,7 @@ def sample(
 @singledispatch
 def _ad_expectation_single_observable(
     state: Any,
-    observable: Primitive,
+    observable: Observable,
     values: dict[str, float],
 ) -> Any:
     raise NotImplementedError("_ad_expectation_single_observable is not implemented")
@@ -79,35 +78,32 @@ def _ad_expectation_single_observable(
 @_ad_expectation_single_observable.register
 def _(
     state: Array,
-    observable: Primitive,
+    observable: Observable,
     values: dict[str, float],
 ) -> Array:
-    projected_state = apply_gate(
+    projected_state = observable(
         state,
-        observable,
         values,
-        OperationType.UNITARY,
     )
     return inner(state, projected_state).real
-
 
 @_ad_expectation_single_observable.register
 def _(
     state: DensityMatrix,
-    observable: Primitive,
+    observable: Observable,
     values: dict[str, float],
 ) -> Array:
     n_qubits = num_qubits(state)
-    mat_obs = to_matrix(observable, n_qubits, values)
+    mat_obs = observable.tensor(values)
     d = 2**n_qubits
-    prod = jnp.matmul(mat_obs, state.array.reshape((d, d)))
+    prod = apply_operator(state.array, mat_obs, observable.qubit_support, (None,)).reshape((d,d))
     return jnp.trace(prod, axis1=-2, axis2=-1).real
 
 
 def ad_expectation(
     state: State,
     circuit: Sequence,
-    observables: list[Primitive],
+    observables: list[Observable],
     values: dict[str, float],
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -116,7 +112,7 @@ def ad_expectation(
     Args:
         state (State): Input state vector or density matrix.
         gates (GateSequence): Sequence of gates.
-        observables (list[Primitive]): List of observables.
+        observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
 
     Returns:
@@ -134,7 +130,7 @@ def ad_expectation(
 def expectation(
     state: State,
     circuit: Sequence,
-    observables: list[Primitive],
+    observables: list[Observable],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
     forward_mode: ForwardMode = ForwardMode.EXACT,
@@ -147,7 +143,7 @@ def expectation(
     Args:
         state (State): Input state vector or density matrix.
         circuit (Sequence): Sequence of gates.
-        observables (list[Primitive]): List of observables.
+        observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
         forward_mode (ForwardMode, optional): Type of forward method. Defaults to ForwardMode.EXACT.

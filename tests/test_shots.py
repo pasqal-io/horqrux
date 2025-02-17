@@ -7,6 +7,7 @@ from horqrux import expectation, random_state, run
 from horqrux.circuit import QuantumCircuit
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
+from horqrux.composite import Observable
 from horqrux.utils import density_mat
 
 N_QUBITS = 2
@@ -17,7 +18,7 @@ N_SHOTS = 100_000
 def test_shots() -> None:
     ops = [RX("theta", 0)]
     circuit = QuantumCircuit(2, ops)
-    observables = [Z(0), Z(1)]
+    observables = [Observable([Z(0)]), Observable([Z(1)])]
     state = random_state(N_QUBITS)
     x = jnp.pi * 0.5
 
