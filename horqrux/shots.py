@@ -88,13 +88,16 @@ def eigen_sample(
         Array: Sampled eigenvalues.
     """
     qubits = tuple(range(n_qubits))
-    mat_obs = [
-        expand_operator(observable.tensor(values), observable.qubit_support, qubits).reshape(
-            (2**n_qubits, 2**n_qubits)
+    d = 2**n_qubits
+    mat_obs = list(
+        map(
+            lambda observable: expand_operator(
+                observable.tensor(values), observable.qubit_support, qubits
+            ).reshape((d, d)),
+            observables,
         )
-        for observable in observables
-    ]
-    eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
+    )
+    eigs = list(map(lambda mat: jnp.linalg.eigh(mat), mat_obs))
     eigvecs, eigvals = align_eigenvectors(eigs)
     probs = eigen_probabilities(state, eigvecs)
     return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
