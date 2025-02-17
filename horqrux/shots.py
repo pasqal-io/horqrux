@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import partial, reduce, singledispatch
+from functools import partial, singledispatch
 from typing import Any
 
 import jax
@@ -9,8 +9,8 @@ from jax import Array, random
 from jax.experimental import checkify
 
 from horqrux.apply import apply_gate
-from horqrux.primitives.primitive import GateSequence, Primitive
 from horqrux.composite import Observable
+from horqrux.primitives.primitive import GateSequence
 from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
 
 
@@ -87,8 +87,13 @@ def eigen_sample(
     Returns:
         Array: Sampled eigenvalues.
     """
-    qubits = list(range(n_qubits))
-    mat_obs = [expand_operator(observable.tensor(values), observable.qubit_support, qubits).reshape((2**n_qubits, 2**n_qubits)) for observable in observables]
+    qubits = tuple(range(n_qubits))
+    mat_obs = [
+        expand_operator(observable.tensor(values), observable.qubit_support, qubits).reshape(
+            (2**n_qubits, 2**n_qubits)
+        )
+        for observable in observables
+    ]
     eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
     eigvecs, eigvals = align_eigenvectors(eigs)
     probs = eigen_probabilities(state, eigvecs)

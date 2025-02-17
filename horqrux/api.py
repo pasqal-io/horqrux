@@ -9,9 +9,9 @@ import jax.numpy as jnp
 from jax import Array
 from jax.experimental import checkify
 
-from horqrux.adjoint import adjoint_expectation
+from horqrux.adjoint import adjoint_expectation as apply_adjoint
 from horqrux.apply import apply_gate, apply_operator
-from horqrux.composite import Sequence, Observable
+from horqrux.composite import Observable, Sequence
 from horqrux.shots import finite_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
@@ -87,6 +87,7 @@ def _(
     )
     return inner(state, projected_state).real
 
+
 @_ad_expectation_single_observable.register
 def _(
     state: DensityMatrix,
@@ -96,7 +97,7 @@ def _(
     n_qubits = num_qubits(state)
     mat_obs = observable.tensor(values)
     d = 2**n_qubits
-    prod = apply_operator(state.array, mat_obs, observable.qubit_support, (None,)).reshape((d,d))
+    prod = apply_operator(state.array, mat_obs, observable.qubit_support, (None,)).reshape((d, d))
     return jnp.trace(prod, axis1=-2, axis2=-1).real
 
 
@@ -123,6 +124,30 @@ def ad_expectation(
             apply_gate(state, circuit.operations, values, OperationType.UNITARY), observable, values
         )
         for observable in observables
+    ]
+    return jnp.stack(outputs)
+
+
+def adjoint_expectation(
+    state: State,
+    circuit: Sequence,
+    observables: list[Observable],
+    values: dict[str, float],
+) -> Array:
+    """Run 'state' through a sequence of 'gates' given parameters 'values'
+       and compute the expectation given an observable.
+
+    Args:
+        state (State): Input state vector or density matrix.
+        gates (GateSequence): Sequence of gates.
+        observables (list[Observable]): List of observables.
+        values (dict[str, float]): Parameter values.
+
+    Returns:
+        Array: Expectation values.
+    """
+    outputs = [
+        apply_adjoint(state, circuit.operations, observable, values) for observable in observables
     ]
     return jnp.stack(outputs)
 
@@ -158,7 +183,7 @@ def expectation(
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
-        return adjoint_expectation(state, circuit.operations, observables, values)
+        return adjoint_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.GPSR:
         checkify.check(
             forward_mode == ForwardMode.SHOTS, "Finite shots and GPSR must be used together"

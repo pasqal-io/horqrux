@@ -3,41 +3,42 @@ from __future__ import annotations
 from jax import Array, custom_vjp
 
 from horqrux.apply import apply_gate
+from horqrux.composite import Observable
 from horqrux.primitives.parametric import Parametric
 from horqrux.primitives.primitive import GateSequence, Primitive
 from horqrux.utils import OperationType, inner
 
 
 def ad_expectation(
-    state: Array, gates: list[Primitive], observables: list[Primitive], values: dict[str, float]
+    state: Array, gates: list[Primitive], observable: Observable, values: dict[str, float]
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
-    projected_state = apply_gate(out_state, observables, values, OperationType.UNITARY)
+    projected_state = observable(out_state, values)
     return inner(out_state, projected_state).real
 
 
 @custom_vjp
 def __adjoint_expectation_single_observable(
-    state: Array, gates: list[Primitive], observable: Primitive, values: dict[str, float]
+    state: Array, gates: list[Primitive], observable: Observable, values: dict[str, float]
 ) -> Array:
-    return ad_expectation(state, gates, [observable], values)
+    return ad_expectation(state, gates, observable, values)
 
 
 def adjoint_expectation(
-    state: Array, gates: GateSequence, observables: list[Primitive], values: dict[str, float]
+    state: Array, gates: GateSequence, observable: Observable, values: dict[str, float]
 ) -> Array:
-    return ad_expectation(state, gates, observables, values)  # type: ignore[arg-type]
+    return ad_expectation(state, gates, observable, values)  # type: ignore[arg-type]
 
 
 def adjoint_expectation_single_observable_fwd(
-    state: Array, gates: list[Primitive], observable: list[Primitive], values: dict[str, float]
+    state: Array, gates: list[Primitive], observable: Observable, values: dict[str, float]
 ) -> tuple[Array, tuple[Array, Array, list[Primitive], dict[str, float]]]:
     out_state = apply_gate(state, gates, values, OperationType.UNITARY)
-    projected_state = apply_gate(out_state, observable, values, OperationType.UNITARY)
+    projected_state = observable(out_state, values)
     return inner(out_state, projected_state).real, (out_state, projected_state, gates, values)
 
 

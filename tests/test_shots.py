@@ -5,9 +5,9 @@ import jax.numpy as jnp
 
 from horqrux import expectation, random_state, run
 from horqrux.circuit import QuantumCircuit
+from horqrux.composite import Observable
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
-from horqrux.composite import Observable
 from horqrux.utils import density_mat
 
 N_QUBITS = 2
