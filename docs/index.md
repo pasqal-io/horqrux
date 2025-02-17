@@ -102,6 +102,8 @@ from __future__ import annotations
 
 import jax
 from jax import grad, jit, Array, value_and_grad, vmap
+from jax.tree_util import register_pytree_node_class
+
 from dataclasses import dataclass
 import jax.numpy as jnp
 import optax
@@ -110,11 +112,11 @@ from operator import add
 from typing import Any, Callable
 from uuid import uuid4
 
-from horqrux import expectation
+from horqrux import expectation, Observable
 from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
 from horqrux.circuit import QuantumCircuit, hea
-from horqrux.primitive import Primitive
-from horqrux.parametric import Parametric
+from horqrux.primitives.primitive import Primitive
+from horqrux.primitives.parametric import Parametric
 from horqrux.utils import DiffMode
 
 
@@ -129,21 +131,21 @@ fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in r
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
 
-@dataclass
 class DQC(QuantumCircuit):
-    def __post_init__(self) -> None:
-        self.observable: list[Primitive] = [Z(0)]
+    def __init__(self, n_qubits, operations, fparams) -> None:
+        super().__init__(n_qubits, operations, fparams)
+        self.observable: Observable = Observable([Z(0)])
         self.state = zero_state(self.n_qubits)
 
     @partial(vmap, in_axes=(None, None, 0))
     def __call__(self, param_values: Array, x: Array) -> Array:
         param_dict = {name: val for name, val in zip(self.vparams, param_values)}
-        return expectation(self.state, self.operations, self.observable, {**param_dict, **{'phi': x}}, DiffMode.ADJOINT)
+        return jnp.squeeze(expectation(self.state, self, [self.observable], {**param_dict, **{'phi': x}}, DiffMode.ADJOINT))
 
 feature_map = [RX('phi', i) for i in range(n_qubits)]
 fm_names = [f.param for f in feature_map]
 ansatz = hea(n_qubits, n_layers)
-circ = DQC(n_qubits=n_qubits, operations=feature_map + ansatz, fparams=fm_names)
+circ = DQC(n_qubits, feature_map + ansatz, fm_names)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -216,9 +218,9 @@ from numpy.random import uniform
 
 from horqrux.apply import group_by_index
 from horqrux.circuit import QuantumCircuit, hea
-from horqrux import NOT, RX, RY, Z, apply_gate, zero_state
-from horqrux.primitive import Primitive
-from horqrux.parametric import Parametric
+from horqrux import NOT, RX, RY, Z, apply_gate, zero_state, Observable
+from horqrux.primitives.primitive import Primitive
+from horqrux.primitives.parametric import Parametric
 from horqrux.utils import inner
 
 LEARNING_RATE = 0.15
@@ -230,20 +232,18 @@ X_POS, Y_POS = [i for i in range(NUM_VARIABLES)]
 BATCH_SIZE = 500
 N_EPOCHS = 500
 
-def total_magnetization(n_qubits:int) -> Callable:
-    paulis = [Z(i) for i in range(n_qubits)]
+def total_magnetization(n_qubits:int) -> Observable:
+    paulis = Observable([Z(i) for i in range(n_qubits)])
 
     def _total_magnetization(out_state: Array, values: dict[str, Array]) -> Array:
-        projected_state = reduce(
-            add, [apply_gate(out_state, pauli, values) for pauli in paulis]
-        )
+        projected_state = paulis(out_state, values)
         return inner(out_state, projected_state).real
     return _total_magnetization
 
-@dataclass
 class DQC(QuantumCircuit):
-    def __post_init__(self) -> None:
-        self.operations = group_by_index(self.operations)
+    def __init__(self, n_qubits, operations, fparams) -> None:
+        operations = group_by_index(operations)
+        super().__init__(n_qubits, operations, fparams)
         self.observable = total_magnetization(self.n_qubits)
         self.state = zero_state(self.n_qubits)
 
