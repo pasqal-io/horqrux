@@ -70,8 +70,8 @@ class Add(Sequence):
 
     def __init__(self, operations: list[Primitive | Sequence]) -> None:
         primitives = [[op] if isinstance(op, Primitive) else op.operations for op in operations]
-        merged_primitives: list[Primitive] = reduce(add, primitives)
-        super().__init__(merged_primitives)
+        added_primitives: list[Primitive] = reduce(add, primitives)
+        super().__init__(added_primitives)
 
     def tree_flatten(self) -> tuple:
         children = (self.operations,)
