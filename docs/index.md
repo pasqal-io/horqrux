@@ -131,7 +131,20 @@ fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in r
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
 
-class DQC(QuantumCircuit):
+class DifferentiableQuantumCircuit(QuantumCircuit):
+    """
+    A DifferentiableQuantumCircuit is composed of a quantum circuit and an observable to obtain a real-valued
+        output. It can be seen as a function of input values `x`, `y` that are passed as parameter values of a subset of parameterized quantum gates. The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
+
+    Attributes:
+        n_qubits (int): Number of qubits.
+        operations (list[Primitive]): Operations defining the circuit.
+        fparams (list[str]): List of parameters that are considered
+            non trainable, used for passing fixed input data to a quantum circuit.
+                The corresponding operations compose the `feature map`.
+        observable (Observable): Observable for getting real-valued output.
+        state (Array): Initial zero state.
+    """
     def __init__(self, n_qubits, operations, fparams) -> None:
         super().__init__(n_qubits, operations, fparams)
         self.observable: Observable = Observable([Z(0)])
@@ -145,7 +158,7 @@ class DQC(QuantumCircuit):
 feature_map = [RX('phi', i) for i in range(n_qubits)]
 fm_names = [f.param for f in feature_map]
 ansatz = hea(n_qubits, n_layers)
-circ = DQC(n_qubits, feature_map + ansatz, fm_names)
+circ = DifferentiableQuantumCircuit(n_qubits, feature_map + ansatz, fm_names)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -195,9 +208,9 @@ def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
 # from docs import docutils # markdown-exec: hide
 print(fig_to_html(plt.gcf())) # markdown-exec: hide
 ```
-## Fitting a partial differential equation using DQC
+## Fitting a partial differential equation using DifferentiableQuantumCircuit
 
-Finally, we show how [DQC](https://arxiv.org/abs/2011.10395) can be implemented in `horqrux` and solve a partial differential equation.
+Finally, we show how [DifferentiableQuantumCircuit](https://arxiv.org/abs/2011.10395) can be implemented in `horqrux` and solve a partial differential equation.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
@@ -240,7 +253,20 @@ def total_magnetization(n_qubits:int) -> Observable:
         return inner(out_state, projected_state).real
     return _total_magnetization
 
-class DQC(QuantumCircuit):
+class DifferentiableQuantumCircuit(QuantumCircuit):
+    """
+    A DifferentiableQuantumCircuit is composed of a quantum circuit and an observable to obtain a real-valued
+        output. It can be seen as a function of input values `x`, `y` that are passed as parameter values of a subset of parameterized quantum gates. The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
+
+    Attributes:
+        n_qubits (int): Number of qubits.
+        operations (list[Primitive]): Operations defining the circuit.
+        fparams (list[str]): List of parameters that are considered
+            non trainable, used for passing fixed input data to a quantum circuit.
+                The corresponding operations compose the `feature map`.
+        observable (Observable): Observable for getting real-valued output.
+        state (Array): Initial zero state.
+    """
     def __init__(self, n_qubits, operations, fparams) -> None:
         operations = group_by_index(operations)
         super().__init__(n_qubits, operations, fparams)
@@ -261,7 +287,7 @@ fm =  [RX("f_x", i) for i in range(N_QUBITS // 2)] + [
         ]
 fm_circuit_parameters = [f.param for f in fm]
 ansatz = hea(N_QUBITS, DEPTH)
-circ = DQC(N_QUBITS, fm + ansatz, fm_circuit_parameters)
+circ = DifferentiableQuantumCircuit(N_QUBITS, fm + ansatz, fm_circuit_parameters)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -331,8 +357,8 @@ domain = jnp.array(list(product(single_domain, single_domain)))
 analytic_sol = (
     (np.exp(-np.pi * domain[:, 0]) * np.sin(np.pi * domain[:, 1])).reshape(BATCH_SIZE, BATCH_SIZE).T
 )
-# DQC solution
-dqc_sol = vmap(lambda domain: circ(param_vals, domain[0], domain[1]), in_axes=(0,))(
+# DifferentiableQuantumCircuit solution
+DifferentiableQuantumCircuit_sol = vmap(lambda domain: circ(param_vals, domain[0], domain[1]), in_axes=(0,))(
     domain
 ).reshape(BATCH_SIZE, BATCH_SIZE)
 # # plot results
@@ -341,10 +367,10 @@ ax[0].imshow(analytic_sol, cmap="turbo")
 ax[0].set_xlabel("x")
 ax[0].set_ylabel("y")
 ax[0].set_title("Analytical solution u(x,y)")
-ax[1].imshow(dqc_sol, cmap="turbo")
+ax[1].imshow(DifferentiableQuantumCircuit_sol, cmap="turbo")
 ax[1].set_xlabel("x")
 ax[1].set_ylabel("y")
-ax[1].set_title("DQC solution u(x,y)")
+ax[1].set_title("DifferentiableQuantumCircuit solution u(x,y)")
 from io import StringIO  # markdown-exec: hide
 from matplotlib.figure import Figure  # markdown-exec: hide
 def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
