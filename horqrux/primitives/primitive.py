@@ -7,9 +7,9 @@ import numpy as np
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from ..matrices import OPERATIONS_DICT
-from ..noise import NoiseProtocol
-from ..utils import (
+from horqrux.matrices import OPERATIONS_DICT
+from horqrux.noise import NoiseProtocol
+from horqrux.utils import (
     ControlQubits,
     QubitSupport,
     TargetQubits,
@@ -294,7 +294,7 @@ def SWAP(
     return Primitive("SWAP", target, control, noise)
 
 
-def SQSWAP(
+def SQRTSWAP(
     target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
 ) -> Primitive:
     return Primitive("SQSWAP", target, control, noise)
@@ -306,7 +306,7 @@ def ISWAP(
     return Primitive("ISWAP", target, control, noise)
 
 
-def ISQSWAP(
+def ISQRTSWAP(
     target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
 ) -> Primitive:
     return Primitive("ISQSWAP", target, control, noise)
