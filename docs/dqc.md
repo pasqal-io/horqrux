@@ -1,9 +1,8 @@
-
 # Fitting a nonlinear function using adjoint differentiation
 
 We can build a fully differentiable variational circuit by simply defining a sequence of gates
 and a set of initial parameter values we want to optimize.
-`horqrux` provides an implementation of the Adjoint differentiation method[^2],
+`horqrux` provides an implementation of the Adjoint differentiation method[^1],
 which we can use to fit a function using a simple `Circuit` class.
 
 ```python exec="on" source="material-block" html="1"
@@ -40,10 +39,10 @@ fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in r
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
 
-class DifferentiableQuantumCircuit(QuantumCircuit):
+class QuantumCircuitFunction(QuantumCircuit):
     """
-    A DifferentiableQuantumCircuit is composed of a quantum circuit and an observable to obtain a real-valued
-        output. It can be seen as a function of input values `x`, `y` that are passed as parameter values of a subset of parameterized quantum gates. The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
+    A QuantumCircuitFunction is composed of a quantum circuit and an observable to obtain a real-valued
+        output. It can be seen as a function of input values `x` that are passed as parameter values of a subset of parameterized quantum gates. The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
 
     Attributes:
         n_qubits (int): Number of qubits.
@@ -67,7 +66,7 @@ class DifferentiableQuantumCircuit(QuantumCircuit):
 feature_map = [RX('phi', i) for i in range(n_qubits)]
 fm_names = [f.param for f in feature_map]
 ansatz = hea(n_qubits, n_layers)
-circ = DifferentiableQuantumCircuit(n_qubits, feature_map + ansatz, fm_names)
+circ = QuantumCircuitFunction(n_qubits, feature_map + ansatz, fm_names)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -118,9 +117,9 @@ def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
 print(fig_to_html(plt.gcf())) # markdown-exec: hide
 ```
 
-## Fitting a partial differential equation using DifferentiableQuantumCircuit
+# Fitting a partial differential equation using DifferentiableQuantumCircuit
 
-Finally, we show how a DifferentiableQuantumCircuit[^1] can be implemented in `horqrux` and solve a partial differential equation.
+Finally, we show how a Differentiable Quantum Circuit (DQC)[^2] can be implemented in `horqrux` and solve a partial differential equation.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
@@ -182,7 +181,6 @@ class DifferentiableQuantumCircuit(QuantumCircuit):
         super().__init__(n_qubits, operations, fparams)
         self.observable = total_magnetization(self.n_qubits)
         self.state = zero_state(self.n_qubits)
-
 
     def __call__(self, values: dict[str, Array], x: Array, y: Array) -> Array:
         param_dict = {name: val for name, val in zip(self.vparams, values)}
@@ -291,10 +289,9 @@ def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
 print(fig_to_html(plt.gcf())) # markdown-exec: hide
 ```
 
-
-[^1]: [Oleksandr Kyriienko, Annie E. Paine, Vincent E. Elfving, Solving nonlinear differential equations with differentiable quantum circuits
+[^1]: [Tyson Jones, Julien Gacon
+, Efficient calculation of gradients in classical simulations of variational quantum algorithms
  (2020)](https://arxiv.org/abs/2011.10395)
 
-[^2]: [Tyson Jones, Julien Gacon
-, Efficient calculation of gradients in classical simulations of variational quantum algorithms
+[^2]: [Oleksandr Kyriienko, Annie E. Paine, Vincent E. Elfving, Solving nonlinear differential equations with differentiable quantum circuits
  (2020)](https://arxiv.org/abs/2011.10395)
