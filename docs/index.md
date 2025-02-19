@@ -18,24 +18,24 @@ pip install horqrux
 Let's have a look at primitive gates first.
 
 ```python exec="on" source="material-block"
-from horqrux import X, random_state, apply_gate
+from horqrux import X, random_state, apply_gates
 
 state = random_state(2)
-new_state = apply_gate(state, X(0))
+new_state = apply_gates(state, X(0))
 ```
 
 We can also make any gate controlled, in the case of X, we have to pass the target qubit first!
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux import X, product_state, equivalent_state, apply_gate
+from horqrux import X, product_state, equivalent_state, apply_gates
 
 n_qubits = 2
 state = product_state('11')
 control = 0
 target = 1
 # This is equivalent to performing CNOT(0,1)
-new_state= apply_gate(state, X(target,control))
+new_state= apply_gates(state, X(target,control))
 assert jnp.allclose(new_state, product_state('10'))
 ```
 
@@ -43,29 +43,29 @@ When applying parametric gates, we can either pass a numeric value or a paramete
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux import RX, random_state, apply_gate
+from horqrux import RX, random_state, apply_gates
 
 target_qubit = 1
 state = random_state(target_qubit+1)
 param_value = 1 / 4 * jnp.pi
-new_state = apply_gate(state, RX(param_value, target_qubit))
+new_state = apply_gates(state, RX(param_value, target_qubit))
 # Parametric horqrux gates also accept parameter names in the form of strings.
-# Simply pass a dictionary of parameter names and values to the 'apply_gate' function
-new_state = apply_gate(state, RX('theta', target_qubit), {'theta': jnp.pi})
+# Simply pass a dictionary of parameter names and values to the 'apply_gates' function
+new_state = apply_gates(state, RX('theta', target_qubit), {'theta': jnp.pi})
 ```
 
 We can also make any parametric gate controlled simply by passing a control qubit.
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux import RX, product_state, apply_gate
+from horqrux import RX, product_state, apply_gates
 
 n_qubits = 2
 target_qubit = 1
 control_qubit = 0
 state = product_state('11')
 param_value = 1 / 4 * jnp.pi
-new_state = apply_gate(state, RX(param_value, target_qubit, control_qubit))
+new_state = apply_gates(state, RX(param_value, target_qubit, control_qubit))
 ```
 
 ## Analog Operations
@@ -76,7 +76,7 @@ Note that it expects a hamiltonian and a time evolution parameter passed as `num
 ```python exec="on" source="material-block"
 from jax.numpy import pi, array, diag, kron, cdouble
 from horqrux.analog import HamiltonianEvolution
-from horqrux.apply import apply_gate
+from horqrux.apply import apply_gates
 from horqrux.utils import uniform_state
 
 sigmaz = diag(array([1.0, -1.0], dtype=cdouble))
@@ -87,7 +87,7 @@ n_qubits = 4
 t_evo = pi / 4
 hamevo = HamiltonianEvolution(tuple([i for i in range(n_qubits)]))
 psi = uniform_state(n_qubits)
-psi_star = apply_gate(psi, hamevo, {"hamiltonian": Hamiltonian, "time_evolution": t_evo})
+psi_star = apply_gates(psi, hamevo, {"hamiltonian": Hamiltonian, "time_evolution": t_evo})
 ```
 
 ## Fitting a nonlinear function using adjoint differentiation
@@ -113,7 +113,7 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from horqrux import expectation, Observable
-from horqrux import Z, RX, RY, NOT, zero_state, apply_gate
+from horqrux import Z, RX, RY, NOT, zero_state, apply_gates
 from horqrux.circuit import QuantumCircuit, hea
 from horqrux.primitives.primitive import Primitive
 from horqrux.primitives.parametric import Parametric
@@ -231,7 +231,7 @@ from numpy.random import uniform
 
 from horqrux.apply import group_by_index
 from horqrux.circuit import QuantumCircuit, hea
-from horqrux import NOT, RX, RY, Z, apply_gate, zero_state, Observable
+from horqrux import NOT, RX, RY, Z, apply_gates, zero_state, Observable
 from horqrux.primitives.primitive import Primitive
 from horqrux.primitives.parametric import Parametric
 from horqrux.utils import inner
@@ -276,7 +276,7 @@ class DifferentiableQuantumCircuit(QuantumCircuit):
 
     def __call__(self, values: dict[str, Array], x: Array, y: Array) -> Array:
         param_dict = {name: val for name, val in zip(self.vparams, values)}
-        out_state = apply_gate(
+        out_state = apply_gates(
             self.state, self.operations, {**param_dict, **{"f_x": x, "f_y": y}}
         )
         return self.observable(out_state, {})
