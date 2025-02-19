@@ -29,10 +29,7 @@ class OpSequence:
 
     @property
     def qubit_support(self) -> tuple:
-        all_qubits = reduce(
-            lambda x, y: x + y, [op.qubit_support for op in self.operations]
-        )  # type:ignore[operator]
-        return tuple(set(all_qubits))
+        return tuple(set().union(*(op.qubit_support for op in self.operations)))
 
     def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
         if state is None:
