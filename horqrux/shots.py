@@ -8,7 +8,7 @@ import jax.numpy as jnp
 from jax import Array, random
 from jax.experimental import checkify
 
-from horqrux.apply import apply_gate
+from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.primitives.primitive import GateSequence
 from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
@@ -116,7 +116,7 @@ def finite_shots_fwd(
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    output_gates = apply_gate(state, gates, values)
+    output_gates = apply_gates(state, gates, values)
     n_qubits = num_qubits(output_gates)
     if isinstance(state, DensityMatrix):
         d = 2**n_qubits

@@ -6,14 +6,14 @@ from uuid import uuid4
 
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.composite.sequence import Sequence
+from horqrux.composite.sequence import OpSequence
 from horqrux.primitives.parametric import RX, RY, Parametric
 from horqrux.primitives.primitive import NOT, Primitive
 
 
 @register_pytree_node_class
 @dataclass
-class QuantumCircuit(Sequence):
+class QuantumCircuit(OpSequence):
     """A minimalistic circuit class to store a sequence of gates.
 
     Attributes:

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from jax import Array
 
-from horqrux.apply import apply_gate, apply_operator
+from horqrux.apply import apply_gates, apply_operator
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
 from horqrux.utils import OperationType, density_mat, equivalent_state, product_state, random_state
@@ -23,7 +23,7 @@ def test_primitive(gate_fn: Callable) -> None:
     gate = gate_fn(target)
     orig_state = random_state(MAX_QUBITS)
     assert len(orig_state) == 2
-    state = apply_gate(orig_state, gate)
+    state = apply_gates(orig_state, gate)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
     )
@@ -46,7 +46,7 @@ def test_controlled_primitive(gate_fn: Callable) -> None:
         control = np.random.randint(1, MAX_QUBITS)
     gate = gate_fn(target, control)
     orig_state = random_state(MAX_QUBITS)
-    state = apply_gate(orig_state, gate)
+    state = apply_gates(orig_state, gate)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
     )
@@ -67,7 +67,7 @@ def test_parametric(gate_fn: Callable) -> None:
     gate = gate_fn("theta", target)
     values = {"theta": np.random.uniform(0.1, 2 * np.pi)}
     orig_state = random_state(MAX_QUBITS)
-    state = apply_gate(orig_state, gate, values)
+    state = apply_gates(orig_state, gate, values)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(values), gate.target[0], gate.control[0]), orig_state
     )
@@ -91,7 +91,7 @@ def test_controlled_parametric(gate_fn: Callable) -> None:
     gate = gate_fn("theta", target, control)
     values = {"theta": np.random.uniform(0.1, 2 * np.pi)}
     orig_state = random_state(MAX_QUBITS)
-    state = apply_gate(orig_state, gate, values)
+    state = apply_gates(orig_state, gate, values)
     assert jnp.allclose(
         apply_operator(state, gate.dagger(values), gate.target[0], gate.control[0]), orig_state
     )
@@ -117,8 +117,8 @@ def test_controlled_parametric(gate_fn: Callable) -> None:
 )
 def test_bell_states(bitstring: str, expected_state: Array):
     state = product_state(bitstring)
-    state = apply_gate(state, H(target=0))
-    state = apply_gate(state, NOT(target=1, control=0))
+    state = apply_gates(state, H(target=0))
+    state = apply_gates(state, NOT(target=1, control=0))
     assert jnp.allclose(state.flatten(), expected_state)
 
 
@@ -137,7 +137,7 @@ def test_bell_states(bitstring: str, expected_state: Array):
 def test_swap_gate(inputs: tuple[str, str, Array]) -> None:
     bitstring, expected_bitstring, op = inputs
     state = product_state(bitstring)
-    out_state = apply_gate(state, op)
+    out_state = apply_gates(state, op)
     assert equivalent_state(out_state, product_state(expected_bitstring))
 
 
@@ -148,7 +148,7 @@ def test_merge_gates() -> None:
         "b": np.random.uniform(0.1, 2 * np.pi),
         "c": np.random.uniform(0.1, 2 * np.pi),
     }
-    state_grouped = apply_gate(
+    state_grouped = apply_gates(
         product_state("0000"),
         gates,
         values,
@@ -156,7 +156,7 @@ def test_merge_gates() -> None:
         group_gates=True,
         merge_ops=True,
     )
-    state = apply_gate(
+    state = apply_gates(
         product_state("0000"),
         gates,
         values,
@@ -191,14 +191,14 @@ def flip_bit_wrt_control(bitstring: str, control: int, target: int) -> str:
 def test_cnot_product_state(bitstring: str):
     cnot0 = NOT(target=1, control=0)
     state = product_state(bitstring)
-    state = apply_gate(state, cnot0)
+    state = apply_gates(state, cnot0)
     expected_state = product_state(flip_bit_wrt_control(bitstring, 0, 1))
     assert jnp.allclose(state, expected_state)
 
     # reverse control and target
     cnot1 = NOT(target=0, control=1)
     state = product_state(bitstring)
-    state = apply_gate(state, cnot1)
+    state = apply_gates(state, cnot1)
     expected_state = product_state(flip_bit_wrt_control(bitstring, 1, 0))
     assert jnp.allclose(state, expected_state)
 

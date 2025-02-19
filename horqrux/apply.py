@@ -281,7 +281,7 @@ def merge_operators(
 
 
 @singledispatch
-def apply_gate(
+def apply_gates(
     state: Any,
     gate: GateSequence,
     values: dict[str, float] = dict(),
@@ -333,7 +333,7 @@ def prepare_sequence_reduce(
     return operator, target, control, noise
 
 
-@apply_gate.register
+@apply_gates.register
 def _(
     state: Array,
     gate: Union[Primitive, Iterable[Primitive]],
@@ -377,7 +377,7 @@ def _(
     return output_state
 
 
-@apply_gate.register
+@apply_gates.register
 def _(
     state: DensityMatrix,
     gate: Union[Primitive, Iterable[Primitive]],

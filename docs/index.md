@@ -94,7 +94,7 @@ psi_star = apply_gate(psi, hamevo, {"hamiltonian": Hamiltonian, "time_evolution"
 
 We can now build a fully differentiable variational circuit by simply defining a sequence of gates
 and a set of initial parameter values we want to optimize.
-`horqrux` provides an implementation of [adjoint differentiation](https://arxiv.org/abs/2009.02823),
+`horqrux` provides an implementation of the Adjoint differentiation method[^2],
 which we can use to fit a function using a simple `Circuit` class.
 
 ```python exec="on" source="material-block" html="1"
@@ -210,7 +210,7 @@ print(fig_to_html(plt.gcf())) # markdown-exec: hide
 ```
 ## Fitting a partial differential equation using DifferentiableQuantumCircuit
 
-Finally, we show how [DifferentiableQuantumCircuit](https://arxiv.org/abs/2011.10395) can be implemented in `horqrux` and solve a partial differential equation.
+Finally, we show how a DifferentiableQuantumCircuit[^1] can be implemented in `horqrux` and solve a partial differential equation.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
@@ -358,7 +358,7 @@ analytic_sol = (
     (np.exp(-np.pi * domain[:, 0]) * np.sin(np.pi * domain[:, 1])).reshape(BATCH_SIZE, BATCH_SIZE).T
 )
 # DifferentiableQuantumCircuit solution
-DifferentiableQuantumCircuit_sol = vmap(lambda domain: circ(param_vals, domain[0], domain[1]), in_axes=(0,))(
+dqc_sol = vmap(lambda domain: circ(param_vals, domain[0], domain[1]), in_axes=(0,))(
     domain
 ).reshape(BATCH_SIZE, BATCH_SIZE)
 # # plot results
@@ -367,7 +367,7 @@ ax[0].imshow(analytic_sol, cmap="turbo")
 ax[0].set_xlabel("x")
 ax[0].set_ylabel("y")
 ax[0].set_title("Analytical solution u(x,y)")
-ax[1].imshow(DifferentiableQuantumCircuit_sol, cmap="turbo")
+ax[1].imshow(dqc_sol, cmap="turbo")
 ax[1].set_xlabel("x")
 ax[1].set_ylabel("y")
 ax[1].set_title("DifferentiableQuantumCircuit solution u(x,y)")
@@ -380,3 +380,11 @@ def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
 # from docs import docutils # markdown-exec: hide
 print(fig_to_html(plt.gcf())) # markdown-exec: hide
 ```
+
+
+[^1]: [Oleksandr Kyriienko, Annie E. Paine, Vincent E. Elfving, Solving nonlinear differential equations with differentiable quantum circuits
+ (2020)](https://arxiv.org/abs/2011.10395)
+
+[^2]: [Tyson Jones, Julien Gacon
+, Efficient calculation of gradients in classical simulations of variational quantum algorithms
+ (2020)](https://arxiv.org/abs/2011.10395)

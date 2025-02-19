@@ -10,8 +10,8 @@ from jax import Array
 from jax.experimental import checkify
 
 from horqrux.adjoint import adjoint_expectation as apply_adjoint
-from horqrux.apply import apply_gate, apply_operator
-from horqrux.composite import Observable, Sequence
+from horqrux.apply import apply_gates, apply_operator
+from horqrux.composite import Observable, OpSequence
 from horqrux.shots import finite_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
@@ -27,7 +27,7 @@ from horqrux.utils import (
 
 
 def run(
-    circuit: Sequence,
+    circuit: OpSequence,
     state: State,
     values: dict[str, float] = dict(),
 ) -> State:
@@ -36,7 +36,7 @@ def run(
 
 def sample(
     state: State,
-    circuit: Sequence,
+    circuit: OpSequence,
     values: dict[str, float] = dict(),
     n_shots: int = 1000,
 ) -> Counter:
@@ -103,7 +103,7 @@ def _(
 
 def ad_expectation(
     state: State,
-    circuit: Sequence,
+    circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
 ) -> Array:
@@ -122,7 +122,7 @@ def ad_expectation(
     outputs = list(
         map(
             lambda observable: _ad_expectation_single_observable(
-                apply_gate(state, circuit.operations, values, OperationType.UNITARY),
+                apply_gates(state, circuit.operations, values, OperationType.UNITARY),
                 observable,
                 values,
             ),
@@ -134,7 +134,7 @@ def ad_expectation(
 
 def adjoint_expectation(
     state: State,
-    circuit: Sequence,
+    circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
 ) -> Array:
@@ -161,7 +161,7 @@ def adjoint_expectation(
 
 def expectation(
     state: State,
-    circuit: Sequence,
+    circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
