@@ -44,7 +44,7 @@ def sample(
 
     Args:
         state (State): Input state vector or density matrix.
-        gates (GateSequence): Sequence of gates.
+        gates (OpSequence): Sequence of gates.
         values (dict[str, float], optional): _description_. Defaults to dict().
         n_shots (int, optional): Parameter values.. Defaults to 1000.
 
@@ -112,7 +112,7 @@ def ad_expectation(
 
     Args:
         state (State): Input state vector or density matrix.
-        gates (GateSequence): Sequence of gates.
+        gates (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
 
@@ -143,7 +143,7 @@ def adjoint_expectation(
 
     Args:
         state (State): Input state vector or density matrix.
-        gates (GateSequence): Sequence of gates.
+        gates (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
 

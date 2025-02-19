@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial, singledispatch
-from typing import Any
+from typing import Any, Iterable, Union
 
 import jax
 import jax.numpy as jnp
@@ -10,7 +10,7 @@ from jax.experimental import checkify
 
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
-from horqrux.primitives.primitive import GateSequence
+from horqrux.primitives.primitive import Primitive
 from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
 
 
@@ -106,7 +106,7 @@ def eigen_sample(
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
 def finite_shots_fwd(
     state: State,
-    gates: GateSequence,
+    gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
     values: dict[str, float],
     n_shots: int = 100,
@@ -165,7 +165,7 @@ def validate_permutation_matrix(P: Array) -> Array:
 @finite_shots_fwd.defjvp
 def finite_shots_jvp(
     state: Array,
-    gates: GateSequence,
+    gates: Union[Primitive, Iterable[Primitive]],
     observable: Observable,
     n_shots: int,
     key: Array,

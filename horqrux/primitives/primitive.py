@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, Union
+from typing import Any, Iterable
 
 import numpy as np
 from jax import Array
@@ -124,9 +124,6 @@ class Primitive:
 
     def __repr__(self) -> str:
         return self.name + f"(target={self.target}, control={self.control})"
-
-
-GateSequence = Union[Primitive, Iterable[Primitive]]
 
 
 def I(

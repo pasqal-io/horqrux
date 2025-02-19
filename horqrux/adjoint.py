@@ -5,7 +5,7 @@ from jax import Array, custom_vjp
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.primitives.parametric import Parametric
-from horqrux.primitives.primitive import GateSequence, Primitive
+from horqrux.primitives.primitive import Primitive
 from horqrux.utils import OperationType, inner
 
 
@@ -29,7 +29,7 @@ def __adjoint_expectation_single_observable(
 
 
 def adjoint_expectation(
-    state: Array, gates: GateSequence, observable: Observable, values: dict[str, float]
+    state: Array, gates: list[Primitive], observable: Observable, values: dict[str, float]
 ) -> Array:
     return ad_expectation(state, gates, observable, values)  # type: ignore[arg-type]
 
