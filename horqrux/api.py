@@ -138,7 +138,7 @@ def adjoint_expectation(
     observables: list[Observable],
     values: dict[str, float],
 ) -> Array:
-    """Run 'state' through a sequence of 'gates' given parameters 'values'
+    """Apply a sequence of adjoint operators to an input state given parameters 'values'
        and compute the expectation given an observable.
 
     Args:
