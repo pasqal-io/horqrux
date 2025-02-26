@@ -2,7 +2,7 @@
 
 We can build a fully differentiable variational circuit by simply defining a sequence of gates
 and a set of initial parameter values we want to optimize.
-`horqrux` provides an implementation of the Adjoint differentiation method[^1],
+`horqrux` provides an implementation for the adjoint differentiation method[^1],
 which we can use to fit a function using a simple `Circuit` class.
 
 ```python exec="on" source="material-block" html="1"
