@@ -1,6 +1,6 @@
 # Fitting a nonlinear function using adjoint differentiation
 
-We can build a fully differentiable variational circuit by simply defining a sequence of gates
+We can build a fully differentiable variational circuit by defining a sequence of gates
 and a set of optimizable parameter values.
 `horqrux` provides an implementation for the adjoint differentiation method[^1],
 which we can use to fit a function using a simple `Circuit` class.
