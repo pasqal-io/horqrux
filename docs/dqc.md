@@ -50,7 +50,7 @@ class QuantumCircuitFunction(QuantumCircuit):
         fparams (list[str]): List of parameters that are considered
             non trainable, used for passing fixed input data to a quantum circuit.
                 The corresponding operations compose the `feature map`.
-        observable (Observable): Observable for getting real-valued output.
+        observable (Observable): Observable for getting real-valued measurement output.
         state (Array): Initial zero state.
     """
     def __init__(self, n_qubits, operations, fparams) -> None:
