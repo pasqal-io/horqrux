@@ -145,7 +145,7 @@ from horqrux.primitives.primitive import Primitive
 from horqrux.primitives.parametric import Parametric
 from horqrux.utils import inner
 
-LEARNING_RATE = 0.15
+LEARNING_RATE = 0.01
 N_QUBITS = 4
 DEPTH = 3
 VARIABLES = ("x", "y")
@@ -200,7 +200,7 @@ circ = DifferentiableQuantumCircuit(N_QUBITS, fm + ansatz, fm_circuit_parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
 
-optimizer = optax.adam(learning_rate=0.01)
+optimizer = optax.adam(learning_rate=LEARNING_RATE)
 opt_state = optimizer.init(param_vals)
 
 
