@@ -34,7 +34,7 @@ n_layers = 3
 
 # Lets define a sequence of rotations
 
-#  We need a function to fit and use it to produce training data
+#  We need a target function to fit and to produce training data
 fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in range(degree)), 0)
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
