@@ -88,8 +88,7 @@ def optimize_step(param_vals: Array, opt_state: Array, grads: Array) -> tuple:
     return param_vals, opt_state
 
 @jit
-def train_step(i: int, paramvals_w_optstate: tuple
-) -> tuple:
+def train_step(i: int, paramvals_w_optstate: tuple) -> tuple:
     param_vals, opt_state = paramvals_w_optstate
     loss, grads = value_and_grad(loss_fn)(param_vals)
     param_vals, opt_state = optimize_step(param_vals, opt_state, grads)
