@@ -143,7 +143,7 @@ def adjoint_expectation(
 
     Args:
         state (State): Input state vector or density matrix.
-        gates (OpSequence): Sequence of gates.
+        circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
 
