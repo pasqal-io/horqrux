@@ -7,6 +7,7 @@ nav:
   - Contribute: CONTRIBUTING.md
   - Code of Conduct: CODE_OF_CONDUCT.md
   - Advanced Features:
+    - Function fitting and PDE solving with DQC: dqc.md
     - Noisy simulation: noise.md
 
 theme:
@@ -34,13 +35,19 @@ theme:
 
 markdown_extensions:
 - admonition  # for notes
+- footnotes
 - pymdownx.arithmatex: # for mathjax
     generic: true
 - pymdownx.highlight:
     anchor_linenums: true
 - pymdownx.inlinehilite
 - pymdownx.snippets
-- pymdownx.superfences
+- pymdownx.superfences:
+    custom_fences:
+    - name: python
+      class: python
+      validator: "!!python/name:markdown_exec.validator"
+      format: "!!python/name:markdown_exec.formatter"
 
 plugins:
 - search

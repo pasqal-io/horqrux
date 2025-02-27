@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import Array
 
-from horqrux.primitive import Primitive
+from horqrux.primitives.primitive import Primitive
 
 from .noise import NoiseProtocol
 from .utils import (
@@ -281,9 +281,9 @@ def merge_operators(
 
 
 @singledispatch
-def apply_gate(
+def apply_gates(
     state: Any,
-    gate: Primitive | Iterable[Primitive],
+    gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
@@ -293,7 +293,7 @@ def apply_gate(
 
 
 def prepare_sequence_reduce(
-    gate: Primitive | Iterable[Primitive],
+    gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
@@ -302,7 +302,7 @@ def prepare_sequence_reduce(
     """Prepare the tuples to be used when applying operations.
 
     Args:
-        gate (Primitive | Iterable[Primitive]): Gate(s) to apply.
+        gate (Union[Primitive, Iterable[Primitive]]): Gate(s) to apply.
         values (dict[str, float], optional): A dictionary with parameter values.
             Defaults to dict().
         op_type (OperationType, optional): The type of operation to perform: Unitary, Dagger or Jacobian.
@@ -333,7 +333,7 @@ def prepare_sequence_reduce(
     return operator, target, control, noise
 
 
-@apply_gate.register
+@apply_gates.register
 def _(
     state: Array,
     gate: Union[Primitive, Iterable[Primitive]],
@@ -377,7 +377,7 @@ def _(
     return output_state
 
 
-@apply_gate.register
+@apply_gates.register
 def _(
     state: DensityMatrix,
     gate: Union[Primitive, Iterable[Primitive]],

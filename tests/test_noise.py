@@ -7,10 +7,10 @@ import numpy as np
 import pytest
 
 from horqrux.api import expectation, run, sample
-from horqrux.apply import apply_gate
+from horqrux.apply import apply_gates
 from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
-from horqrux.parametric import PHASE, RX, RY, RZ
-from horqrux.primitive import NOT, H, I, S, T, X, Y, Z
+from horqrux.primitives.parametric import PHASE, RX, RY, RZ
+from horqrux.primitives.primitive import NOT, H, I, S, T, X, Y, Z
 from horqrux.utils import ForwardMode, density_mat, product_state, random_state
 
 MAX_QUBITS = 7
@@ -97,21 +97,21 @@ def test_noisy_primitive(gate_fn: Callable, noise_type: DigitalNoiseType) -> Non
     dm_shape_len = 2 * MAX_QUBITS
 
     orig_state = random_state(MAX_QUBITS)
-    output_dm = apply_gate(orig_state, noisy_gate)
+    output_dm = apply_gates(orig_state, noisy_gate)
 
     # check output is a density matrix
     assert len(output_dm.array.shape) == dm_shape_len
 
     orig_dm = density_mat(orig_state)
     assert len(orig_dm.array.shape) == dm_shape_len
-    output_dm2 = apply_gate(
+    output_dm2 = apply_gates(
         orig_dm,
         noisy_gate,
     )
     assert jnp.allclose(output_dm2.array, output_dm.array)
 
     perfect_gate = gate_fn(target)
-    perfect_output = density_mat(apply_gate(orig_state, perfect_gate))
+    perfect_output = density_mat(apply_gates(orig_state, perfect_gate))
     assert not jnp.allclose(perfect_output.array, output_dm.array)
 
 
@@ -126,14 +126,14 @@ def test_noisy_parametric(gate_fn: Callable, noise_type: DigitalNoiseType) -> No
 
     dm_shape_len = 2 * MAX_QUBITS
 
-    output_dm = apply_gate(orig_state, noisy_gate, values)
+    output_dm = apply_gates(orig_state, noisy_gate, values)
     # check output is a density matrix
     assert len(output_dm.array.shape) == dm_shape_len
 
     orig_dm = density_mat(orig_state)
     assert len(orig_dm.array.shape) == dm_shape_len
 
-    output_dm2 = apply_gate(
+    output_dm2 = apply_gates(
         orig_dm,
         noisy_gate,
         values,
@@ -141,7 +141,7 @@ def test_noisy_parametric(gate_fn: Callable, noise_type: DigitalNoiseType) -> No
     assert jnp.allclose(output_dm2.array, output_dm.array)
 
     perfect_gate = gate_fn("theta", target)
-    perfect_output = density_mat(apply_gate(orig_state, perfect_gate, values))
+    perfect_output = density_mat(apply_gates(orig_state, perfect_gate, values))
     assert not jnp.allclose(perfect_output.array, output_dm.array)
 
 

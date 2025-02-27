@@ -7,11 +7,10 @@ import jax.numpy as jnp
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from ._misc import default_complex_dtype
-from .matrices import OPERATIONS_DICT
-from .noise import NoiseProtocol
-from .primitive import Primitive
-from .utils import (
+from horqrux._misc import default_complex_dtype
+from horqrux.matrices import OPERATIONS_DICT
+from horqrux.noise import NoiseProtocol
+from horqrux.utils import (
     ControlQubits,
     QubitSupport,
     TargetQubits,
@@ -19,6 +18,8 @@ from .utils import (
     _unitary,
     is_controlled,
 )
+
+from .primitive import Primitive
 
 default_dtype = default_complex_dtype()
 

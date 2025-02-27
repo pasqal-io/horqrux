@@ -9,10 +9,10 @@ import jax.numpy as jnp
 from jax import Array
 from jax.experimental import checkify
 
-from horqrux.adjoint import adjoint_expectation
-from horqrux.apply import apply_gate
-from horqrux.primitive import GateSequence, Primitive
-from horqrux.shots import finite_shots_fwd, to_matrix
+from horqrux.adjoint import adjoint_expectation as apply_adjoint
+from horqrux.apply import apply_gates, apply_operator
+from horqrux.composite import Observable, OpSequence
+from horqrux.shots import finite_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
@@ -27,16 +27,16 @@ from horqrux.utils import (
 
 
 def run(
-    circuit: GateSequence,
+    circuit: OpSequence,
     state: State,
     values: dict[str, float] = dict(),
 ) -> State:
-    return apply_gate(state, circuit, values)
+    return circuit(state, values)
 
 
 def sample(
     state: State,
-    gates: GateSequence,
+    circuit: OpSequence,
     values: dict[str, float] = dict(),
     n_shots: int = 1000,
 ) -> Counter:
@@ -44,7 +44,7 @@ def sample(
 
     Args:
         state (State): Input state vector or density matrix.
-        gates (GateSequence): Sequence of gates.
+        circuit (OpSequence): Sequence of gates.
         values (dict[str, float], optional): _description_. Defaults to dict().
         n_shots (int, optional): Parameter values.. Defaults to 1000.
 
@@ -56,7 +56,7 @@ def sample(
     """
     if n_shots < 1:
         raise ValueError("You can only sample with non-negative 'n_shots'.")
-    output_circuit = apply_gate(state, gates, values)
+    output_circuit = circuit(state, values)
     n_qubits = num_qubits(output_circuit)
     if isinstance(output_circuit, DensityMatrix):
         d = 2**n_qubits
@@ -69,7 +69,7 @@ def sample(
 @singledispatch
 def _ad_expectation_single_observable(
     state: Any,
-    observable: Primitive,
+    observable: Observable,
     values: dict[str, float],
 ) -> Any:
     raise NotImplementedError("_ad_expectation_single_observable is not implemented")
@@ -78,14 +78,12 @@ def _ad_expectation_single_observable(
 @_ad_expectation_single_observable.register
 def _(
     state: Array,
-    observable: Primitive,
+    observable: Observable,
     values: dict[str, float],
 ) -> Array:
-    projected_state = apply_gate(
+    projected_state = observable(
         state,
-        observable,
         values,
-        OperationType.UNITARY,
     )
     return inner(state, projected_state).real
 
@@ -93,20 +91,20 @@ def _(
 @_ad_expectation_single_observable.register
 def _(
     state: DensityMatrix,
-    observable: Primitive,
+    observable: Observable,
     values: dict[str, float],
 ) -> Array:
     n_qubits = num_qubits(state)
-    mat_obs = to_matrix(observable, n_qubits, values)
+    mat_obs = observable.tensor(values)
     d = 2**n_qubits
-    prod = jnp.matmul(mat_obs, state.array.reshape((d, d)))
+    prod = apply_operator(state.array, mat_obs, observable.qubit_support, (None,)).reshape((d, d))
     return jnp.trace(prod, axis1=-2, axis2=-1).real
 
 
 def ad_expectation(
     state: State,
-    gates: GateSequence,
-    observables: list[Primitive],
+    circuit: OpSequence,
+    observables: list[Observable],
     values: dict[str, float],
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -114,26 +112,57 @@ def ad_expectation(
 
     Args:
         state (State): Input state vector or density matrix.
-        gates (GateSequence): Sequence of gates.
-        observables (list[Primitive]): List of observables.
+        circuit (OpSequence): Sequence of gates.
+        observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
 
     Returns:
         Array: Expectation values.
     """
-    outputs = [
-        _ad_expectation_single_observable(
-            apply_gate(state, gates, values, OperationType.UNITARY), observable, values
+    outputs = list(
+        map(
+            lambda observable: _ad_expectation_single_observable(
+                apply_gates(state, circuit.operations, values, OperationType.UNITARY),
+                observable,
+                values,
+            ),
+            observables,
         )
-        for observable in observables
-    ]
+    )
+    return jnp.stack(outputs)
+
+
+def adjoint_expectation(
+    state: State,
+    circuit: OpSequence,
+    observables: list[Observable],
+    values: dict[str, float],
+) -> Array:
+    """Apply a sequence of adjoint operators to an input state given parameters 'values'
+       and compute the expectation given an observable.
+
+    Args:
+        state (State): Input state vector or density matrix.
+        circuit (OpSequence): Sequence of gates.
+        observables (list[Observable]): List of observables.
+        values (dict[str, float]): Parameter values.
+
+    Returns:
+        Array: Expectation values.
+    """
+    outputs = list(
+        map(
+            lambda observable: apply_adjoint(state, circuit.operations, observable, values),
+            observables,
+        )
+    )
     return jnp.stack(outputs)
 
 
 def expectation(
     state: State,
-    gates: GateSequence,
-    observables: list[Primitive],
+    circuit: OpSequence,
+    observables: list[Observable],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
     forward_mode: ForwardMode = ForwardMode.EXACT,
@@ -145,8 +174,8 @@ def expectation(
 
     Args:
         state (State): Input state vector or density matrix.
-        gates (GateSequence): Sequence of gates.
-        observables (list[Primitive]): List of observables.
+        circuit (OpSequence): Sequence of gates.
+        observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
         forward_mode (ForwardMode, optional): Type of forward method. Defaults to ForwardMode.EXACT.
@@ -157,11 +186,11 @@ def expectation(
         Array: Expectation values.
     """
     if diff_mode == DiffMode.AD:
-        return ad_expectation(state, gates, observables, values)
+        return ad_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
-        return adjoint_expectation(state, gates, observables, values)
+        return adjoint_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.GPSR:
         checkify.check(
             forward_mode == ForwardMode.SHOTS, "Finite shots and GPSR must be used together"
@@ -174,7 +203,7 @@ def expectation(
         # type: ignore
         return finite_shots_fwd(
             state=state,
-            gates=gates,
+            gates=circuit.operations,
             observables=observables,
             values=values,
             n_shots=n_shots,

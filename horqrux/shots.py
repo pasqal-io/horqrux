@@ -1,40 +1,17 @@
 from __future__ import annotations
 
-from functools import partial, reduce, singledispatch
-from typing import Any
+from functools import partial, singledispatch
+from typing import Any, Iterable, Union
 
 import jax
 import jax.numpy as jnp
 from jax import Array, random
 from jax.experimental import checkify
 
-from horqrux.apply import apply_gate
-from horqrux.primitive import GateSequence, Primitive
-from horqrux.utils import DensityMatrix, State, none_like, num_qubits
-
-
-def to_matrix(
-    observable: Primitive,
-    n_qubits: int,
-    values: dict[str, float],
-) -> Array:
-    """For finite shot sampling we need to calculate the eigenvalues/vectors of
-    an observable. This helper function takes an observable and system size
-    (n_qubits) and returns the overall action of the observable on the whole
-    system.
-
-    LIMITATION: currently only works for observables which are not controlled.
-    """
-    checkify.check(
-        observable.control == observable.parse_idx(none_like(observable.target)),
-        "Controlled gates cannot be promoted from observables to operations on the whole state vector",
-    )
-    unitary = observable._unitary(values=values)
-    target = observable.target[0][0]
-    identity = jnp.eye(2, dtype=unitary.dtype)
-    ops = [identity for _ in range(n_qubits)]
-    ops[target] = unitary
-    return reduce(lambda x, y: jnp.kron(x, y), ops[1:], ops[0])
+from horqrux.apply import apply_gates
+from horqrux.composite import Observable
+from horqrux.primitives.primitive import Primitive
+from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
 
 
 @singledispatch
@@ -90,7 +67,7 @@ def _(state: DensityMatrix, eigvecs: Array) -> Array:
 
 def eigen_sample(
     state: State,
-    observables: list[Primitive],
+    observables: list[Observable],
     values: dict[str, float],
     n_qubits: int,
     n_shots: int,
@@ -101,7 +78,7 @@ def eigen_sample(
 
     Args:
         state (State): Input state or density matrix.
-        observables (list[Primitive]): list of observables.
+        observables (list[Observable]): list of observables.
         values (dict[str, float]): Parameter values.
         n_qubits (int): Number of qubits
         n_shots (int): Number of samples
@@ -110,8 +87,17 @@ def eigen_sample(
     Returns:
         Array: Sampled eigenvalues.
     """
-    mat_obs = [to_matrix(observable, n_qubits, values) for observable in observables]
-    eigs = [jnp.linalg.eigh(mat) for mat in mat_obs]
+    qubits = tuple(range(n_qubits))
+    d = 2**n_qubits
+    mat_obs = list(
+        map(
+            lambda observable: expand_operator(
+                observable.tensor(values), observable.qubit_support, qubits
+            ).reshape((d, d)),
+            observables,
+        )
+    )
+    eigs = list(map(lambda mat: jnp.linalg.eigh(mat), mat_obs))
     eigvecs, eigvals = align_eigenvectors(eigs)
     probs = eigen_probabilities(state, eigvecs)
     return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
@@ -120,8 +106,8 @@ def eigen_sample(
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
 def finite_shots_fwd(
     state: State,
-    gates: GateSequence,
-    observables: list[Primitive],
+    gates: Union[Primitive, Iterable[Primitive]],
+    observables: list[Observable],
     values: dict[str, float],
     n_shots: int = 100,
     key: Any = jax.random.PRNGKey(0),
@@ -130,7 +116,7 @@ def finite_shots_fwd(
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    output_gates = apply_gate(state, gates, values)
+    output_gates = apply_gates(state, gates, values)
     n_qubits = num_qubits(output_gates)
     if isinstance(state, DensityMatrix):
         d = 2**n_qubits
@@ -179,8 +165,8 @@ def validate_permutation_matrix(P: Array) -> Array:
 @finite_shots_fwd.defjvp
 def finite_shots_jvp(
     state: Array,
-    gates: GateSequence,
-    observable: Primitive,
+    gates: Union[Primitive, Iterable[Primitive]],
+    observable: Observable,
     n_shots: int,
     key: Array,
     primals: tuple[dict[str, float]],

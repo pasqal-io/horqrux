@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, Union
+from typing import Any, Iterable
 
 import numpy as np
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from .matrices import OPERATIONS_DICT
-from .noise import NoiseProtocol
-from .utils import (
+from horqrux.matrices import OPERATIONS_DICT
+from horqrux.noise import NoiseProtocol
+from horqrux.utils import (
     ControlQubits,
     QubitSupport,
     TargetQubits,
@@ -108,11 +108,22 @@ class Primitive:
             n_qubits += len(self.control)
         return n_qubits
 
+    @property
+    def qubit_support(self) -> tuple:
+        return tuple(
+            sorted(
+                tuple(
+                    set(
+                        self.target[0] + self.control[0]
+                        if is_controlled(self.control)
+                        else self.target[0]
+                    )
+                )
+            )
+        )
+
     def __repr__(self) -> str:
         return self.name + f"(target={self.target}, control={self.control})"
-
-
-GateSequence = Union[Primitive, Iterable[Primitive]]
 
 
 def I(
@@ -280,13 +291,19 @@ def SWAP(
     return Primitive("SWAP", target, control, noise)
 
 
-def SQSWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
-    return Primitive("SQSWAP", target, control)
+def SQRTSWAP(
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+) -> Primitive:
+    return Primitive("SQSWAP", target, control, noise)
 
 
-def ISWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
-    return Primitive("ISWAP", target, control)
+def ISWAP(
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+) -> Primitive:
+    return Primitive("ISWAP", target, control, noise)
 
 
-def ISQSWAP(target: TargetQubits, control: ControlQubits = (None,)) -> Primitive:
-    return Primitive("ISQSWAP", target, control)
+def ISQRTSWAP(
+    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+) -> Primitive:
+    return Primitive("ISQSWAP", target, control, noise)

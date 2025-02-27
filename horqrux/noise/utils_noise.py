@@ -3,7 +3,7 @@ from __future__ import annotations
 import jax.numpy as jnp
 from jax import Array
 
-from .matrices import OPERATIONS_DICT
+from horqrux.matrices import OPERATIONS_DICT
 
 
 def BitFlip(error_probability: float) -> tuple[Array, ...]:

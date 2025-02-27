@@ -8,11 +8,12 @@ description = "Jax-based quantum state vector and noisy simulator."
 authors = [
     { name = "Gert-Jan Both" , email = "gert-jan.both@pasqal.com" },
     { name = "Dominik Seitz", email = "dominik.seitz@pasqal.com" },
+    { name = "Charles Moussa", email = "charles.moussa@pasqal.com" },
 ]
 requires-python = ">=3.8,<3.13"
 license = {text = "Apache 2.0"}
 
-version = "0.7.0"
+version = "0.7.1"
 
 classifiers=[
     "License :: Other/Proprietary License",

@@ -84,14 +84,14 @@ Then a gate can be instantiated by providing a tuple of `DigitalNoiseInstance` i
 For instance, an $X$ gate flips the state of the qubit: $X|0\rangle = |1\rangle$. In practice, it's common for the target qubit to stay in its original state after applying $X$ due to the interactions between it and its environment. The possibility of failure can be represented by the `BitFlip` subclass of `DigitalNoiseInstance`, which flips the state again after the application of the $X$ gate, returning it to its original state with a probability `1 - gate_fidelity`.
 
 ```python exec="on" source="material-block"
+from horqrux import X, QuantumCircuit
 from horqrux.api import sample
 from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
 from horqrux.utils import density_mat, product_state
-from horqrux.primitive import X
 
 noise = (DigitalNoiseInstance(DigitalNoiseType.BITFLIP, 0.1),)
-ops = [X(0)]
-noisy_ops = [X(0, noise=noise)]
+ops = QuantumCircuit(1, [X(0)])
+noisy_ops = QuantumCircuit(1, [X(0, noise=noise)])
 state = product_state("0")
 
 noiseless_samples = sample(state, ops)

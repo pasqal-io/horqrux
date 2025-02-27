@@ -225,7 +225,7 @@ def controlled(
 
 
 def expand_operator(
-    operator: Array, qubit_support: TargetQubits, full_support: TargetQubits
+    operator: Array, qubit_support: tuple[int, ...], full_support: tuple[int, ...]
 ) -> Array:
     """
     Expands an operator acting on a given qubit_support to act on a larger full_support
@@ -233,8 +233,8 @@ def expand_operator(
 
     Args:
         operator (Array): Operator to expand
-        qubit_support (TargetQubits): Qubit support the operator is initially defined over.
-        full_support (TargetQubits): Qubit support the operator will be defined over.
+        qubit_support (tuple[int, ...]): Qubit support the operator is initially defined over.
+        full_support (tuple[int, ...]): Qubit support the operator will be defined over.
 
     Raises:
         ValueError: When `full_support` larger than or equal to the `qubit_support`
@@ -250,9 +250,10 @@ def expand_operator(
             "larger than or equal to the `qubit_support`."
         )
 
-    kron_qubits = set(full_support) - set(qubit_support)
+    kron_qubits = tuple(sorted(set(full_support) - set(qubit_support)))
     kron_operator = reduce(jnp.kron, [operator] + [_I] * len(kron_qubits))
-    # TODO: Add permute_basis
+    kron_operator = hilbert_reshape(kron_operator)
+    kron_operator = permute_basis(kron_operator, qubit_support + kron_qubits, True)
     return kron_operator
 
 
