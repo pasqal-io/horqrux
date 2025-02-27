@@ -3,7 +3,7 @@
 We can build a fully differentiable variational circuit by defining a sequence of gates
 and a set of optimizable parameter values.
 `horqrux` provides an implementation for the adjoint differentiation method[^1],
-which we can use to fit a function using a simple `Circuit` class.
+which we can use to fit a function using a simple `QuantumFunctionFitter` class inheriting from the `QuantumCircuit` class.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
@@ -39,18 +39,21 @@ fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in r
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
 
-class QuantumCircuitFunction(QuantumCircuit):
+class QuantumFunctionFitter(QuantumCircuit):
     """
-    A QuantumCircuitFunction is composed of a quantum circuit and an observable to obtain a real-valued
-        output. It can be seen as a function of input values `x` that are passed as parameter values of a subset of parameterized quantum gates. The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
+    A QuantumFunctionFitter is composed of a quantum circuit and an observable to obtain a real-valued output.
+    It can be seen as a function of input values `x` that are passed as parameter values of a subset of parameterized quantum gates.
+    The output is define as
+    The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
 
     Attributes:
         n_qubits (int): Number of qubits.
         operations (list[Primitive]): Operations defining the circuit.
         fparams (list[str]): List of parameters that are considered
             non trainable, used for passing fixed input data to a quantum circuit.
-                The corresponding operations compose the `feature map`.
+            The corresponding operations compose the `feature map`.
         observable (Observable): Observable for getting real-valued measurement output.
+            Here, we use the Z observable applied on qubit 0.
         state (Array): Initial zero state.
     """
     def __init__(self, n_qubits, operations, fparams) -> None:
@@ -66,7 +69,7 @@ class QuantumCircuitFunction(QuantumCircuit):
 feature_map = [RX('phi', i) for i in range(n_qubits)]
 fm_names = [f.param for f in feature_map]
 ansatz = hea(n_qubits, n_layers)
-circ = QuantumCircuitFunction(n_qubits, feature_map + ansatz, fm_names)
+circ = QuantumFunctionFitter(n_qubits, feature_map + ansatz, fm_names)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -118,7 +121,8 @@ print(fig_to_html(plt.gcf())) # markdown-exec: hide
 
 # Fitting a partial differential equation using DifferentiableQuantumCircuit
 
-Finally, we show how a Differentiable Quantum Circuit (DQC)[^2] can be implemented in `horqrux` and solve a partial differential equation.
+We show how a Differentiable Quantum Circuit (DQC)[^2] can be implemented in `horqrux` and solve a partial differential equation.
+To do so, we define a `QuantumPDESolver` class inheriting from the `QuantumCircuit` class.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
@@ -153,7 +157,7 @@ X_POS, Y_POS = [i for i in range(NUM_VARIABLES)]
 BATCH_SIZE = 500
 N_EPOCHS = 500
 
-def total_magnetization(n_qubits:int) -> Observable:
+def total_magnetization(n_qubits:int) -> Callable:
     paulis = Observable([Z(i) for i in range(n_qubits)])
 
     def _total_magnetization(out_state: Array, values: dict[str, Array]) -> Array:
@@ -161,10 +165,11 @@ def total_magnetization(n_qubits:int) -> Observable:
         return inner(out_state, projected_state).real
     return _total_magnetization
 
-class DifferentiableQuantumCircuit(QuantumCircuit):
+class QuantumPDESolver(QuantumCircuit):
     """
-    A DifferentiableQuantumCircuit is composed of a quantum circuit and an observable to obtain a real-valued
-        output. It can be seen as a function of input values `x`, `y` that are passed as parameter values of a subset of parameterized quantum gates. The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
+    A QuantumPDESolver is composed of a quantum circuit and an observable to obtain a real-valued output.
+    It can be seen as a function of input values `x`, `y` that are passed as parameter values of a subset of parameterized quantum gates.
+    The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
 
     Attributes:
         n_qubits (int): Number of qubits.
@@ -172,7 +177,8 @@ class DifferentiableQuantumCircuit(QuantumCircuit):
         fparams (list[str]): List of parameters that are considered
             non trainable, used for passing fixed input data to a quantum circuit.
                 The corresponding operations compose the `feature map`.
-        observable (Observable): Observable for getting real-valued output.
+        observable (Callable): Function applying the observable for getting real-valued output.
+            Here, we use the total_magnetization function applying the observable \sum_i^N Z(i).
         state (Array): Initial zero state.
     """
     def __init__(self, n_qubits, operations, fparams) -> None:
@@ -194,7 +200,7 @@ fm =  [RX("f_x", i) for i in range(N_QUBITS // 2)] + [
         ]
 fm_circuit_parameters = [f.param for f in fm]
 ansatz = hea(N_QUBITS, DEPTH)
-circ = DifferentiableQuantumCircuit(N_QUBITS, fm + ansatz, fm_circuit_parameters)
+circ = QuantumPDESolver(N_QUBITS, fm + ansatz, fm_circuit_parameters)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
