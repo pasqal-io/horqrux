@@ -32,8 +32,6 @@ n_qubits = 5
 n_params = 3
 n_layers = 3
 
-# Lets define a sequence of rotations
-
 #  We need a target function to fit and to produce training data
 fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in range(degree)), 0)
 x = jnp.linspace(0, 10, 100)
@@ -270,7 +268,7 @@ domain = jnp.array(list(product(single_domain, single_domain)))
 analytic_sol = (
     (np.exp(-np.pi * domain[:, 0]) * np.sin(np.pi * domain[:, 1])).reshape(BATCH_SIZE, BATCH_SIZE).T
 )
-# DifferentiableQuantumCircuit solution
+# QuantumPDESolver solution
 dqc_sol = vmap(lambda domain: circ(param_vals, domain[0], domain[1]), in_axes=(0,))(
     domain
 ).reshape(BATCH_SIZE, BATCH_SIZE)
@@ -283,7 +281,7 @@ ax[0].set_title("Analytical solution u(x,y)")
 ax[1].imshow(dqc_sol, cmap="turbo")
 ax[1].set_xlabel("x")
 ax[1].set_ylabel("y")
-ax[1].set_title("DifferentiableQuantumCircuit solution u(x,y)")
+ax[1].set_title("QuantumPDESolver solution u(x,y)")
 from io import StringIO  # markdown-exec: hide
 from matplotlib.figure import Figure  # markdown-exec: hide
 def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
