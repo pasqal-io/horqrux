@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from functools import reduce
 from operator import add
 from typing import Any
@@ -17,7 +16,6 @@ from .sequence import OpSequence
 
 
 @register_pytree_node_class
-@dataclass
 class Scale(OpSequence):
     """
     Generic container for multiplying a 'Primitive', 'Sequence' or 'Add' instance by a parameter.
@@ -59,7 +57,6 @@ class Scale(OpSequence):
 
 
 @register_pytree_node_class
-@dataclass
 class Add(OpSequence):
     """
     The 'add' operation applies all 'operations' to 'state' and returns the sum of states.
@@ -100,7 +97,6 @@ class Add(OpSequence):
 
 
 @register_pytree_node_class
-@dataclass
 class Observable(Add):
     """
     The Observable :math:`O` represents an operator from which
