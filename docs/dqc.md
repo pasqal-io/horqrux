@@ -3,7 +3,7 @@
 We can build a fully differentiable variational circuit by defining a sequence of gates
 and a set of optimizable parameter values.
 `horqrux` provides an implementation for the adjoint differentiation method[^1],
-which we can use to fit a function using a simple `QuantumFunctionFitter` class inheriting from the `QuantumCircuit` class.
+which we can use to fit a function using a simple `FunctionFitter` class inheriting from the `QuantumCircuit` class.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
@@ -120,7 +120,7 @@ print(fig_to_html(plt.gcf())) # markdown-exec: hide
 # Fitting a partial differential equation using DifferentiableQuantumCircuit
 
 We show how a Differentiable Quantum Circuit (DQC)[^2] can be implemented in `horqrux` and solve a partial differential equation.
-To do so, we define a `QuantumPDESolver` class inheriting from the `QuantumCircuit` class.
+To do so, we define a `PDESolver` class inheriting from the `QuantumCircuit` class.
 
 ```python exec="on" source="material-block" html="1"
 from __future__ import annotations
