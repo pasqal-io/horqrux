@@ -37,9 +37,9 @@ fn = lambda x, degree: .05 * reduce(add, (jnp.cos(i*x) + jnp.sin(i*x) for i in r
 x = jnp.linspace(0, 10, 100)
 y = fn(x, 5)
 
-class QuantumFunctionFitter(QuantumCircuit):
+class FunctionFitter(QuantumCircuit):
     """
-    A QuantumFunctionFitter is composed of a quantum circuit and an observable to obtain a real-valued output.
+    The FunctionFitter is composed of a quantum circuit and an observable to obtain a real-valued output.
     It can be seen as a function of input values `x` that are passed as parameter values of a subset of parameterized quantum gates.
     The output is define as
     The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
@@ -67,7 +67,7 @@ class QuantumFunctionFitter(QuantumCircuit):
 feature_map = [RX('phi', i) for i in range(n_qubits)]
 fm_names = [f.param for f in feature_map]
 ansatz = hea(n_qubits, n_layers)
-circ = QuantumFunctionFitter(n_qubits, feature_map + ansatz, fm_names)
+circ = FunctionFitter(n_qubits, feature_map + ansatz, fm_names)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -163,9 +163,9 @@ def total_magnetization(n_qubits:int) -> Callable:
         return inner(out_state, projected_state).real
     return _total_magnetization
 
-class QuantumPDESolver(QuantumCircuit):
+class PDESolver(QuantumCircuit):
     """
-    A QuantumPDESolver is composed of a quantum circuit and an observable to obtain a real-valued output.
+    The PDESolver is composed of a quantum circuit and an observable to obtain a real-valued output.
     It can be seen as a function of input values `x`, `y` that are passed as parameter values of a subset of parameterized quantum gates.
     The rest of the parameterized quantum gates use the `values` coming from a classical optimizer.
 
@@ -198,7 +198,7 @@ fm =  [RX("f_x", i) for i in range(N_QUBITS // 2)] + [
         ]
 fm_circuit_parameters = [f.param for f in fm]
 ansatz = hea(N_QUBITS, DEPTH)
-circ = QuantumPDESolver(N_QUBITS, fm + ansatz, fm_circuit_parameters)
+circ = PDESolver(N_QUBITS, fm + ansatz, fm_circuit_parameters)
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
 param_vals = jax.random.uniform(key, shape=(circ.n_vparams,))
@@ -268,7 +268,7 @@ domain = jnp.array(list(product(single_domain, single_domain)))
 analytic_sol = (
     (np.exp(-np.pi * domain[:, 0]) * np.sin(np.pi * domain[:, 1])).reshape(BATCH_SIZE, BATCH_SIZE).T
 )
-# QuantumPDESolver solution
+# DQC solution
 dqc_sol = vmap(lambda domain: circ(param_vals, domain[0], domain[1]), in_axes=(0,))(
     domain
 ).reshape(BATCH_SIZE, BATCH_SIZE)
@@ -281,7 +281,7 @@ ax[0].set_title("Analytical solution u(x,y)")
 ax[1].imshow(dqc_sol, cmap="turbo")
 ax[1].set_xlabel("x")
 ax[1].set_ylabel("y")
-ax[1].set_title("QuantumPDESolver solution u(x,y)")
+ax[1].set_title("DQC solution u(x,y)")
 from io import StringIO  # markdown-exec: hide
 from matplotlib.figure import Figure  # markdown-exec: hide
 def fig_to_html(fig: Figure) -> str:  # markdown-exec: hide
