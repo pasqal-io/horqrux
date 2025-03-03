@@ -124,31 +124,6 @@ def finite_shots_fwd(
         output_gates.array = output_gates.array.reshape((d, d))
     return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
 
-
-@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
-def no_shots_fwd(
-    state: State,
-    gates: Union[Primitive, Iterable[Primitive]],
-    observables: list[Observable],
-    values: dict[str, float],
-) -> Array:
-    """
-    Run 'state' through a sequence of 'gates' given parameters 'values'
-    and compute the expectation given an observable.
-    """
-    outputs = list(
-        map(
-            lambda observable: _ad_expectation_single_observable(
-                apply_gates(state, gates, values),
-                observable,
-                values,
-            ),
-            observables,
-        )
-    )
-    return jnp.stack(outputs)
-
-
 def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, Array]:
     """
     Given a list of eigenvalue eigenvector matrix tuples in the form of
