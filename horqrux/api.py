@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import Counter
-from functools import singledispatch
 from typing import Any, Optional
 
 import jax
@@ -10,16 +9,14 @@ from jax import Array
 from jax.experimental import checkify
 
 from horqrux.adjoint import adjoint_expectation as apply_adjoint
-from horqrux.apply import apply_gates, apply_operator
 from horqrux.composite import Observable, OpSequence
+from horqrux.differentiation import ad_expectation
 from horqrux.shots import finite_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
     ForwardMode,
-    OperationType,
     State,
-    inner,
     num_qubits,
     probabilities,
     sample_from_probs,
@@ -64,72 +61,6 @@ def sample(
 
     probs = probabilities(output_circuit)
     return sample_from_probs(probs, n_qubits, n_shots)
-
-
-@singledispatch
-def _ad_expectation_single_observable(
-    state: Any,
-    observable: Observable,
-    values: dict[str, float],
-) -> Any:
-    raise NotImplementedError("_ad_expectation_single_observable is not implemented")
-
-
-@_ad_expectation_single_observable.register
-def _(
-    state: Array,
-    observable: Observable,
-    values: dict[str, float],
-) -> Array:
-    projected_state = observable(
-        state,
-        values,
-    )
-    return inner(state, projected_state).real
-
-
-@_ad_expectation_single_observable.register
-def _(
-    state: DensityMatrix,
-    observable: Observable,
-    values: dict[str, float],
-) -> Array:
-    n_qubits = num_qubits(state)
-    mat_obs = observable.tensor(values)
-    d = 2**n_qubits
-    prod = apply_operator(state.array, mat_obs, observable.qubit_support, (None,)).reshape((d, d))
-    return jnp.trace(prod, axis1=-2, axis2=-1).real
-
-
-def ad_expectation(
-    state: State,
-    circuit: OpSequence,
-    observables: list[Observable],
-    values: dict[str, float],
-) -> Array:
-    """Run 'state' through a sequence of 'gates' given parameters 'values'
-       and compute the expectation given an observable.
-
-    Args:
-        state (State): Input state vector or density matrix.
-        circuit (OpSequence): Sequence of gates.
-        observables (list[Observable]): List of observables.
-        values (dict[str, float]): Parameter values.
-
-    Returns:
-        Array: Expectation values.
-    """
-    outputs = list(
-        map(
-            lambda observable: _ad_expectation_single_observable(
-                apply_gates(state, circuit.operations, values, OperationType.UNITARY),
-                observable,
-                values,
-            ),
-            observables,
-        )
-    )
-    return jnp.stack(outputs)
 
 
 def adjoint_expectation(
