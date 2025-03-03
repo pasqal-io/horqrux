@@ -11,7 +11,7 @@ from jax.experimental import checkify
 from horqrux.composite import Observable, OpSequence
 from horqrux.differentiation.adjoint import adjoint_expectation as apply_adjoint
 from horqrux.differentiation.automatic_diff import ad_expectation
-from horqrux.differentiation.gpsr import finite_shots_fwd
+from horqrux.differentiation.gpsr import finite_shots_fwd, no_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
@@ -122,18 +122,26 @@ def expectation(
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
         return adjoint_expectation(state, circuit, observables, values)
-    elif diff_mode == DiffMode.GPSR and forward_mode == ForwardMode.SHOTS:
-        checkify.check(
-            type(n_shots) is int and n_shots > 0,
-            "Number of shots must be an integer for finite shots.",
-        )
-        # Type checking is disabled because mypy doesn't parse checkify.check.
-        # type: ignore
-        return finite_shots_fwd(
-            state=state,
-            gates=circuit.operations,
-            observables=observables,
-            values=values,
-            n_shots=n_shots,
-            key=key,
-        )
+    elif diff_mode == DiffMode.GPSR:
+        if forward_mode == ForwardMode.SHOTS:
+            checkify.check(
+                type(n_shots) is int and n_shots > 0,
+                "Number of shots must be an integer for finite shots.",
+            )
+            # Type checking is disabled because mypy doesn't parse checkify.check.
+            # type: ignore
+            return finite_shots_fwd(
+                state=state,
+                gates=circuit.operations,
+                observables=observables,
+                values=values,
+                n_shots=n_shots,
+                key=key,
+            )
+        else:
+            return no_shots_fwd(
+                state=state,
+                gates=circuit.operations,
+                observables=observables,
+                values=values,
+            )

@@ -10,8 +10,8 @@ from jax.experimental import checkify
 
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
-from horqrux.primitives.primitive import Primitive
 from horqrux.differentiation.automatic_diff import _ad_expectation_single_observable
+from horqrux.primitives.primitive import Primitive
 from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
 
 
@@ -115,7 +115,7 @@ def finite_shots_fwd(
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
-    and compute the expectation given an observable.
+    and compute the expectation given an observable and `n_shots` shots.
     """
     output_gates = apply_gates(state, gates, values)
     n_qubits = num_qubits(output_gates)
@@ -125,24 +125,28 @@ def finite_shots_fwd(
     return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
 
 
-# @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
-# def no_shots_fwd(
-#     state: State,
-#     gates: Union[Primitive, Iterable[Primitive]],
-#     observables: list[Observable],
-#     values: dict[str, float],
-# ) -> Array:
-#     outputs = list(
-#         map(
-#             lambda observable: _ad_expectation_single_observable(
-#                 apply_gates(state, gates, values),
-#                 observable,
-#                 values,
-#             ),
-#             observables,
-#         )
-#     )
-#     return jnp.stack(outputs)
+@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
+def no_shots_fwd(
+    state: State,
+    gates: Union[Primitive, Iterable[Primitive]],
+    observables: list[Observable],
+    values: dict[str, float],
+) -> Array:
+    """
+    Run 'state' through a sequence of 'gates' given parameters 'values'
+    and compute the expectation given an observable.
+    """
+    outputs = list(
+        map(
+            lambda observable: _ad_expectation_single_observable(
+                apply_gates(state, gates, values),
+                observable,
+                values,
+            ),
+            observables,
+        )
+    )
+    return jnp.stack(outputs)
 
 
 def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, Array]:
@@ -186,7 +190,7 @@ def validate_permutation_matrix(P: Array) -> Array:
 def finite_shots_jvp(
     state: Array,
     gates: Union[Primitive, Iterable[Primitive]],
-    observable: Observable,
+    observable: list[Observable],
     n_shots: int,
     key: Array,
     primals: tuple[dict[str, float]],
@@ -214,4 +218,35 @@ def finite_shots_jvp(
     params_with_keys = zip(values.keys(), random.split(key, len(values)))
     fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
     jvp = sum(jvp_component(param, key) for param, key in params_with_keys)
+    return fwd, jvp.reshape(fwd.shape)
+
+
+@no_shots_fwd.defjvp
+def no_shots_fwd_jvp(
+    state: Array,
+    gates: Union[Primitive, Iterable[Primitive]],
+    observable: list[Observable],
+    primals: tuple[dict[str, float]],
+    tangents: tuple[dict[str, float]],
+) -> Array:
+    values = primals[0]
+    tangent_dict = tangents[0]
+
+    # TODO: compute spectral gap through the generator which is associated with
+    # a param name.
+    spectral_gap = 2.0
+    shift = jnp.pi / 2
+
+    def jvp_component(param_name: str) -> Array:
+        up_val = values.copy()
+        up_val[param_name] = up_val[param_name] + shift
+        f_up = no_shots_fwd(state, gates, observable, up_val)
+        down_val = values.copy()
+        down_val[param_name] = down_val[param_name] - shift
+        f_down = no_shots_fwd(state, gates, observable, down_val)
+        grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+        return grad * tangent_dict[param_name]
+
+    fwd = no_shots_fwd(state, gates, observable, values)
+    jvp = sum(jvp_component(param) for param in values.keys())
     return fwd, jvp.reshape(fwd.shape)
