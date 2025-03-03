@@ -98,8 +98,8 @@ def eigen_sample(
             observables,
         )
     )
-    eigs = list(map(lambda mat: jnp.linalg.eigh(mat), mat_obs))
-    eigvecs, eigvals = align_eigenvectors(eigs)
+    eigs = jax.vmap(jnp.linalg.eigh)(jnp.stack(mat_obs))
+    eigvecs, eigvals = align_eigenvectors(eigs.eigenvalues, eigs.eigenvectors)
     probs = eigen_probabilities(state, eigvecs)
     return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
 
@@ -145,7 +145,7 @@ def finite_shots_fwd(
 #     return jnp.stack(outputs)
 
 
-def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:
+def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, Array]:
     """
     Given a list of eigenvalue eigenvector matrix tuples in the form of
     [(eigenvalue, eigenvector)...], this function aligns all the eigenvector
@@ -160,20 +160,19 @@ def align_eigenvectors(eigs: list[tuple[Array, Array]]) -> tuple[Array, Array]:
     matrix and uses it to align each eigenvector matrix to the first eigenvector
     matrix of eigs.
     """
-    eigenvalues = []
-    eigs_copy = eigs.copy()
-    eigenvalue, eigenvector_matrix = eigs_copy.pop(0)
-    eigenvalues.append(eigenvalue)
-    # TODO: laxify this loop
-    for mat in eigs_copy:
-        inv = jnp.linalg.inv(mat[1])
-        P = (inv @ eigenvector_matrix).real > 0.5
-        checkify.check(
-            validate_permutation_matrix(P),
-            "Did not calculate valid permutation matrix",
-        )
-        eigenvalues.append(mat[0] @ P)
-    return eigenvector_matrix, jnp.stack(eigenvalues, axis=1)
+    eigenvector_matrix = eigenvectors[0]
+
+    P = jax.vmap(lambda mat: permutation_matrix(mat, eigenvector_matrix))(eigenvectors)
+    checkify.check(
+        jnp.all(jax.vmap(validate_permutation_matrix)(P)),
+        "Did not calculate valid permutation matrix",
+    )
+    eigenvalues_aligned = jax.vmap(jnp.dot)(eigenvalues, P).T
+    return eigenvector_matrix, eigenvalues_aligned
+
+
+def permutation_matrix(mat: Array, eigenvector_matrix: Array) -> Array:
+    return (jnp.linalg.inv(mat) @ eigenvector_matrix).real > 0.5
 
 
 def validate_permutation_matrix(P: Array) -> Array:
