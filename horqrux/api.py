@@ -8,10 +8,10 @@ import jax.numpy as jnp
 from jax import Array
 from jax.experimental import checkify
 
-from horqrux.adjoint import adjoint_expectation as apply_adjoint
 from horqrux.composite import Observable, OpSequence
-from horqrux.differentiation import ad_expectation
-from horqrux.shots import finite_shots_fwd
+from horqrux.differentiation.adjoint import adjoint_expectation as apply_adjoint
+from horqrux.differentiation.automatic_diff import ad_expectation
+from horqrux.differentiation.shots import finite_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
@@ -122,12 +122,9 @@ def expectation(
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
         return adjoint_expectation(state, circuit, observables, values)
-    elif diff_mode == DiffMode.GPSR:
+    elif diff_mode == DiffMode.GPSR and forward_mode == ForwardMode.SHOTS:
         checkify.check(
-            forward_mode == ForwardMode.SHOTS, "Finite shots and GPSR must be used together"
-        )
-        checkify.check(
-            type(n_shots) is int,
+            type(n_shots) is int and n_shots > 0,
             "Number of shots must be an integer for finite shots.",
         )
         # Type checking is disabled because mypy doesn't parse checkify.check.

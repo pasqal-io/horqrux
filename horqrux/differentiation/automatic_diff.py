@@ -3,7 +3,6 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import Any
 
-import jax
 import jax.numpy as jnp
 from jax import Array
 
@@ -16,6 +15,7 @@ from horqrux.utils import (
     inner,
     num_qubits,
 )
+
 
 @singledispatch
 def _ad_expectation_single_observable(
