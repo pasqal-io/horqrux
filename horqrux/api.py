@@ -11,7 +11,7 @@ from jax.experimental import checkify
 from horqrux.composite import Observable, OpSequence
 from horqrux.differentiation.adjoint import adjoint_expectation as apply_adjoint
 from horqrux.differentiation.automatic_diff import ad_expectation
-from horqrux.differentiation.gpsr.shots import finite_shots_fwd
+from horqrux.differentiation.gpsr import finite_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
