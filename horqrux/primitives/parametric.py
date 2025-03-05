@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Iterable
+from uuid import uuid4
 
 import jax.numpy as jnp
 from jax import Array
@@ -37,8 +38,11 @@ class Parametric(Primitive):
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        self._param_uuid = str(uuid4())
 
         def parse_dict(values: dict[str, float] = dict()) -> float:
+            if self._param_uuid in values.keys():
+                return values[self._param_uuid]
             return values[self.param]  # type: ignore[index]
 
         def parse_val(values: dict[str, float] = dict()) -> float:
