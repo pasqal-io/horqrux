@@ -21,12 +21,13 @@ class _HamiltonianEvolution(Primitive):
     generator_name: str
     target: QubitSupport
     control: QubitSupport
+    _param_uuid: str = str(uuid4())
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self._param_uuid = str(uuid4())
 
     def _unitary(self, values: dict[str, Array] = dict()) -> Array:
+        # note: GPSR trick when the same param_name is used in many operations
         time_val = (
             values[self._param_uuid]
             if self._param_uuid in values.keys()

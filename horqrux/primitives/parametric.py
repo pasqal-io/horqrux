@@ -35,12 +35,13 @@ class Parametric(Primitive):
     control: QubitSupport
     noise: NoiseProtocol = None
     param: str | float = ""
+    _param_uuid: str = str(uuid4())
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self._param_uuid = str(uuid4())
 
         def parse_dict(values: dict[str, float] = dict()) -> float:
+            # note: GPSR trick when the same param_name is used in many operations
             if self._param_uuid in values.keys():
                 return values[self._param_uuid]
             return values[self.param]  # type: ignore[index]
