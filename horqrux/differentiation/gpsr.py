@@ -219,9 +219,25 @@ def finite_shots_jvp(
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
         return grad * tangent_dict[param_name]
 
-    params_with_keys = zip(values.keys(), random.split(key, len(values)))
+    if isinstance(gates, Primitive):
+        params_with_keys = zip(values.keys(), random.split(key, len(values)))
+        fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
+        jvp = sum(jvp_component(param, key, values) for param, key in params_with_keys)
+        return fwd, jvp.reshape(fwd.shape)
+
+    val_keys = tuple(values.keys())
+    param_to_gates: dict[str, tuple] = dict.fromkeys(val_keys, tuple())
+    for gate in gates:
+        if is_parametric(gate) and gate.param in val_keys:  # type: ignore[attr-defined]
+            param_to_gates[gate.param] += (gate,)  # type: ignore[attr-defined]
+
     fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
-    jvp = sum(jvp_component(param, key, values) for param, key in params_with_keys)
+    if max(map(len, param_to_gates.values())) == 1:
+        params_with_keys = zip(values.keys(), random.split(key, len(values)))
+        jvp = sum(jvp_component(param, key, values) for param, key in params_with_keys)
+    else:
+        raise NotImplementedError("Shots not working with repeated parameters")
+    # jvp = sum(jvp_component(param, key, values) for param, key in params_with_keys)
     return fwd, jvp.reshape(fwd.shape)
 
 
