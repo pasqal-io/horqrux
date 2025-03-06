@@ -241,9 +241,6 @@ def no_shots_fwd_jvp(
     spectral_gap = 2.0
     shift = jnp.pi / 2
 
-    if isinstance(gates, Primitive):
-        gates = [gates]
-
     def jvp_component(param_name: str, values: dict[str, float]) -> Array:
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
@@ -255,23 +252,31 @@ def no_shots_fwd_jvp(
         return grad
 
     val_keys = tuple(values.keys())
+    if isinstance(gates, Primitive):
+        fwd = no_shots_fwd(state, gates, observable, values)
+        jvp = sum(jvp_component(param, values) for param in val_keys)
+        return fwd, jvp.reshape(fwd.shape)
+
     param_to_gates: dict[str, tuple] = dict.fromkeys(val_keys, tuple())
     for gate in gates:
         if is_parametric(gate) and gate.param in val_keys:  # type: ignore[attr-defined]
             param_to_gates[gate.param] += (gate,)  # type: ignore[attr-defined]
 
     fwd = no_shots_fwd(state, gates, observable, values)
-    jvp = sum(
-        [
-            sum(
-                jvp_component(
-                    shift_gate.param + "_gpsr",
-                    values | {shift_gate.param + "_gpsr": values[shift_gate.param]},
+    if max(map(len, param_to_gates.values())) == 1:
+        jvp = sum(jvp_component(param, values) * tangent_dict[param] for param in val_keys)
+    else:
+        jvp = sum(
+            [
+                sum(
+                    jvp_component(
+                        shift_gate.param + "_gpsr",
+                        values | {shift_gate.param + "_gpsr": values[shift_gate.param]},
+                    )
+                    for shift_gate in shift_gates
                 )
-                for shift_gate in shift_gates
-            )
-            * tangent_dict[param]
-            for param, shift_gates in param_to_gates.items()
-        ]
-    )
+                * tangent_dict[param]
+                for param, shift_gates in param_to_gates.items()
+            ]
+        )
     return fwd, jvp.reshape(fwd.shape)
