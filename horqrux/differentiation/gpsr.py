@@ -11,8 +11,12 @@ from jax.experimental import checkify
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.differentiation.ad import _ad_expectation_single_observable
-from horqrux.primitives.primitive import Primitive
+from horqrux.primitives import Parametric, Primitive
 from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
+
+
+def is_parametric(gate: Primitive) -> bool:
+    return isinstance(gate, Parametric) and isinstance(gate.param, str)
 
 
 @singledispatch
@@ -204,7 +208,7 @@ def finite_shots_jvp(
     spectral_gap = 2.0
     shift = jnp.pi / 2
 
-    def jvp_component(param_name: str, key: Array) -> Array:
+    def jvp_component(param_name: str, key: Array, values: dict[str, float]) -> Array:
         up_key, down_key = random.split(key)
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
@@ -217,7 +221,7 @@ def finite_shots_jvp(
 
     params_with_keys = zip(values.keys(), random.split(key, len(values)))
     fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
-    jvp = sum(jvp_component(param, key) for param, key in params_with_keys)
+    jvp = sum(jvp_component(param, key, values) for param, key in params_with_keys)
     return fwd, jvp.reshape(fwd.shape)
 
 
@@ -237,7 +241,10 @@ def no_shots_fwd_jvp(
     spectral_gap = 2.0
     shift = jnp.pi / 2
 
-    def jvp_component(param_name: str) -> Array:
+    if isinstance(gates, Primitive):
+        gates = [gates]
+
+    def jvp_component(param_name: str, values: dict[str, float]) -> Array:
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
         f_up = no_shots_fwd(state, gates, observable, up_val)
@@ -245,8 +252,26 @@ def no_shots_fwd_jvp(
         down_val[param_name] = down_val[param_name] - shift
         f_down = no_shots_fwd(state, gates, observable, down_val)
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-        return grad * tangent_dict[param_name]
+        return grad
+
+    val_keys = tuple(values.keys())
+    param_to_gates: dict[str, tuple] = dict.fromkeys(val_keys, tuple())
+    for gate in gates:
+        if is_parametric(gate) and gate.param in val_keys:  # type: ignore[attr-defined]
+            param_to_gates[gate.param] += (gate,)  # type: ignore[attr-defined]
 
     fwd = no_shots_fwd(state, gates, observable, values)
-    jvp = sum(jvp_component(param) for param in values.keys())
+    jvp = sum(
+        [
+            sum(
+                jvp_component(
+                    shift_gate.param + "_gpsr",
+                    values | {shift_gate.param + "_gpsr": values[shift_gate.param]},
+                )
+                for shift_gate in shift_gates
+            )
+            * tangent_dict[param]
+            for param, shift_gates in param_to_gates.items()
+        ]
+    )
     return fwd, jvp.reshape(fwd.shape)
