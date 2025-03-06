@@ -217,7 +217,7 @@ def finite_shots_jvp(
         down_val[param_name] = down_val[param_name] - shift
         f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, down_key)
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-        return grad * tangent_dict[param_name]
+        return grad
 
     params_with_keys = zip(values.keys(), random.split(key, len(values)))
     val_keys = tuple(values.keys())
@@ -236,9 +236,15 @@ def finite_shots_jvp(
                 keys = random.split(key, len(shift_gates))
 
                 def shift_jvp(gate: Parametric, key: Array) -> Array:
+                    up_key, down_key = random.split(key)
                     gate.shift = shift
-                    grad = jvp_component(param_name, key)
+                    f_up = finite_shots_fwd(state, gates, observable, values, n_shots, up_key)
+                    gate.shift = -shift
+                    f_down = finite_shots_fwd(state, gates, observable, values, n_shots, down_key)
                     gate.shift = 0.0
+                    grad = (
+                        spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+                    )
                     return grad
 
                 return sum(
@@ -248,7 +254,7 @@ def finite_shots_jvp(
 
             jvp_caller = jvp_component_repeated_param
 
-    jvp = sum(jvp_caller(param, key) for param, key in params_with_keys)
+    jvp = sum(jvp_caller(param, key) * tangent_dict[param] for param, key in params_with_keys)
     return fwd, jvp.reshape(fwd.shape)
 
 
@@ -294,9 +300,13 @@ def no_shots_fwd_jvp(
 
                 def shift_jvp(gate: Parametric) -> Array:
                     gate.shift = shift
-                    grad = jvp_component(param_name)
+                    f_up = no_shots_fwd(state, gates, observable, values)
+                    gate.shift = -shift
+                    f_down = no_shots_fwd(state, gates, observable, values)
                     gate.shift = 0.0
-                    return grad
+                    return (
+                        spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+                    )
 
                 return sum(shift_jvp(shift_gate) for shift_gate in shift_gates)
 

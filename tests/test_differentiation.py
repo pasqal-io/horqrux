@@ -21,6 +21,7 @@ N_SHOTS = 100_000
     "same_name",
     [
         False,
+        True,
     ],
 )
 def test_shots(same_name: bool) -> None:
