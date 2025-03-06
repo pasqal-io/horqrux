@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import uuid4
 
 from jax import Array
 from jax.scipy.linalg import expm
@@ -21,7 +20,6 @@ class _HamiltonianEvolution(Primitive):
     generator_name: str
     target: QubitSupport
     control: QubitSupport
-    _param_uuid: str = str(uuid4())
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -29,8 +27,8 @@ class _HamiltonianEvolution(Primitive):
     def _unitary(self, values: dict[str, Array] = dict()) -> Array:
         # note: GPSR trick when the same param_name is used in many operations
         time_val = (
-            values[self._param_uuid]
-            if self._param_uuid in values.keys()
+            values["time_evolution_gpsr"]
+            if "time_evolution_gpsr" in values.keys()
             else values["time_evolution"]
         )
         return expm(values["hamiltonian"] * (-1j * time_val))
