@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Iterable
-from uuid import uuid4
 
 import jax.numpy as jnp
 from jax import Array
@@ -35,15 +34,14 @@ class Parametric(Primitive):
     control: QubitSupport
     noise: NoiseProtocol = None
     param: str | float = ""
-    _param_uuid: str = str(uuid4())
 
     def __post_init__(self) -> None:
         super().__post_init__()
 
         def parse_dict(values: dict[str, float] = dict()) -> float:
             # note: GPSR trick when the same param_name is used in many operations
-            if self._param_uuid in values.keys():
-                return values[self._param_uuid]
+            if self.param + "_gpsr" in values.keys():  # type: ignore[operator]
+                return values[self.param + "_gpsr"]  # type: ignore[index, operator]
             return values[self.param]  # type: ignore[index]
 
         def parse_val(values: dict[str, float] = dict()) -> float:
