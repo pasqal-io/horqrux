@@ -34,18 +34,17 @@ class Parametric(Primitive):
     control: QubitSupport
     noise: NoiseProtocol = None
     param: str | float = ""
+    shift: float = 0.0
 
     def __post_init__(self) -> None:
         super().__post_init__()
 
         def parse_dict(values: dict[str, float] = dict()) -> float:
-            # note: GPSR trick when the same param_name is used in many operations
-            if self.param + "_gpsr" in values.keys():  # type: ignore[operator]
-                return values[self.param + "_gpsr"]  # type: ignore[index, operator]
-            return values[self.param]  # type: ignore[index]
+            # note: shift is for GPSR when the same param_name is used in many operations
+            return values[self.param] + self.shift  # type: ignore[index]
 
         def parse_val(values: dict[str, float] = dict()) -> float:
-            return self.param  # type: ignore[return-value]
+            return self.param + self.shift  # type: ignore[return-value, operator]
 
         self.parse_values = parse_dict if isinstance(self.param, str) else parse_val
 
