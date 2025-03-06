@@ -24,7 +24,17 @@ N_SHOTS = 100_000
     ],
 )
 def test_shots(same_name: bool) -> None:
-    param_names = ["theta", "theta"] if same_name else ["theta", "theta2"]
+    if same_name:
+        param_names = ["theta", "theta"]
+
+        def values_to_dict(x):
+            return {param_names[0]: x}
+
+    else:
+        param_names = ["theta", "theta2"]
+
+        def values_to_dict(x):
+            return {param_names[0]: x[0], param_names[1]: x[1]}
 
     ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
     circuit = QuantumCircuit(2, ops)
@@ -33,23 +43,23 @@ def test_shots(same_name: bool) -> None:
     x = jax.random.uniform(jax.random.key(0), (2))
 
     def exact(x):
-        values = {param_names[0]: x[0], param_names[1]: x[1]}
+        values = values_to_dict(x)
         return expectation(state, circuit, observables, values, diff_mode="ad")
 
     def exact_dm(x):
-        values = {param_names[0]: x[0], param_names[1]: x[1]}
+        values = values_to_dict(x)
         return expectation(density_mat(state), circuit, observables, values, diff_mode="ad")
 
     def exact_gpsr(x):
-        values = {param_names[0]: x[0], param_names[1]: x[1]}
+        values = values_to_dict(x)
         return expectation(state, circuit, observables, values, diff_mode="gpsr")
 
     def exact_gpsr_dm(x):
-        values = {param_names[0]: x[0], param_names[1]: x[1]}
+        values = values_to_dict(x)
         return expectation(density_mat(state), circuit, observables, values, diff_mode="gpsr")
 
     def shots(x):
-        values = {param_names[0]: x[0], param_names[1]: x[1]}
+        values = values_to_dict(x)
         return expectation(
             state,
             circuit,
@@ -61,7 +71,7 @@ def test_shots(same_name: bool) -> None:
         )
 
     def shots_dm(x):
-        values = {param_names[0]: x[0], param_names[1]: x[1]}
+        values = values_to_dict(x)
         return expectation(
             density_mat(state),
             circuit,
