@@ -171,6 +171,7 @@ def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, 
     eigenvector_matrix = eigenvectors[0]
 
     P = jax.vmap(lambda mat: permutation_matrix(mat, eigenvector_matrix))(eigenvectors)
+    # TODO: use chex
     # checkify.check(
     #     jnp.all(jax.vmap(validate_permutation_matrix)(P)),
     #     "Did not calculate valid permutation matrix",

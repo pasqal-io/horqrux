@@ -65,6 +65,7 @@ def test_shots(same_name: bool) -> None:
         values = values_to_dict(x)
         return expectation(density_mat(state), circuit, observables, values, diff_mode="gpsr")
 
+    @jax.jit
     def shots(x):
         values = values_to_dict(x)
         return expectation(
@@ -77,6 +78,7 @@ def test_shots(same_name: bool) -> None:
             n_shots=N_SHOTS,
         )
 
+    @jax.jit
     def shots_dm(x):
         values = values_to_dict(x)
         return expectation(

@@ -123,6 +123,7 @@ def expectation(
         return adjoint_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.GPSR:
         if forward_mode == ForwardMode.SHOTS:
+            # TODO: use chex
             # checkify.check(
             #     type(n_shots) is int and n_shots > 0,
             #     "Number of shots must be an integer for finite shots.",
