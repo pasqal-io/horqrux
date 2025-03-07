@@ -34,21 +34,23 @@ class Parametric(Primitive):
     control: QubitSupport
     noise: NoiseProtocol = None
     param: str | float = ""
+    shift: float = 0.0
 
     def __post_init__(self) -> None:
         super().__post_init__()
 
         def parse_dict(values: dict[str, float] = dict()) -> float:
-            return values[self.param]  # type: ignore[index]
+            # note: shift is for GPSR when the same param_name is used in many operations
+            return values[self.param] + self.shift  # type: ignore[index]
 
         def parse_val(values: dict[str, float] = dict()) -> float:
-            return self.param  # type: ignore[return-value]
+            return self.param + self.shift  # type: ignore[return-value, operator]
 
         self.parse_values = parse_dict if isinstance(self.param, str) else parse_val
 
     def tree_flatten(  # type: ignore[override]
         self,
-    ) -> tuple[tuple, tuple[str, tuple, tuple, NoiseProtocol, str | float]]:
+    ) -> tuple[tuple, tuple[str, tuple, tuple, NoiseProtocol, str | float, float]]:
         children = ()
         aux_data = (
             self.generator_name,
@@ -56,11 +58,14 @@ class Parametric(Primitive):
             self.control[0],
             self.noise,
             self.param,
+            self.shift,
         )
         return (children, aux_data)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.noise, self.param))
+        return iter(
+            (self.generator_name, self.target, self.control, self.noise, self.param, self.shift)
+        )
 
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
@@ -78,7 +83,10 @@ class Parametric(Primitive):
         return "C" + base_name if is_controlled(self.control) else base_name
 
     def __repr__(self) -> str:
-        return self.name + f"(target={self.target}, control={self.control}, param={self.param})"
+        return (
+            self.name
+            + f"(target={self.target}, control={self.control}, param={self.param}, shift={self.shift})"
+        )
 
 
 def RX(

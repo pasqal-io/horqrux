@@ -20,9 +20,15 @@ class _HamiltonianEvolution(Primitive):
     generator_name: str
     target: QubitSupport
     control: QubitSupport
+    shift: float = 0.0
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
 
     def _unitary(self, values: dict[str, Array] = dict()) -> Array:
-        return expm(values["hamiltonian"] * (-1j * values["time_evolution"]))
+        # note: GPSR trick when the same param_name is used in many operations
+        time_val = values["time_evolution"] + self.shift
+        return expm(values["hamiltonian"] * (-1j * time_val))
 
 
 def HamiltonianEvolution(
