@@ -27,14 +27,14 @@ N_SHOTS = 100_000
 def test_shots(same_name: bool) -> None:
     param_name = "theta"
     if same_name:
-        x = jax.random.uniform(jax.random.key(0), 1)
+        x = jax.random.uniform(jax.random.key(0), (1,))
         ops = [RX(param_name, 0), RX(param_name, 1)]
 
         def values_to_dict(x):
             return {param_name: x}
 
     else:
-        x = jax.random.uniform(jax.random.key(0), (2))
+        x = jax.random.uniform(jax.random.key(0), (2,))
         param_names = [param_name, param_name + "2"]
         ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
 
