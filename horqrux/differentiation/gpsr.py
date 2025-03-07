@@ -224,103 +224,46 @@ def finite_shots_jvp(
     fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
     jvp_caller = jvp_component
     if not isinstance(gates, Primitive):
-        param_to_gates: dict[str, tuple] = dict.fromkeys(val_keys, tuple())
-        for gate in gates:
-            if is_parametric(gate) and gate.param in val_keys:  # type: ignore[attr-defined]
-                param_to_gates[gate.param] += (gate,)  # type: ignore[attr-defined]
+        gate_names = list(
+            map(
+                lambda g: g.param if hasattr(g, "param") and isinstance(g.param, str) else None,
+                gates,
+            )
+        )
+        gate_names = list(filter(partial(is_not, None), gate_names))
+        if len(gate_names) > len(val_keys):
+            param_to_gates_indices = prepare_param_gates_seq(val_keys, gates)
+            # repeated case
+            if max(map(len, param_to_gates_indices.values())) > 1:  # type: ignore[arg-type]
 
-        if max(map(len, param_to_gates.values())) > 1:
+                def jvp_component_repeated_param(param_name: str, key: Array) -> Array:
+                    shift_gates = param_to_gates_indices[param_name]
+                    shift_keys = random.split(key, len(shift_gates))
 
-            def jvp_component_repeated_param(param_name: str, key: Array) -> Array:
-                shift_gates = param_to_gates[param_name]
-                keys = random.split(key, len(shift_gates))
+                    def shift_jvp(ind: int, key: Array) -> Array:
+                        up_key, down_key = random.split(key)
+                        gates_up = alter_gate_sequence(gates, ind, shift)
+                        f_up = finite_shots_fwd(
+                            state, gates_up, observable, values, n_shots, up_key
+                        )
+                        gates_down = alter_gate_sequence(gates, ind, -shift)
+                        f_down = finite_shots_fwd(
+                            state, gates_down, observable, values, n_shots, down_key
+                        )
+                        return (
+                            spectral_gap
+                            * (f_up - f_down)
+                            / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+                        )
 
-                def shift_jvp(gate: Parametric, key: Array) -> Array:
-                    up_key, down_key = random.split(key)
-                    f_up = finite_shots_fwd(state, gates, observable, values, n_shots, up_key)
-                    f_down = finite_shots_fwd(state, gates, observable, values, n_shots, down_key)
-                    grad = (
-                        spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+                    return sum(
+                        shift_jvp(shift_ind, key) for shift_ind, key in zip(shift_gates, shift_keys)
                     )
-                    return grad
-
-                return sum(
-                    shift_jvp(shift_gate, key_gate)
-                    for shift_gate, key_gate in zip(shift_gates, keys)
-                )
 
             jvp_caller = jvp_component_repeated_param
 
     jvp = sum(jvp_caller(param, key) * tangent_dict[param] for param, key in params_with_keys)
     return fwd, jvp.reshape(fwd.shape)
-
-
-# @no_shots_fwd.defjvp
-# def no_shots_fwd_jvp(
-#     state: Array,
-#     gates: Union[Primitive, Iterable[Primitive]],
-#     observable: list[Observable],
-#     primals: tuple[dict[str, float]],
-#     tangents: tuple[dict[str, float]],
-# ) -> Array:
-#     values = primals[0]
-#     tangent_dict = tangents[0]
-
-#     # TODO: compute spectral gap through the generator which is associated with
-#     # a param name.
-#     spectral_gap = 2.0
-#     shift = jnp.pi / 2
-
-#     def jvp_component(param_name: str) -> Array:
-#         up_val = values.copy()
-#         up_val[param_name] = up_val[param_name] + shift
-#         f_up = no_shots_fwd(state, gates, observable, up_val)
-#         down_val = values.copy()
-#         down_val[param_name] = down_val[param_name] - shift
-#         f_down = no_shots_fwd(state, gates, observable, down_val)
-#         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-#         return grad
-
-#     val_keys = tuple(values.keys())
-#     fwd = no_shots_fwd(state, gates, observable, values)
-#     jvp_caller = jvp_component
-#     if not isinstance(gates, Primitive):
-#         param_to_gates: dict[str, tuple] = dict.fromkeys(val_keys, tuple())
-#         for ind_gate, gate in enumerate(gates):
-#             if is_parametric(gate) and gate.param in val_keys:  # type: ignore[attr-defined]
-#                 param_to_gates[gate.param] += (ind_gate,)  # type: ignore[attr-defined]
-#         print(param_to_gates)
-
-#         if max(map(len, param_to_gates.values())) > 1:
-
-#             def jvp_component_repeated_param(param_name: str) -> Array:
-#                 shift_gates_ind = param_to_gates[param_name]
-
-#                 def shift_jvp(ind_gate: int) -> Array:
-#                     gate_shift = shift_gate(gates[ind_gate], shift)
-#                     f_up = no_shots_fwd(
-#                         state,
-#                         gates[:ind_gate] + [gate_shift] + gates[min(ind_gate + 1, len(gates)) :],
-#                         observable,
-#                         values,
-#                     )
-#                     gate_shift = shift_gate(gates[ind_gate], -shift)
-#                     f_down = no_shots_fwd(
-#                         state,
-#                         gates[:ind_gate] + [gate_shift] + gates[min(ind_gate + 1, len(gates)) :],
-#                         observable,
-#                         values,
-#                     )
-#                     grad = (
-#                         spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-#                     )
-#                     return grad
-
-#                 return sum(shift_jvp(ind_gate) for ind_gate in shift_gates_ind)
-
-#             jvp_caller = jvp_component_repeated_param
-#     jvp = sum(jvp_caller(param) * tangent_dict[param] for param in val_keys)
-#     return fwd, jvp.reshape(fwd.shape)
 
 
 @no_shots_fwd.defjvp
@@ -361,37 +304,50 @@ def no_shots_fwd_jvp(
         )
         gate_names = list(filter(partial(is_not, None), gate_names))
         if len(gate_names) > len(val_keys):
-            # raise NotImplementedError("Repeated params not possible")
-            zero = jnp.zeros_like(fwd)
+            param_to_gates_indices = prepare_param_gates_seq(val_keys, gates)
+            # repeated case
+            if max(map(len, param_to_gates_indices.values())) > 1:  # type: ignore[arg-type]
 
-            def jvp_component_gate(index: int) -> Array:
-                if not isinstance(gates[index], Parametric):
-                    return zero
-                if not isinstance(gates[index].param, str):
-                    return zero
-                altered_gate = shift_gate(gates[index], shift)
-                f_up = no_shots_fwd(
-                    state,
-                    gates[:index] + [altered_gate] + gates[min(index + 1, len(gates)) :],
-                    observable,
-                    values,
-                )
-                altered_gate = shift_gate(gates[index], -shift)
-                f_down = no_shots_fwd(
-                    state,
-                    gates[:index] + [altered_gate] + gates[min(index + 1, len(gates)) :],
-                    observable,
-                    values,
-                )
-                grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-                return grad * tangent_dict[altered_gate.param]
+                def jvp_component_repeated_param(param_name: str) -> Array:
+                    shift_gates = param_to_gates_indices[param_name]
 
-            jvp = sum(jvp_component_gate(ind) for ind in range(len(gates)))
-            return fwd, jvp.reshape(fwd.shape)
+                    def shift_jvp(ind: int) -> Array:
+                        gates_up = alter_gate_sequence(gates, ind, shift)
+                        f_up = no_shots_fwd(state, gates_up, observable, values)
+                        gates_down = alter_gate_sequence(gates, ind, -shift)
+                        f_down = no_shots_fwd(state, gates_down, observable, values)
+                        return (
+                            spectral_gap
+                            * (f_up - f_down)
+                            / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+                        )
+
+                    return sum(shift_jvp(shift_ind) for shift_ind in shift_gates)
+
+                jvp_caller = jvp_component_repeated_param
+
     jvp = sum(jvp_caller(param) * tangent_dict[param] for param in val_keys)
     return fwd, jvp.reshape(fwd.shape)
 
 
-def shift_gate(gate: Parametric, shift_value: Array) -> Parametric:
+def to_shift(gate: Parametric, shift_value: Array) -> Any:
     children, aux_data = gate.tree_flatten()
     return Parametric.tree_unflatten(aux_data[:-1] + (shift_value,), children)
+
+
+def prepare_param_gates_seq(
+    param_names: tuple[str, ...], gates: Iterable[Primitive]
+) -> dict[str, tuple]:
+    param_to_gates: dict[str, tuple] = dict.fromkeys(param_names, tuple())
+    for i, gate in enumerate(gates):
+        if is_parametric(gate) and gate.param in param_names:  # type: ignore[attr-defined]
+            param_to_gates[gate.param] += (i,)  # type: ignore[attr-defined]
+    return param_to_gates
+
+
+def alter_gate_sequence(gates: Iterable[Any], ind_alter: int, shift_val: float) -> Any:
+    gate_alter = gates[ind_alter]  # type: ignore[index]
+    gate_shift = to_shift(gate_alter, shift_val)
+    upper = min(ind_alter + 1, len(gates))  # type: ignore[arg-type]
+    gates_seq = gates[:ind_alter] + [gate_shift] + gates[upper:]  # type: ignore[index]
+    return gates_seq

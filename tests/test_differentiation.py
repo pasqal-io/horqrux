@@ -25,23 +25,25 @@ N_SHOTS = 100_000
     ],
 )
 def test_shots(same_name: bool) -> None:
+    param_name = "theta"
     if same_name:
-        param_names = ["theta", "theta"]
+        x = jax.random.uniform(jax.random.key(0), (1))
+        ops = [RX(param_name, 0), RX(param_name, 1)]
 
         def values_to_dict(x):
-            return {param_names[0]: x}
+            return {param_name: x}
 
     else:
-        param_names = ["theta", "theta2"]
+        x = jax.random.uniform(jax.random.key(0), (2))
+        param_names = [param_name, param_name + "2"]
+        ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
 
         def values_to_dict(x):
             return {param_names[0]: x[0], param_names[1]: x[1]}
 
-    ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
     circuit = QuantumCircuit(2, ops)
     observables = [Observable([Z(0)]), Observable([Z(1)])]
     state = random_state(N_QUBITS)
-    x = jax.random.uniform(jax.random.key(0), (2))
 
     @jax.jit
     def exact(x):
@@ -63,7 +65,6 @@ def test_shots(same_name: bool) -> None:
         values = values_to_dict(x)
         return expectation(density_mat(state), circuit, observables, values, diff_mode="gpsr")
 
-    @jax.jit
     def shots(x):
         values = values_to_dict(x)
         return expectation(
@@ -76,7 +77,6 @@ def test_shots(same_name: bool) -> None:
             n_shots=N_SHOTS,
         )
 
-    @jax.jit
     def shots_dm(x):
         values = values_to_dict(x)
         return expectation(
@@ -89,8 +89,8 @@ def test_shots(same_name: bool) -> None:
             n_shots=N_SHOTS,
         )
 
-    expected_dm = density_mat(run(circuit, state, {"theta": x[0], "theta2": x[1]}))
-    output_dm = run(circuit, density_mat(state), {"theta": x[0], "theta2": x[1]})
+    expected_dm = density_mat(run(circuit, state, values_to_dict(x)))
+    output_dm = run(circuit, density_mat(state), values_to_dict(x))
     assert jnp.allclose(expected_dm.array, output_dm.array)
 
     exp_exact = exact(x)
