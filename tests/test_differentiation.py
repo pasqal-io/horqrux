@@ -43,22 +43,27 @@ def test_shots(same_name: bool) -> None:
     state = random_state(N_QUBITS)
     x = jax.random.uniform(jax.random.key(0), (2))
 
+    @jax.jit
     def exact(x):
         values = values_to_dict(x)
         return expectation(state, circuit, observables, values, diff_mode="ad")
 
+    @jax.jit
     def exact_dm(x):
         values = values_to_dict(x)
         return expectation(density_mat(state), circuit, observables, values, diff_mode="ad")
 
+    @jax.jit
     def exact_gpsr(x):
         values = values_to_dict(x)
         return expectation(state, circuit, observables, values, diff_mode="gpsr")
 
+    @jax.jit
     def exact_gpsr_dm(x):
         values = values_to_dict(x)
         return expectation(density_mat(state), circuit, observables, values, diff_mode="gpsr")
 
+    @jax.jit
     def shots(x):
         values = values_to_dict(x)
         return expectation(
@@ -71,6 +76,7 @@ def test_shots(same_name: bool) -> None:
             n_shots=N_SHOTS,
         )
 
+    @jax.jit
     def shots_dm(x):
         values = values_to_dict(x)
         return expectation(

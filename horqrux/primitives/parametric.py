@@ -50,7 +50,7 @@ class Parametric(Primitive):
 
     def tree_flatten(  # type: ignore[override]
         self,
-    ) -> tuple[tuple, tuple[str, tuple, tuple, NoiseProtocol, str | float]]:
+    ) -> tuple[tuple, tuple[str, tuple, tuple, NoiseProtocol, str | float, float]]:
         children = ()
         aux_data = (
             self.generator_name,
@@ -58,11 +58,14 @@ class Parametric(Primitive):
             self.control[0],
             self.noise,
             self.param,
+            self.shift,
         )
         return (children, aux_data)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.noise, self.param))
+        return iter(
+            (self.generator_name, self.target, self.control, self.noise, self.param, self.shift)
+        )
 
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
@@ -80,7 +83,10 @@ class Parametric(Primitive):
         return "C" + base_name if is_controlled(self.control) else base_name
 
     def __repr__(self) -> str:
-        return self.name + f"(target={self.target}, control={self.control}, param={self.param})"
+        return (
+            self.name
+            + f"(target={self.target}, control={self.control}, param={self.param}, shift={self.shift})"
+        )
 
 
 def RX(

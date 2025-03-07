@@ -6,7 +6,6 @@ from typing import Any, Optional
 import jax
 import jax.numpy as jnp
 from jax import Array
-from jax.experimental import checkify
 
 from horqrux.composite import Observable, OpSequence
 from horqrux.differentiation.ad import ad_expectation
@@ -124,10 +123,10 @@ def expectation(
         return adjoint_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.GPSR:
         if forward_mode == ForwardMode.SHOTS:
-            checkify.check(
-                type(n_shots) is int and n_shots > 0,
-                "Number of shots must be an integer for finite shots.",
-            )
+            # checkify.check(
+            #     type(n_shots) is int and n_shots > 0,
+            #     "Number of shots must be an integer for finite shots.",
+            # )
             # Type checking is disabled because mypy doesn't parse checkify.check.
             # type: ignore
             return finite_shots_fwd(
