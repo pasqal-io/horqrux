@@ -115,9 +115,17 @@ def no_shots_fwd(
     observables: list[Observable],
     values: dict[str, float],
 ) -> Array:
-    """
-    Run 'state' through a sequence of 'gates' given parameters 'values'
-    and compute the expectation given an observable.
+    """Run 'state' through a sequence of 'gates' given parameters 'values'
+    and compute the expectations analytically.
+
+    Args:
+        state (State): Input state or density matrix.
+        gates (Union[Primitive, Iterable[Primitive]]): Sequence of gates.
+        observables (list[Observable]): List of observables.
+        values (dict[str, float]): Parameter values.
+
+    Returns:
+        Array: Expectation values.
     """
     outputs = list(
         map(
@@ -141,9 +149,19 @@ def finite_shots_fwd(
     n_shots: int = 100,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
-    """
-    Run 'state' through a sequence of 'gates' given parameters 'values'
-    and compute the expectation given an observable and `n_shots` shots.
+    """Run 'state' through a sequence of 'gates' given parameters 'values'
+    and compute the expectations using `n_shots` shots per observable.
+
+    Args:
+        state (State): Input state or density matrix.
+        gates (Union[Primitive, Iterable[Primitive]]): Sequence of gates.
+        observables (list[Observable]): List of observables.
+        values (dict[str, float]): Parameter values.
+        n_shots (int, optional): Number of shots. Defaults to 100.
+        key (Any, optional): Key for randomness. Defaults to jax.random.PRNGKey(0).
+
+    Returns:
+        Array: Expectation values.
     """
     output_gates = apply_gates(state, gates, values)
     n_qubits = num_qubits(output_gates)
@@ -162,11 +180,6 @@ def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, 
 
     This is primarily used as a utility function to help sample multiple
     correlated observables when using finite shots.
-
-    Given two permuted eigenvector matrices, A and B, we wish to find a permutation
-    matrix P such that A P = B. This function calculates such a permutation
-    matrix and uses it to align each eigenvector matrix to the first eigenvector
-    matrix of eigs.
     """
     eigenvector_matrix = eigenvectors[0]
 
@@ -181,10 +194,32 @@ def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, 
 
 
 def permutation_matrix(mat: Array, eigenvector_matrix: Array) -> Array:
+    """Obtain the permutation matrix for aligning eigenvectors.
+
+    Given two permuted eigenvector matrices, A and B, we wish to find a permutation
+    matrix P such that A P = B. This function calculates such a permutation
+    matrix and uses it to align each eigenvector matrix to the first eigenvector
+    matrix of eigs.
+
+    Args:
+        mat (Array): Matrix A.
+        eigenvector_matrix (Array): Eigenvector matrix B.
+
+    Returns:
+        Array: Permutation matrix P.
+    """
     return (jnp.linalg.inv(mat) @ eigenvector_matrix).real > 0.5
 
 
 def validate_permutation_matrix(P: Array) -> Array:
+    """Validateif P is a correct permutation matrix.
+
+    Args:
+        P (Array): Matrix.
+
+    Returns:
+        Array: Array of boolean values.
+    """
     rows = P.sum(axis=0)
     columns = P.sum(axis=1)
     ones = jnp.ones(P.shape[0], dtype=rows.dtype)
@@ -198,9 +233,25 @@ def finite_shots_jvp(
     observable: list[Observable],
     n_shots: int,
     key: Array,
-    primals: tuple[dict[str, float]],
-    tangents: tuple[dict[str, float]],
-) -> Array:
+    primals: tuple[dict[str, Array]],
+    tangents: tuple[dict[str, Array]],
+) -> tuple[Array, Array]:
+    """Jvp version for finite_shots_fwd.
+
+    Args:
+        state (Array): Input state or density matrix.
+        gates (Union[Primitive, Iterable[Primitive]]): sequence of gates.
+        observable (list[Observable]): List of observables.
+        n_shots (int): Number of shots.
+        key (Array): Key for randomness.
+        primals (tuple[dict[str, Array]]): Values we are differentiating over.
+            Jax-specific syntax argument.
+        tangents (tuple[dict[str, Array]]): Bases for differentiation.
+            Jax-specific syntax argument.
+
+    Returns:
+        tuple[Array, Array]: Forward eveluation and gradient
+    """
     values = primals[0]
     tangent_dict = tangents[0]
 
@@ -331,7 +382,16 @@ def no_shots_fwd_jvp(
     return fwd, jvp.reshape(fwd.shape)
 
 
-def to_shift(gate: Parametric, shift_value: Array) -> Any:
+def to_shift(gate: Parametric, shift_value: float) -> Any:
+    """Create the shifted gate for PSR.
+
+    Args:
+        gate (Parametric): Gate to shift.
+        shift_value (float): Shift value.
+
+    Returns:
+        Any: A new Parametric (Any type due to clsmethod)
+    """
     children, aux_data = gate.tree_flatten()
     return Parametric.tree_unflatten(aux_data[:-1] + (shift_value,), children)
 
@@ -339,6 +399,15 @@ def to_shift(gate: Parametric, shift_value: Array) -> Any:
 def prepare_param_gates_seq(
     param_names: tuple[str, ...], gates: Iterable[Primitive]
 ) -> dict[str, tuple]:
+    """Create a dictionary of parameter names and corresponding parametric gates.
+
+    Args:
+        param_names (tuple[str, ...]): Parameters.
+        gates (Iterable[Primitive]): Sequence of gates.
+
+    Returns:
+        dict[str, tuple]: dictionary of parameter names and corresponding parametric gates.
+    """
     param_to_gates: dict[str, tuple] = dict.fromkeys(param_names, tuple())
     for i, gate in enumerate(gates):
         if is_parametric(gate) and gate.param in param_names:  # type: ignore[attr-defined]
@@ -347,6 +416,16 @@ def prepare_param_gates_seq(
 
 
 def alter_gate_sequence(gates: Iterable[Any], ind_alter: int, shift_val: float) -> Any:
+    """Create a sequence replacing the `ind_alter` gate by its shifted version.
+
+    Args:
+        gates (Iterable[Any]): sequence of gates.
+        ind_alter (int): Index of gate to shift.
+        shift_val (float): Shift value.
+
+    Returns:
+        Any: sequence of gates including shift.
+    """
     gate_alter = gates[ind_alter]  # type: ignore[index]
     gate_shift = to_shift(gate_alter, shift_val)
     upper = min(ind_alter + 1, len(gates))  # type: ignore[arg-type]
