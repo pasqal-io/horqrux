@@ -32,7 +32,8 @@ dependencies = [
     "optax",
     "jaxopt",
     "einops",
-    "numpy"
+    "numpy",
+    "chex",
 ]
 
 

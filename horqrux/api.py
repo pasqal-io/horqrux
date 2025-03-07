@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Optional
 
+import chex
 import jax
 import jax.numpy as jnp
 from jax import Array
@@ -123,13 +124,8 @@ def expectation(
         return adjoint_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.GPSR:
         if forward_mode == ForwardMode.SHOTS:
-            # TODO: use chex
-            # checkify.check(
-            #     type(n_shots) is int and n_shots > 0,
-            #     "Number of shots must be an integer for finite shots.",
-            # )
-            # Type checking is disabled because mypy doesn't parse checkify.check.
-            # type: ignore
+            chex.assert_type(n_shots, int)
+            chex.assert_equal(n_shots > 0, True)  # type: ignore[operator]
             return finite_shots_fwd(
                 state=state,
                 gates=circuit.operations,

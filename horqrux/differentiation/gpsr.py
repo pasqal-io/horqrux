@@ -184,11 +184,6 @@ def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, 
     eigenvector_matrix = eigenvectors[0]
 
     P = jax.vmap(lambda mat: permutation_matrix(mat, eigenvector_matrix))(eigenvectors)
-    # TODO: use chex
-    # checkify.check(
-    #     jnp.all(jax.vmap(validate_permutation_matrix)(P)),
-    #     "Did not calculate valid permutation matrix",
-    # )
     eigenvalues_aligned = jax.vmap(jnp.dot)(eigenvalues, P).T
     return eigenvector_matrix, eigenvalues_aligned
 
@@ -209,21 +204,6 @@ def permutation_matrix(mat: Array, eigenvector_matrix: Array) -> Array:
         Array: Permutation matrix P.
     """
     return (jnp.linalg.inv(mat) @ eigenvector_matrix).real > 0.5
-
-
-def validate_permutation_matrix(P: Array) -> Array:
-    """Validateif P is a correct permutation matrix.
-
-    Args:
-        P (Array): Matrix.
-
-    Returns:
-        Array: Array of boolean values.
-    """
-    rows = P.sum(axis=0)
-    columns = P.sum(axis=1)
-    ones = jnp.ones(P.shape[0], dtype=rows.dtype)
-    return ((ones == rows) & (ones == columns)).min()
 
 
 @finite_shots_fwd.defjvp
