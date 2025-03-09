@@ -14,6 +14,8 @@ from horqrux.utils import density_mat
 
 N_QUBITS = 2
 GPSR_ATOL = 0.0001
+GPSR_ATOL_hessian = 0.01
+
 SHOTS_ATOL = 0.01
 N_SHOTS = 100_000
 
@@ -120,3 +122,9 @@ class DifferentiationTest(chex.TestCase):
         grad_shots = d_shots(x)
 
         assert jnp.allclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)
+
+        # hessian tests
+        hessian_exact = jax.jacfwd(d_exact)(x)
+        hessian_gpsr = jax.jacfwd(d_gpsr)(x)
+
+        assert jnp.allclose(hessian_exact, hessian_gpsr, atol=GPSR_ATOL_hessian)
