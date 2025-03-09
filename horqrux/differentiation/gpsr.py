@@ -235,7 +235,8 @@ def finite_shots_jvp(
     values = primals[0]
     tangent_dict = tangents[0]
 
-    spectral_gap = 2.0
+    val_keys = tuple(values.keys())
+    spectral_gap = dict.fromkeys(val_keys, 2.0)
     shift = jnp.pi / 2
 
     def jvp_component(param_name: str, key: Array) -> Array:
@@ -246,11 +247,14 @@ def finite_shots_jvp(
         down_val = values.copy()
         down_val[param_name] = down_val[param_name] - shift
         f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, down_key)
-        grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+        grad = (
+            spectral_gap[param_name]
+            * (f_up - f_down)
+            / (4.0 * jnp.sin(spectral_gap[param_name] * shift / 2.0))
+        )
         return grad
 
     params_with_keys = zip(values.keys(), random.split(key, len(values)))
-    val_keys = tuple(values.keys())
     fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
     jvp_caller = jvp_component
     if not isinstance(gates, Primitive):
@@ -291,6 +295,11 @@ def finite_shots_jvp(
                         shift_jvp(shift_ind, key) for shift_ind, key in zip(shift_gates, shift_keys)
                     )
 
+            else:
+                spectral_gap = {
+                    param: param_to_gates_indices[param][0].spectral_gap for param in val_keys
+                }
+
             jvp_caller = jvp_component_repeated_param
 
     jvp = sum(jvp_caller(param, key) * tangent_dict[param] for param, key in params_with_keys)
@@ -308,7 +317,8 @@ def no_shots_fwd_jvp(
     values = primals[0]
     tangent_dict = tangents[0]
 
-    spectral_gap = 2.0
+    val_keys = tuple(values.keys())
+    spectral_gap = dict.fromkeys(val_keys, 2.0)
     shift = jnp.pi / 2
 
     def jvp_component(param_name: str) -> Array:
@@ -318,10 +328,13 @@ def no_shots_fwd_jvp(
         down_val = values.copy()
         down_val[param_name] = down_val[param_name] - shift
         f_down = no_shots_fwd(state, gates, observable, down_val)
-        grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+        grad = (
+            spectral_gap[param_name]
+            * (f_up - f_down)
+            / (4.0 * jnp.sin(spectral_gap[param_name] * shift / 2.0))
+        )
         return grad
 
-    val_keys = tuple(values.keys())
     fwd = no_shots_fwd(state, gates, observable, values)
     jvp_caller = jvp_component
     if not isinstance(gates, Primitive):
@@ -355,6 +368,10 @@ def no_shots_fwd_jvp(
                     return sum(shift_jvp(shift_ind) for shift_ind in shift_gates)
 
                 jvp_caller = jvp_component_repeated_param
+            else:
+                spectral_gap = {
+                    param: param_to_gates_indices[param][0].spectral_gap for param in val_keys
+                }
 
     jvp = sum(jvp_caller(param) * tangent_dict[param] for param in val_keys)
     return fwd, jvp.reshape(fwd.shape)
