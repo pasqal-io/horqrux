@@ -71,7 +71,6 @@ class DifferentiationTest(chex.TestCase):
                 observables,
                 values,
                 diff_mode="gpsr",
-                forward_mode="shots",
                 n_shots=N_SHOTS,
             )
 
@@ -84,7 +83,6 @@ class DifferentiationTest(chex.TestCase):
                 observables,
                 values,
                 diff_mode="gpsr",
-                forward_mode="shots",
                 n_shots=N_SHOTS,
             )
 

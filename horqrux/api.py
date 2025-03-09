@@ -15,7 +15,6 @@ from horqrux.differentiation.gpsr import finite_shots_fwd, no_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
-    ForwardMode,
     State,
     num_qubits,
     probabilities,
@@ -96,7 +95,6 @@ def expectation(
     observables: list[Observable],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
-    forward_mode: ForwardMode = ForwardMode.EXACT,
     n_shots: Optional[int] = None,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
@@ -109,7 +107,6 @@ def expectation(
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
-        forward_mode (ForwardMode, optional): Type of forward method. Defaults to ForwardMode.EXACT.
         n_shots (Optional[int], optional): Number of shots. Defaults to None.
         key (Any, optional): Random key. Defaults to jax.random.PRNGKey(0).
 
@@ -123,7 +120,14 @@ def expectation(
             raise TypeError("Adjoint does not support density matrices.")
         return adjoint_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.GPSR:
-        if forward_mode == ForwardMode.SHOTS:
+        if n_shots is None:
+            return no_shots_fwd(
+                state=state,
+                gates=circuit.operations,
+                observables=observables,
+                values=values,
+            )
+        else:
             chex.assert_type(n_shots, int)
             chex.assert_equal(n_shots > 0, True)  # type: ignore[operator]
             return finite_shots_fwd(
@@ -133,11 +137,4 @@ def expectation(
                 values=values,
                 n_shots=n_shots,
                 key=key,
-            )
-        else:
-            return no_shots_fwd(
-                state=state,
-                gates=circuit.operations,
-                observables=observables,
-                values=values,
             )
