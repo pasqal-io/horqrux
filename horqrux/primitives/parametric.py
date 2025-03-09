@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Any, Iterable
 
+import jax
 import jax.numpy as jnp
 from jax import Array
 from jax.tree_util import register_pytree_node_class
@@ -22,6 +24,8 @@ from horqrux.utils import (
 from .primitive import Primitive
 
 default_dtype = default_complex_dtype()
+nonzero_jit = jax.jit(jnp.nonzero, static_argnames="size")
+unique_jit = jax.jit(jnp.unique, static_argnames="size")
 
 
 @register_pytree_node_class
@@ -87,6 +91,37 @@ class Parametric(Primitive):
             self.name
             + f"(target={self.target}, control={self.control}, param={self.param}, shift={self.shift})"
         )
+
+    @cached_property
+    def eigenvals_generator(self) -> Array:
+        """Get eigenvalues of the underlying operation.
+
+        Arguments:
+            values: Parameter values.
+
+        Returns:
+            Array: Eigenvalues of the operation.
+        """
+        eig_vals_generator = jnp.linalg.eigvalsh(OPERATIONS_DICT[self.generator_name])
+        if is_controlled(self.control):
+            eig_vals_generator = jnp.concatenate(
+                (jnp.zeros(2 ** (len(self.control))), eig_vals_generator)
+            )
+        return eig_vals_generator
+
+    @cached_property
+    def spectral_gap(self) -> Array:
+        """Difference between the moduli of the two largest eigenvalues of the generator.
+
+        Returns:
+            Array: Spectral gap value.
+        """
+        spectrum = jnp.atleast_2d(self.eigenvals_generator)
+        diffs = spectrum - spectrum.T
+        # note for jitting, must specify a size
+        # atm only size 2 is acceptable given all possible generators in OPERATIONS_DICT
+        spectral_gap = unique_jit(jnp.abs(jnp.tril(diffs)), size=2)
+        return spectral_gap[nonzero_jit(spectral_gap, size=1)]
 
 
 def RX(

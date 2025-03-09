@@ -235,8 +235,6 @@ def finite_shots_jvp(
     values = primals[0]
     tangent_dict = tangents[0]
 
-    # TODO: compute spectral gap through the generator which is associated with
-    # a param name.
     spectral_gap = 2.0
     shift = jnp.pi / 2
 
@@ -274,6 +272,7 @@ def finite_shots_jvp(
 
                     def shift_jvp(ind: int, key: Array) -> Array:
                         up_key, down_key = random.split(key)
+                        spectral_gap = gates[ind].spectral_gap  # type: ignore[index]
                         gates_up = alter_gate_sequence(gates, ind, shift)
                         f_up = finite_shots_fwd(
                             state, gates_up, observable, values, n_shots, up_key
@@ -309,8 +308,6 @@ def no_shots_fwd_jvp(
     values = primals[0]
     tangent_dict = tangents[0]
 
-    # TODO: compute spectral gap through the generator which is associated with
-    # a param name.
     spectral_gap = 2.0
     shift = jnp.pi / 2
 
@@ -344,6 +341,7 @@ def no_shots_fwd_jvp(
                     shift_gates = param_to_gates_indices[param_name]
 
                     def shift_jvp(ind: int) -> Array:
+                        spectral_gap = gates[ind].spectral_gap  # type: ignore[index]
                         gates_up = alter_gate_sequence(gates, ind, shift)
                         f_up = no_shots_fwd(state, gates_up, observable, values)
                         gates_down = alter_gate_sequence(gates, ind, -shift)
