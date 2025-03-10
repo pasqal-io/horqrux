@@ -106,7 +106,7 @@ class Primitive:
         """
         base_unitary = self._unitary(values)
         if is_controlled(self.control):
-            return controlled(base_unitary, self.target, self.control, sparse=self.sparse)
+            return controlled(base_unitary, self.target, self.control)
         return base_unitary
 
     @property

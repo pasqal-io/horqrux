@@ -14,7 +14,6 @@ from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
-from numpy import log2
 
 from ._misc import default_complex_dtype
 from .matrices import _I
@@ -25,6 +24,8 @@ QubitSupport = tuple[Any, ...]
 ControlQubits = tuple[Union[None, tuple[int, ...]], ...]
 TargetQubits = tuple[tuple[int, ...], ...]
 ATOL = 1e-014
+
+kron_sp = sparsify(jnp.kron)
 
 
 @register_pytree_node_class
@@ -139,13 +140,33 @@ def _dagger(operator: Array) -> Array:
         return jnp.conjugate(operator.T)
 
 
-def _unitary(generator: Array, theta: float) -> Array:
+@singledispatch
+def _unitary(generator: Any, theta: float) -> Any:
+    raise NotImplementedError("_unitary is not implemented")
+
+
+@_unitary.register
+def _(generator: Array, theta: float) -> Array:
     return (
         jnp.cos(theta / 2) * jnp.eye(2, dtype=default_dtype) - 1j * jnp.sin(theta / 2) * generator
     )
 
 
-def _jacobian(generator: Array, theta: float) -> Array:
+@_unitary.register
+def _(generator: BCOO, theta: float) -> Array:
+    return (
+        jnp.cos(theta / 2) * jax.experimental.sparse.eye(2, dtype=default_dtype)
+        - 1j * jnp.sin(theta / 2) * generator
+    )
+
+
+@singledispatch
+def _jacobian(generator: Any, theta: float) -> Any:
+    raise NotImplementedError("_jacobian is not implemented")
+
+
+@_jacobian.register
+def _(generator: Array, theta: float) -> Array:
     return (
         -1
         / 2
@@ -154,7 +175,26 @@ def _jacobian(generator: Array, theta: float) -> Array:
     )
 
 
-def _controlled(operator: Array, n_control: int, sparse: bool = False) -> Array:
+@_jacobian.register
+def _(generator: BCOO, theta: float) -> Array:
+    return (
+        -1
+        / 2
+        * (
+            jnp.sin(theta / 2) * jax.experimental.sparse.eye(2, dtype=default_dtype)
+            + 1j * jnp.cos(theta / 2)
+        )
+        * generator
+    )
+
+
+@singledispatch
+def _controlled(operator: Any, n_control: int) -> Any:
+    raise NotImplementedError("_controlled is not implemented")
+
+
+@_controlled.register
+def _(operator: Array, n_control: int) -> Array:
     """
     Create a controlled quantum operator with specified number of control qubits.
 
@@ -165,11 +205,25 @@ def _controlled(operator: Array, n_control: int, sparse: bool = False) -> Array:
     Returns:
         jnp.ndarray: The controlled quantum operator matrix
     """
-    n_qubits = int(log2(operator.shape[0]))
-    control = jnp.eye(2 ** (n_control + n_qubits), dtype=default_dtype)
-    control = control.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
-    if sparse:
-        return BCOO.fromdense(control)
+    control = jnp.eye(2**n_control, dtype=default_dtype)
+    control = jnp.kron(control, operator)
+    return control
+
+
+@_controlled.register
+def _(operator: BCOO, n_control: int) -> Array:
+    """
+    Create a controlled quantum operator with specified number of control qubits.
+
+    Args:
+        operator (jnp.ndarray): The base quantum operator to be controlled.
+        n_control (int): Number of control qubits.
+
+    Returns:
+        jnp.ndarray: The controlled quantum operator matrix
+    """
+    control = jax.experimental.sparse.eye(2**n_control, dtype=default_dtype)
+    control = kron_sp(control, operator)
     return control
 
 
@@ -177,7 +231,6 @@ def controlled(
     operator: jnp.ndarray,
     target_qubits: TargetQubits,
     control_qubits: ControlQubits,
-    sparse: bool = False,
 ) -> jnp.ndarray:
     """
     Create a controlled quantum operator with specified control and target qubit indices.
@@ -211,8 +264,6 @@ def controlled(
 
     # Initialize the controlled operator as an identity matrix
     controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
-    if sparse:
-        controlled_op = BCOO.fromdense(controlled_op)
 
     # Compute the control mask using bit manipulation
     control_mask = jnp.sum(

@@ -118,7 +118,7 @@ def _(
     """
     state_dims: tuple[int, ...] = target
     if is_controlled(control):
-        operator = _controlled(operator, len(control), sparse=True)
+        operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
     n_qubits_op = int(np.log2(operator.shape[1]))
     operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
