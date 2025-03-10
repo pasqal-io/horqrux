@@ -11,6 +11,7 @@ from horqrux.apply import apply_gates, apply_operator
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
 from horqrux.utils import OperationType, density_mat, equivalent_state, product_state, random_state
+from tests.utils import verify_arrays
 
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
@@ -18,24 +19,26 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
-def test_primitive(gate_fn: Callable) -> None:
+@pytest.mark.parametrize("sparse", [False, True])
+def test_primitive(gate_fn: Callable, sparse: bool) -> None:
     target = np.random.randint(0, MAX_QUBITS)
-    gate = gate_fn(target)
-    orig_state = random_state(MAX_QUBITS)
+    gate = gate_fn(target, sparse)
+    orig_state = random_state(MAX_QUBITS, sparse)
     assert len(orig_state) == 2
     state = apply_gates(orig_state, gate)
-    assert jnp.allclose(
+    assert verify_arrays(
         apply_operator(state, gate.dagger(), gate.target[0], gate.control[0]), orig_state
     )
 
     # test density matrix is similar to pure state
-    dm = apply_operator(
-        density_mat(orig_state),
-        gate._unitary(),
-        gate.target[0],
-        gate.control[0],
-    )
-    assert jnp.allclose(dm.array, density_mat(state).array)
+    if not sparse:
+        dm = apply_operator(
+            density_mat(orig_state),
+            gate._unitary(),
+            gate.target[0],
+            gate.control[0],
+        )
+        assert verify_arrays(dm.array, density_mat(state).array)
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)

@@ -8,6 +8,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from jax.experimental.sparse import BCOO, sparsify
 
 from horqrux.primitives.primitive import Primitive
 
@@ -87,6 +88,48 @@ def _(
     state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, state_dims))
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
+@apply_operator.register
+def _(
+    state: BCOO,
+    operator: BCOO,
+    target: tuple[int, ...],
+    control: tuple[Union[int, None], ...],
+) -> Array:
+    """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given state
+       of shape [2 for _ in range(n_qubits)] for a given set of target and control qubits.
+       In case of a controlled operation, the 'operator' array will be embedded into a controlled array.
+
+       Since dimension 'i' in 'state' corresponds to all amplitudes where qubit 'i' is 1,
+       target and control qubits represent the dimensions over which to contract the 'operator'.
+       Contraction means applying the 'dot' operation between the operator array and dimension 'i'
+       of 'state, resulting in a new state where the result of the 'dot' operation has been moved to
+       dimension 'i' of 'state'. To restore the former order of dimensions, the affected dimensions
+       are moved to their original positions and the state is returned.
+
+    Args:
+        state (Array): Array to operate on.
+        operator (Array): Array to contract over 'state'.
+        target (tuple[int, ...]): tuple of target qubits on which to apply the 'operator' to.
+        control (tuple[int  |  None, ...]): tuple of control qubits.
+
+    Returns:
+        Array after applying 'operator'.
+    """
+    state_dims: tuple[int, ...] = target
+    if is_controlled(control):
+        operator = _controlled(operator, len(control), sparse=True)
+        state_dims = (*control, *target)  # type: ignore[arg-type]
+    n_qubits_op = int(np.log2(operator.shape[1]))
+    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
+    op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
+    # Apply operator
+    new_state_dims = tuple(range(len(state_dims)))
+    tensordot_sp = sparsify(lambda a, b: jnp.tensordot(a=a, b=b, axes=(op_out_dims, state_dims)))
+    moveaxis_sp = sparsify(
+        lambda a: jnp.moveaxis(a=a, source=new_state_dims, destination=state_dims)
+    )
+    state = tensordot_sp(operator, state)
+    return moveaxis_sp(state)
 
 @apply_operator.register
 def _(
@@ -335,7 +378,7 @@ def prepare_sequence_reduce(
 
 @apply_gates.register
 def _(
-    state: Array,
+    state: Array | BCOO,
     gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,

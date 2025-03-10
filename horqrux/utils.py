@@ -263,7 +263,7 @@ def expand_operator(
     return kron_operator
 
 
-def product_state(bitstring: str) -> Array:
+def product_state(bitstring: str, sparse: bool = False) -> Array:
     """Generates a state of shape [2 for _ in range(len(bitstring))].
 
     Args:
@@ -275,11 +275,13 @@ def product_state(bitstring: str) -> Array:
     n_qubits = len(bitstring)
     space = jnp.zeros(tuple(2 for _ in range(n_qubits)), dtype=default_dtype)
     space = space.at[tuple(map(int, bitstring))].set(1.0)
+    if sparse:
+        space = BCOO.fromdense(space)
     return space
 
 
-def zero_state(n_qubits: int) -> Array:
-    return product_state("0" * n_qubits)
+def zero_state(n_qubits: int, sparse: bool = False) -> Array:
+    return product_state("0" * n_qubits, sparse)
 
 
 def none_like(x: Iterable) -> tuple[None, ...]:
@@ -329,11 +331,11 @@ def overlap(state: Array, projection: Array) -> Array:
     return jnp.power(inner(state, projection), 2).real
 
 
-def uniform_state(
-    n_qubits: int,
-) -> Array:
+def uniform_state(n_qubits: int, sparse: bool = False) -> Array:
     state = jnp.ones(2**n_qubits, dtype=default_dtype)
     state = state / jnp.sqrt(jnp.array(2**n_qubits, dtype=default_dtype))
+    if sparse:
+        state = BCOO.fromdense(state)
     return state.reshape([2] * n_qubits)
 
 
@@ -345,7 +347,7 @@ def is_controlled(qubit_support: Union[tuple[Union[int, None], ...], int, None])
     return False
 
 
-def random_state(n_qubits: int) -> Array:
+def random_state(n_qubits: int, sparse: bool = False) -> Array:
     def _normalize(wf: Array) -> Array:
         return wf / jnp.sqrt((jnp.sum(jnp.abs(wf) ** 2)))
 
@@ -354,9 +356,12 @@ def random_state(n_qubits: int) -> Array:
     x = -jnp.log(jax.random.uniform(key, shape=(N,)))
     sumx = jnp.sum(x)
     phases = jax.random.uniform(key, shape=(N,)) * 2.0 * jnp.pi
-    return _normalize(
+    state = _normalize(
         (jnp.sqrt(x / sumx) * jnp.exp(1j * phases)).reshape(tuple(2 for _ in range(n_qubits)))
     )
+    if sparse:
+        state = BCOO.fromdense(state)
+    return state
 
 
 def is_normalized(state: Array) -> bool:
