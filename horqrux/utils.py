@@ -11,6 +11,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from jax.experimental.sparse import BCOO
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from numpy import log2
@@ -152,7 +153,7 @@ def _jacobian(generator: Array, theta: float) -> Array:
     )
 
 
-def _controlled(operator: Array, n_control: int) -> Array:
+def _controlled(operator: Array, n_control: int, sparse: bool = False) -> Array:
     """
     Create a controlled quantum operator with specified number of control qubits.
 
@@ -166,6 +167,8 @@ def _controlled(operator: Array, n_control: int) -> Array:
     n_qubits = int(log2(operator.shape[0]))
     control = jnp.eye(2 ** (n_control + n_qubits), dtype=default_dtype)
     control = control.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
+    if sparse:
+        return BCOO.fromdense(control)
     return control
 
 
@@ -173,6 +176,7 @@ def controlled(
     operator: jnp.ndarray,
     target_qubits: TargetQubits,
     control_qubits: ControlQubits,
+    sparse: bool = False,
 ) -> jnp.ndarray:
     """
     Create a controlled quantum operator with specified control and target qubit indices.
@@ -206,6 +210,8 @@ def controlled(
 
     # Initialize the controlled operator as an identity matrix
     controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
+    if sparse:
+        controlled_op = BCOO.fromdense(controlled_op)
 
     # Compute the control mask using bit manipulation
     control_mask = jnp.sum(
