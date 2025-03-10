@@ -24,6 +24,8 @@ default_dtype = default_complex_dtype()
 QubitSupport = tuple[Any, ...]
 ControlQubits = tuple[Union[None, tuple[int, ...]], ...]
 TargetQubits = tuple[tuple[int, ...], ...]
+Array_BCOO = Union[Array, BCOO]
+
 ATOL = 1e-014
 
 
@@ -32,9 +34,9 @@ ATOL = 1e-014
 class DensityMatrix:
     """Dataclass to identify density matrices from states."""
 
-    array: Array | BCOO
+    array: Array_BCOO
 
-    def tree_flatten(self) -> tuple[tuple, tuple[Array | BCOO]]:
+    def tree_flatten(self) -> tuple[tuple, tuple[Array_BCOO]]:
         children = ()
         aux_data = (self.array,)
         return (children, aux_data)

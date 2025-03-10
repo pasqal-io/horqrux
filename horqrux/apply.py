@@ -127,10 +127,10 @@ def _(
     support_perm = state_dims + tuple(set(tuple(range(out_state.ndim // 2))) - set(state_dims))
 
     out_state = permute_basis(out_state, support_perm, False)
-    out_state = jnp.tensordot(a=operator, b=out_state, axes=(op_out_dims, new_state_dims))
+    out_state = tensordot(a=operator, b=out_state, axes=(op_out_dims, new_state_dims))
 
     out_state = _dagger(out_state)
-    out_state = jnp.tensordot(a=operator, b=out_state, axes=(op_out_dims, op_in_dims))
+    out_state = tensordot(a=operator, b=out_state, axes=(op_out_dims, op_in_dims))
     out_state = _dagger(out_state)
 
     out_state = permute_basis(out_state, support_perm, True)
@@ -157,11 +157,11 @@ def apply_kraus_operator(
     kraus = kraus.reshape(tuple(2 for _ in np.arange(n_qubits)))
     op_dims = tuple(np.arange(kraus.ndim // 2, kraus.ndim, dtype=int))
 
-    array = jnp.tensordot(a=kraus, b=array, axes=(op_dims, state_dims))
+    array = tensordot(a=kraus, b=array, axes=(op_dims, state_dims))
     new_state_dims = tuple(i for i in range(len(state_dims)))
     array = jnp.moveaxis(a=array, source=new_state_dims, destination=state_dims)
 
-    array = jnp.tensordot(a=kraus, b=_dagger(array), axes=(op_dims, state_dims))
+    array = tensordot(a=kraus, b=_dagger(array), axes=(op_dims, state_dims))
     array = _dagger(array)
 
     return array
