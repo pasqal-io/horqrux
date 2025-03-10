@@ -32,9 +32,9 @@ ATOL = 1e-014
 class DensityMatrix:
     """Dataclass to identify density matrices from states."""
 
-    array: Array
+    array: Array | BCOO
 
-    def tree_flatten(self) -> tuple[tuple, tuple[Array]]:
+    def tree_flatten(self) -> tuple[tuple, tuple[Array | BCOO]]:
         children = ()
         aux_data = (self.array,)
         return (children, aux_data)
@@ -153,7 +153,7 @@ def _jacobian(generator: Array, theta: float) -> Array:
     )
 
 
-def _controlled(operator: Array, n_control: int) -> Array:
+def _controlled(operator: Array, n_control: int, sparse: bool = False) -> Array:
     """
     Create a controlled quantum operator with specified number of control qubits.
 
@@ -167,6 +167,8 @@ def _controlled(operator: Array, n_control: int) -> Array:
     n_qubits = int(log2(operator.shape[0]))
     control = jnp.eye(2 ** (n_control + n_qubits), dtype=default_dtype)
     control = control.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
+    if sparse:
+        control = BCOO.fromdense(control)
     return control
 
 

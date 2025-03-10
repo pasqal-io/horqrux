@@ -8,6 +8,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from jax.experimental import sparse
+from jax.experimental.sparse import BCOO
 
 from horqrux.primitives.primitive import Primitive
 
@@ -22,6 +24,8 @@ from .utils import (
     is_controlled,
     permute_basis,
 )
+
+tensordot = sparse.sparsify(jnp.tensordot)
 
 
 @singledispatch
@@ -50,8 +54,8 @@ def apply_operator(
 
 @apply_operator.register
 def _(
-    state: Array,
-    operator: Array,
+    state: Array | BCOO,
+    operator: Array | BCOO,
     target: tuple[int, ...],
     control: tuple[Union[int, None], ...],
 ) -> Array:
@@ -84,14 +88,14 @@ def _(
     op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     # Apply operator
     new_state_dims = tuple(range(len(state_dims)))
-    state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, state_dims))
+    state = tensordot(a=operator, b=state, axes=(op_out_dims, state_dims))
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
 
 @apply_operator.register
 def _(
     state: DensityMatrix,
-    operator: Array,
+    operator: Array | BCOO,
     target: tuple[int, ...],
     control: tuple[Union[int, None], ...],
 ) -> DensityMatrix:
@@ -134,8 +138,8 @@ def _(
 
 
 def apply_kraus_operator(
-    kraus: Array,
-    array: Array,
+    kraus: Array | BCOO,
+    array: Array | BCOO,
     target: tuple[int, ...],
 ) -> Array:
     """Apply K \\rho K^\\dagger.
@@ -164,8 +168,8 @@ def apply_kraus_operator(
 
 
 def apply_kraus_sum(
-    kraus_ops: Array,
-    array: Array,
+    kraus_ops: Array | BCOO,
+    array: Array | BCOO,
     target: tuple[int, ...],
 ) -> DensityMatrix:
     """Apply the following evolution as a sum of Kraus operators:
@@ -195,7 +199,7 @@ def apply_kraus_sum(
 
 def apply_operator_with_noise(
     state: DensityMatrix,
-    operator: Array,
+    operator: Array | BCOO,
     target: tuple[int, ...],
     control: tuple[Union[int, None], ...],
     noise: NoiseProtocol,
@@ -209,7 +213,7 @@ def apply_operator_with_noise(
 
     Args:
         state (State): Input state or density matrix.
-        operator (Array): Operator to apply.
+        operator (Array | BCOO): Operator to apply.
         target (tuple[int, ...]): Target qubits.
         control (tuple[int  |  None, ...]): Control qubits.
         noise (NoiseProtocol): The noise protocol.
@@ -335,7 +339,7 @@ def prepare_sequence_reduce(
 
 @apply_gates.register
 def _(
-    state: Array,
+    state: Array | BCOO,
     gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
