@@ -68,9 +68,9 @@ class Primitive:
     @property
     def generator(self) -> Array:
         return (
-            OPERATIONS_DICT[self.generator_name]
-            if not self.sparse
-            else sparse.BCOO.fromdense(OPERATIONS_DICT[self.generator_name])
+            sparse.BCOO.fromdense(OPERATIONS_DICT[self.generator_name])
+            if self.sparse
+            else OPERATIONS_DICT[self.generator_name]
         )
 
     def _unitary(self, values: dict[str, float] = dict()) -> Array:

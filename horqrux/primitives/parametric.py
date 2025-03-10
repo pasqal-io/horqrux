@@ -88,6 +88,7 @@ def RX(
     target: TargetQubits,
     control: ControlQubits = (None,),
     noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Parametric:
     """RX gate.
 
