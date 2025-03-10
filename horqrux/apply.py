@@ -88,6 +88,7 @@ def _(
     state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, state_dims))
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
 
+
 @apply_operator.register
 def _(
     state: BCOO,
@@ -130,6 +131,7 @@ def _(
     )
     state = tensordot_sp(operator, state)
     return moveaxis_sp(state)
+
 
 @apply_operator.register
 def _(

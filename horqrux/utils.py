@@ -11,7 +11,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
-from jax.experimental.sparse import BCOO
+from jax.experimental.sparse import BCOO, sparsify
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from numpy import log2
@@ -123,6 +123,7 @@ class ForwardMode(StrEnum):
     SHOTS = "shots"
 
 
+@sparsify
 def _dagger(operator: Array) -> Array:
     # If the operator is a tensor with repeated 2D axes
     if operator.ndim > 2:

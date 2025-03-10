@@ -19,7 +19,7 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
-@pytest.mark.parametrize("sparse", [False,])
+@pytest.mark.parametrize("sparse", [False, True])
 def test_primitive(gate_fn: Callable, sparse: bool) -> None:
     target = np.random.randint(0, MAX_QUBITS)
     gate = gate_fn(target, sparse=sparse)
