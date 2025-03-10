@@ -118,3 +118,13 @@ class DifferentiationTest(chex.TestCase):
         grad_shots = d_shots(x)
 
         assert jnp.allclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)
+
+        @self.variant
+        def dd_exact(x):
+            return jax.hessian(lambda x: exact(x).sum())(x)
+
+        @self.variant
+        def dd_gpsr(x):
+            return jax.hessian(lambda x: exact_gpsr(x).sum())(x)
+
+        assert jnp.allclose(dd_exact(x), dd_gpsr(x), atol=GPSR_ATOL)

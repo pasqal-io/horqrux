@@ -388,7 +388,7 @@ def to_shift(gate: Parametric, shift_value: float) -> Any:
         Any: A new Parametric (Any type due to clsmethod)
     """
     children, aux_data = gate.tree_flatten()
-    return Parametric.tree_unflatten(aux_data[:-1] + (shift_value,), children)
+    return Parametric.tree_unflatten(aux_data[:-1] + (aux_data[-1] + shift_value,), children)
 
 
 def prepare_param_gates_seq(
