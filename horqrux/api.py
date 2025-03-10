@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any, Optional
+from typing import Any
 
 import chex
 import jax
@@ -95,7 +95,7 @@ def expectation(
     observables: list[Observable],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
-    n_shots: Optional[int] = None,
+    n_shots: int | None = None,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -107,7 +107,7 @@ def expectation(
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
-        n_shots (Optional[int], optional): Number of shots. Defaults to None.
+        n_shots (int, optional): Number of shots. Defaults to None.
         key (Any, optional): Random key. Defaults to jax.random.PRNGKey(0).
 
     Returns:
@@ -129,7 +129,7 @@ def expectation(
             )
         else:
             chex.assert_type(n_shots, int)
-            chex.assert_equal(n_shots > 0, True)  # type: ignore[operator]
+            chex.assert_equal(n_shots > 0, True)
             return finite_shots_fwd(
                 state=state,
                 gates=circuit.operations,
