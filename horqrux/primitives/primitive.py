@@ -5,7 +5,7 @@ from typing import Any, Iterable
 
 import numpy as np
 from jax import Array
-from jax.experimental import sparse
+from jax.experimental.sparse import BCOO
 from jax.tree_util import register_pytree_node_class
 
 from horqrux.matrices import OPERATIONS_DICT
@@ -68,7 +68,7 @@ class Primitive:
     @property
     def generator(self) -> Array:
         return (
-            sparse.BCOO.fromdense(OPERATIONS_DICT[self.generator_name])
+            BCOO.fromdense(OPERATIONS_DICT[self.generator_name])
             if self.sparse
             else OPERATIONS_DICT[self.generator_name]
         )

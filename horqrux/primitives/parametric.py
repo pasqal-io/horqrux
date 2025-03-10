@@ -5,7 +5,7 @@ from typing import Any, Iterable
 
 import jax.numpy as jnp
 from jax import Array
-from jax.experimental import sparse
+from jax.experimental.sparse import BCOO
 from jax.tree_util import register_pytree_node_class
 
 from horqrux._misc import default_complex_dtype
@@ -151,14 +151,14 @@ class _PHASE(Parametric):
         u = jnp.eye(2, 2, dtype=default_dtype)
         u = u.at[(1, 1)].set(jnp.exp(1.0j * self.parse_values(values)))
         if self.sparse:
-            u = sparse.BCOO.fromdense(u)
+            u = BCOO.fromdense(u)
         return u
 
     def jacobian(self, values: dict[str, float] = dict()) -> Array:
         jac = jnp.zeros((2, 2), dtype=default_dtype)
         jac = jac.at[(1, 1)].set(1j * jnp.exp(1.0j * self.parse_values(values)))
         if self.sparse:
-            jac = sparse.BCOO.fromdense(jac)
+            jac = BCOO.fromdense(jac)
         return jac
 
     @property
