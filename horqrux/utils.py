@@ -173,6 +173,7 @@ def controlled(
     operator: jnp.ndarray,
     target_qubits: TargetQubits,
     control_qubits: ControlQubits,
+    sparse: bool = False,
 ) -> jnp.ndarray:
     """
     Create a controlled quantum operator with specified control and target qubit indices.
@@ -206,6 +207,8 @@ def controlled(
 
     # Initialize the controlled operator as an identity matrix
     controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
+    if sparse:
+        controlled_op = jax.experimental.sparse.BCOO(controlled_op)
 
     # Compute the control mask using bit manipulation
     control_mask = jnp.sum(
