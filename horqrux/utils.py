@@ -14,6 +14,7 @@ from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
+from numpy import log2
 
 from ._misc import default_complex_dtype
 from .matrices import _I
@@ -205,8 +206,9 @@ def _(operator: Array, n_control: int) -> Array:
     Returns:
         jnp.ndarray: The controlled quantum operator matrix
     """
-    control = jnp.eye(2**n_control, dtype=default_dtype)
-    control = jnp.kron(control, operator)
+    n_qubits = int(log2(operator.shape[0]))
+    control = jnp.eye(2 ** (n_control + n_qubits), dtype=default_dtype)
+    control = control.at[-(2**n_qubits) :, -(2**n_qubits) :].set(operator)
     return control
 
 
