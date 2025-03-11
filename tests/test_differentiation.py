@@ -130,7 +130,7 @@ def test_sparse_diff() -> None:
         return expectation(state, circuit, observables, values, diff_mode="gpsr")
 
     exp_exact = exact(x)
-    exp_gpsr = exact_gpsr_sparse(x)
+    exp_gpsr = exact_gpsr(x)
 
     verify_arrays(exp_exact, exp_exact_sparse.todense())
     verify_arrays(exp_gpsr, exp_gpsr_sparse.todense())
