@@ -13,6 +13,7 @@ from horqrux.composite import Add, Observable, OpSequence, Scale
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, H, I, S, T, X, Y, Z
 from horqrux.utils import density_mat, random_state
+from tests.utils import verify_arrays
 
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
@@ -20,37 +21,47 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
-def test_scale(gate_fn: Callable) -> None:
+@pytest.mark.parametrize("sparse", [False, True])
+def test_scale(gate_fn: Callable, sparse: bool) -> None:
     target = np.random.randint(0, MAX_QUBITS)
-    gate = gate_fn(target)
+    gate = gate_fn(target, sparse=sparse)
     scale_gate = Scale(gate, 2.0)
-    orig_state = random_state(MAX_QUBITS)
+    orig_state = random_state(MAX_QUBITS, sparse=sparse)
 
     state = apply_gates(orig_state, gate)
     scale_state = scale_gate(orig_state)
-    assert jnp.allclose(jnp.array(2.0) * state, scale_state)
+    assert verify_arrays(jnp.array(2.0) * state, scale_state)
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
-def test_observable_gate(gate_fn: Callable) -> None:
+@pytest.mark.parametrize("sparse", [False, True])
+def test_observable_gate(gate_fn: Callable, sparse: bool) -> None:
     target = np.random.randint(0, MAX_QUBITS)
-    gate = gate_fn(target)
+    gate = gate_fn(target, sparse=sparse)
     obs_gate = Observable([gate])
-    orig_state = random_state(MAX_QUBITS)
+    orig_state = random_state(MAX_QUBITS, sparse=sparse)
 
     state = apply_gates(orig_state, gate)
     obs_state = obs_gate(orig_state)
-    assert jnp.allclose(state, obs_state)
+    assert verify_arrays(state, obs_state)
 
     # test density matrix
-    orig_state = density_mat(orig_state)
-    state = apply_gates(orig_state, gate)
-    obs_state = obs_gate(orig_state)
-    assert jnp.allclose(state.array, obs_state.array)
+    if not sparse:
+        orig_state = density_mat(orig_state)
+        state = apply_gates(orig_state, gate)
+        obs_state = obs_gate(orig_state)
+        assert verify_arrays(state.array, obs_state.array)
 
 
-def test_sequence() -> None:
-    ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0), NOT(1, 0), RX("omega", 0, 1)]
+@pytest.mark.parametrize("sparse", [False, True])
+def test_sequence(sparse: bool) -> None:
+    ops = [
+        RX("theta", 0, sparse=sparse),
+        RY("epsilon", 0, sparse=sparse),
+        RX("phi", 0, sparse=sparse),
+        NOT(1, 0, sparse=sparse),
+        RX("omega", 0, 1, sparse=sparse),
+    ]
     values = {
         "theta": np.random.uniform(0, 1),
         "epsilon": np.random.uniform(0, 1),
@@ -61,36 +72,38 @@ def test_sequence() -> None:
     circuit = OpSequence(ops)
     assert circuit.qubit_support == (0, 1)
 
-    orig_state = random_state(MAX_QUBITS)
+    orig_state = random_state(MAX_QUBITS, sparse=sparse)
     sequence_output = circuit(orig_state, values)
     apply_output = apply_gates(orig_state, ops, values)
 
-    assert jnp.allclose(sequence_output, apply_output)
+    assert verify_arrays(sequence_output, apply_output)
 
     qc = QuantumCircuit(2, ops)
     qc_output = qc(orig_state, values)
-    assert jnp.allclose(qc_output, sequence_output)
+    assert verify_arrays(qc_output, sequence_output)
 
     # test density matrix
-    orig_state = density_mat(orig_state)
-    sequence_output = circuit(orig_state, values)
-    apply_output = apply_gates(orig_state, ops, values)
-    assert jnp.allclose(sequence_output.array, apply_output.array)
+    if not sparse:
+        orig_state = density_mat(orig_state)
+        sequence_output = circuit(orig_state, values)
+        apply_output = apply_gates(orig_state, ops, values)
+        assert verify_arrays(sequence_output.array, apply_output.array)
 
 
-def test_add() -> None:
+@pytest.mark.parametrize("sparse", [False, True])
+def test_add(sparse: bool) -> None:
     num_gates = 2
-    orig_state = random_state(MAX_QUBITS)
+    orig_state = random_state(MAX_QUBITS, sparse=sparse)
     chosen_gate_ids = np.random.randint(0, len(PRIMITIVE_GATES), (num_gates,))
 
     chosen_gates = []
     for id in chosen_gate_ids:
         target = random.choice([i for i in range(MAX_QUBITS)])
-        chosen_gates.append(PRIMITIVE_GATES[id](target))
+        chosen_gates.append(PRIMITIVE_GATES[id](target, sparse=sparse))
     add_operator = Add(chosen_gates)
 
     add_state = add_operator(orig_state)
-    assert jnp.allclose(
+    assert verify_arrays(
         add_state,
         apply_gates(orig_state, chosen_gates[0]) + apply_gates(orig_state, chosen_gates[1]),
     )
