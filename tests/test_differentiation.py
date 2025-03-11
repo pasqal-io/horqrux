@@ -9,6 +9,7 @@ from horqrux.composite import Observable
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
 from horqrux.utils import density_mat
+from tests.utils import verify_arrays
 
 N_QUBITS = 2
 GPSR_ATOL = 0.0001
@@ -95,3 +96,30 @@ def test_shots() -> None:
     grad_shots = d_shots(x)
 
     assert jnp.isclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)
+
+
+def test_sparse_diff() -> None:
+    ops = [RX("theta", 0, sparse=True)]
+    circuit = QuantumCircuit(2, ops)
+    observables = [Observable([Z(0, sparse=True)]), Observable([Z(1, sparse=True)])]
+    state = random_state(N_QUBITS, sparse=True)
+    x = jnp.pi * 0.5
+
+    def exact_sparse(x):
+        values = {"theta": x}
+        return expectation(state, circuit, observables, values, diff_mode="ad")
+
+    exp_exact_sparse = exact_sparse(x)
+
+    ops = [RX("theta", 0, sparse=False)]
+    circuit = QuantumCircuit(2, ops)
+    observables = [Observable([Z(0, sparse=False)]), Observable([Z(1, sparse=False)])]
+    state = random_state(N_QUBITS, sparse=False)
+
+    def exact(x):
+        values = {"theta": x}
+        return expectation(state, circuit, observables, values, diff_mode="ad")
+
+    exp_exact = exact(x)
+
+    verify_arrays(exp_exact, exp_exact_sparse.todense())
