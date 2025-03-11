@@ -171,6 +171,13 @@ def finite_shots_fwd(
     return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
 
 
+def validate_permutation_matrix(P: Array) -> Array:
+    rows = P.sum(axis=0)
+    columns = P.sum(axis=1)
+    ones = jnp.ones(P.shape[0], dtype=rows.dtype)
+    return ((ones == rows) & (ones == columns)).min()
+
+
 def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, Array]:
     """
     Given a list of eigenvalue eigenvector matrix tuples in the form of

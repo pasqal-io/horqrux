@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-import chex
 import jax
 import jax.numpy as jnp
 from jax import Array
@@ -128,8 +127,10 @@ def expectation(
                 values=values,
             )
         else:
-            chex.assert_type(n_shots, int)
-            chex.assert_equal(n_shots > 0, True)
+            if not isinstance(n_shots, int):
+                raise TypeError("The number of shots should be of type `int`")
+            if n_shots <= 0:
+                raise ValueError("The number of shots should be strictly positive.")
             return finite_shots_fwd(
                 state=state,
                 gates=circuit.operations,
