@@ -242,9 +242,7 @@ def finite_shots_jvp(
     values = primals[0]
     tangent_dict = tangents[0]
 
-    val_keys = tuple(values.keys())
-    spectral_gap = dict.fromkeys(val_keys, 2.0)
-    shift = jnp.pi / 2
+    val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
 
     def jvp_component(param_name: str, key: Array) -> Array:
         up_key, down_key = random.split(key)
@@ -265,13 +263,7 @@ def finite_shots_jvp(
     fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
     jvp_caller = jvp_component
     if not isinstance(gates, Primitive):
-        gate_names = list(
-            map(
-                lambda g: g.param if hasattr(g, "param") and isinstance(g.param, str) else None,
-                gates,
-            )
-        )
-        gate_names = list(filter(partial(is_not, None), gate_names))
+        gate_names = extract_gate_names(gates)
         if len(gate_names) > len(val_keys):
             param_to_gates_indices = prepare_param_gates_seq(val_keys, gates)
             # repeated case
@@ -303,9 +295,9 @@ def finite_shots_jvp(
                     )
 
             else:
-                spectral_gap = {
-                    param: param_to_gates_indices[param][0].spectral_gap for param in val_keys
-                }
+                spectral_gap = spectral_gap = spectral_gap_from_gates(
+                    param_to_gates_indices, val_keys
+                )
 
             jvp_caller = jvp_component_repeated_param
 
@@ -324,9 +316,7 @@ def no_shots_fwd_jvp(
     values = primals[0]
     tangent_dict = tangents[0]
 
-    val_keys = tuple(values.keys())
-    spectral_gap = dict.fromkeys(val_keys, 2.0)
-    shift = jnp.pi / 2
+    val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
 
     def jvp_component(param_name: str) -> Array:
         up_val = values.copy()
@@ -345,13 +335,7 @@ def no_shots_fwd_jvp(
     fwd = no_shots_fwd(state, gates, observable, values)
     jvp_caller = jvp_component
     if not isinstance(gates, Primitive):
-        gate_names = list(
-            map(
-                lambda g: g.param if hasattr(g, "param") and isinstance(g.param, str) else None,
-                gates,
-            )
-        )
-        gate_names = list(filter(partial(is_not, None), gate_names))
+        gate_names = extract_gate_names(gates)
         if len(gate_names) > len(val_keys):
             param_to_gates_indices = prepare_param_gates_seq(val_keys, gates)
             # repeated case
@@ -376,9 +360,7 @@ def no_shots_fwd_jvp(
 
                 jvp_caller = jvp_component_repeated_param
             else:
-                spectral_gap = {
-                    param: param_to_gates_indices[param][0].spectral_gap for param in val_keys
-                }
+                spectral_gap = spectral_gap_from_gates(param_to_gates_indices, val_keys)
 
     jvp = sum(jvp_caller(param) * tangent_dict[param] for param in val_keys)
     return fwd, jvp.reshape(fwd.shape)
@@ -433,3 +415,57 @@ def alter_gate_sequence(gates: Iterable[Any], ind_alter: int, shift_val: float) 
     upper = min(ind_alter + 1, len(gates))  # type: ignore[arg-type]
     gates_seq = gates[:ind_alter] + [gate_shift] + gates[upper:]  # type: ignore[index]
     return gates_seq
+
+
+def initialize_gpsr_ingredients(
+    values: dict[str, float]
+) -> tuple[tuple[str, ...], dict[str, float], Array]:
+    """Initialize the parameter names, spectral_gap, and shift value for GPSR.
+
+    Args:
+        values (dict[str, float]): Parameter values.
+
+    Returns:
+        tuple[tuple[str, ...], dict[str, float], Array]: parameter names, spectral_gap, and shift value.
+    """
+    val_keys = tuple(values.keys())
+    spectral_gap = dict.fromkeys(val_keys, 2.0)
+    shift = jnp.pi / 2
+    return val_keys, spectral_gap, shift
+
+
+def extract_gate_names(gates: Iterable[Primitive]) -> list:
+    """Extract gate names when a gate is parametric.
+
+    Args:
+        gates (Iterable[Primitive]): List of gates.
+
+    Returns:
+        list: list of names.
+    """
+    gate_names = list(
+        map(
+            lambda g: g.param if hasattr(g, "param") and isinstance(g.param, str) else None,
+            gates,
+        )
+    )
+    gate_names = list(filter(partial(is_not, None), gate_names))
+    return gate_names
+
+
+def spectral_gap_from_gates(
+    param_to_gates_indices: dict[str, tuple], param_names: Iterable[str]
+) -> dict[str, Array]:
+    """Extract spectral gap from each gate.
+
+    Only works when a parameter name is used by only one gate.
+
+    Args:
+        param_to_gates_indices (dict[str, tuple]): dictionary mapping
+            parameter name to indices of gates.
+        param_names (Iterable[str]): Name of parameters.
+
+    Returns:
+        dict[str, Array]: Parameter names mapped with the spectral gap.
+    """
+    return {param: param_to_gates_indices[param][0].spectral_gap for param in param_names}
