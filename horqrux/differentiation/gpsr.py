@@ -181,11 +181,11 @@ def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, 
     This is primarily used as a utility function to help sample multiple
     correlated observables when using finite shots.
     """
-    eigenvector_matrix = eigenvectors[0]
+    eigenvector = eigenvectors[0]
 
-    P = jax.vmap(lambda mat: permutation_matrix(mat, eigenvector_matrix))(eigenvectors)
+    P = jax.vmap(lambda mat: permutation_matrix(mat, eigenvector))(eigenvectors)
     eigenvalues_aligned = jax.vmap(jnp.dot)(eigenvalues, P).T
-    return eigenvector_matrix, eigenvalues_aligned
+    return eigenvector, eigenvalues_aligned
 
 
 def permutation_matrix(mat: Array, eigenvector_matrix: Array) -> Array:
