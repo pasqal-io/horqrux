@@ -5,10 +5,11 @@ from typing import Any
 
 import jax.numpy as jnp
 from jax import Array
-from jax.experimental.sparse import BCOO, sparsify
+from jax.experimental.sparse import BCOO
 
 from horqrux.apply import apply_gates, apply_operator
 from horqrux.composite import Observable, OpSequence
+from horqrux.differentiation.sparse_utils import real_sp, stack_sp
 from horqrux.utils import (
     DensityMatrix,
     OperationType,
@@ -16,9 +17,6 @@ from horqrux.utils import (
     inner,
     num_qubits,
 )
-
-real_sp = sparsify(jnp.real)
-stack_sp = sparsify(jnp.stack)
 
 
 @singledispatch

@@ -109,7 +109,12 @@ def test_sparse_diff() -> None:
         values = {"theta": x}
         return expectation(state, circuit, observables, values, diff_mode="ad")
 
+    def exact_gpsr_sparse(x):
+        values = {"theta": x}
+        return expectation(state, circuit, observables, values, diff_mode="gpsr")
+
     exp_exact_sparse = exact_sparse(x)
+    exp_gpsr_sparse = exact_gpsr_sparse(x)
 
     ops = [RX("theta", 0, sparse=False)]
     circuit = QuantumCircuit(2, ops)
@@ -120,6 +125,12 @@ def test_sparse_diff() -> None:
         values = {"theta": x}
         return expectation(state, circuit, observables, values, diff_mode="ad")
 
+    def exact_gpsr(x):
+        values = {"theta": x}
+        return expectation(state, circuit, observables, values, diff_mode="gpsr")
+
     exp_exact = exact(x)
+    exp_gpsr = exact_gpsr_sparse(x)
 
     verify_arrays(exp_exact, exp_exact_sparse.todense())
+    verify_arrays(exp_gpsr, exp_gpsr_sparse.todense())

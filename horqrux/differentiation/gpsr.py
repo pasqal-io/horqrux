@@ -11,6 +11,7 @@ from jax.experimental import checkify
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.differentiation.ad import _ad_expectation_single_observable
+from horqrux.differentiation.sparse_utils import stack_sp
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
 
@@ -125,7 +126,7 @@ def no_shots_fwd(
             observables,
         )
     )
-    return jnp.stack(outputs)
+    return stack_sp(outputs)
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
