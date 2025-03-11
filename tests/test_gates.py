@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 from jax import Array
+from jax.experimental.sparse import BCOO
 
 from horqrux.apply import apply_gates, apply_operator
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
@@ -124,11 +125,15 @@ def test_controlled_parametric(gate_fn: Callable, sparse: bool) -> None:
         ("10", 1 / jnp.sqrt(2) * jnp.array([1, 0, 0, -1])),
     ],
 )
-def test_bell_states(bitstring: str, expected_state: Array):
-    state = product_state(bitstring)
-    state = apply_gates(state, H(target=0, sparse=False))
-    state = apply_gates(state, NOT(target=1, control=0, sparse=False))
-    assert jnp.allclose(state.flatten(), expected_state)
+@pytest.mark.parametrize("sparse", [False, True])
+def test_bell_states(bitstring: str, expected_state: Array, sparse: bool):
+    state = product_state(bitstring, sparse)
+    state = apply_gates(state, H(target=0, sparse=sparse))
+    state = apply_gates(state, NOT(target=1, control=0, sparse=sparse))
+    if sparse:
+        verify_arrays(state.data, expected_state)
+    else:
+        verify_arrays(state.flatten(), expected_state)
 
 
 @pytest.mark.parametrize(
@@ -150,15 +155,23 @@ def test_swap_gate(inputs: tuple[str, str, Array]) -> None:
     assert verify_arrays(out_state, product_state(expected_bitstring))
 
 
-def test_merge_gates() -> None:
-    gates = [RX("a", 0), RZ("b", 1), RY("c", 0), NOT(1, 2), RX("a", 0, 3), RZ("c", 3)]
+@pytest.mark.parametrize("sparse", [False, True])
+def test_merge_gates(sparse: bool) -> None:
+    gates = [
+        RX("a", 0, sparse=sparse),
+        RZ("b", 1, sparse=sparse),
+        RY("c", 0, sparse=sparse),
+        NOT(1, 2, sparse=sparse),
+        RX("a", 0, 3, sparse=sparse),
+        RZ("c", 3, sparse=sparse),
+    ]
     values = {
         "a": np.random.uniform(0.1, 2 * np.pi),
         "b": np.random.uniform(0.1, 2 * np.pi),
         "c": np.random.uniform(0.1, 2 * np.pi),
     }
     state_grouped = apply_gates(
-        product_state("0000"),
+        product_state("0000", sparse=sparse),
         gates,
         values,
         OperationType.UNITARY,
@@ -166,14 +179,14 @@ def test_merge_gates() -> None:
         merge_ops=True,
     )
     state = apply_gates(
-        product_state("0000"),
+        product_state("0000", sparse=sparse),
         gates,
         values,
         OperationType.UNITARY,
         group_gates=False,
         merge_ops=False,
     )
-    assert jnp.allclose(state_grouped, state)
+    assert verify_arrays(state_grouped, state)
 
 
 def flip_bit_wrt_control(bitstring: str, control: int, target: int) -> str:
@@ -212,27 +225,38 @@ def test_cnot_product_state(bitstring: str):
     assert jnp.allclose(state, expected_state)
 
 
-def test_cnot_tensor() -> None:
-    cnot0 = NOT(target=1, control=0)
-    cnot1 = NOT(target=0, control=1)
-    assert jnp.allclose(
-        cnot0.tensor(), jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    )
-    assert jnp.allclose(
-        cnot1.tensor(), jnp.array([[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]])
-    )
+@pytest.mark.parametrize("sparse", [False, True])
+def test_cnot_tensor(sparse: bool) -> None:
+    cnot0 = NOT(target=1, control=0, sparse=sparse)
+    cnot1 = NOT(target=0, control=1, sparse=sparse)
+
+    t0 = jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    t1 = jnp.array([[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]])
+    if sparse:
+        t0 = BCOO.fromdense(t0)
+        t1 = BCOO.fromdense(t1)
+
+    assert verify_arrays(cnot0.tensor(), t0)
+    assert verify_arrays(cnot1.tensor(), t1)
 
 
-def test_crx_tensor() -> None:
-    crx0 = RX(0.2, target=1, control=0)
-    crx1 = RX(0.2, target=0, control=1)
-    assert jnp.allclose(
+@pytest.mark.parametrize("sparse", [False, True])
+def test_crx_tensor(sparse: bool) -> None:
+    crx0 = RX(0.2, target=1, control=0, sparse=sparse)
+    crx1 = RX(0.2, target=0, control=1, sparse=sparse)
+    t0 = jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0.9950, -0.0998j], [0, 0, -0.0998j, 0.9950]])
+    t1 = jnp.array([[1, 0, 0, 0], [0, 0.9950, 0, -0.0998j], [0, 0, 1, 0], [0, -0.0998j, 0, 0.9950]])
+    if sparse:
+        t0 = BCOO.fromdense(t0)
+        t1 = BCOO.fromdense(t1)
+
+    assert verify_arrays(
         crx0.tensor(),
-        jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0.9950, -0.0998j], [0, 0, -0.0998j, 0.9950]]),
+        t0,
         atol=1e-3,
     )
-    assert jnp.allclose(
+    assert verify_arrays(
         crx1.tensor(),
-        jnp.array([[1, 0, 0, 0], [0, 0.9950, 0, -0.0998j], [0, 0, 1, 0], [0, -0.0998j, 0, 0.9950]]),
+        t1,
         atol=1e-3,
     )

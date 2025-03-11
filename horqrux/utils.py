@@ -230,21 +230,21 @@ def _(operator: BCOO, n_control: int) -> Array:
 
 
 def controlled(
-    operator: jnp.ndarray,
+    operator: Array | BCOO,
     target_qubits: TargetQubits,
     control_qubits: ControlQubits,
-) -> jnp.ndarray:
+) -> Array:
     """
     Create a controlled quantum operator with specified control and target qubit indices.
 
     Args:
-        operator (jnp.ndarray): The base quantum operator to be controlled.
+        operator (Array): The base quantum operator to be controlled.
             Note the operator is defined only on `target_qubits`.
         control_qubits (int or tuple of ints): Index or indices of control qubits
         target_qubits (int or tuple of ints): Index or indices of target qubits
 
     Returns:
-        jnp.ndarray: The controlled quantum operator matrix
+        Array: The controlled quantum operator matrix
     """
     controls: tuple = tuple()
     targets: tuple = tuple()
@@ -264,9 +264,6 @@ def controlled(
     # Create the full Hilbert space dimension
     full_dim = 2**ntotal_qubits
 
-    # Initialize the controlled operator as an identity matrix
-    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
-
     # Compute the control mask using bit manipulation
     control_mask = jnp.sum(
         jnp.array(
@@ -278,8 +275,19 @@ def controlled(
     indices = jnp.arange(full_dim)
     controlled_indices = indices[(indices & control_mask) == control_mask]
 
-    # Set the controlled subspace to the operator
-    controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(operator)
+    # Initialize the controlled operator as an identity matrix
+    # and set the controlled subspace to the operator
+    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
+    if isinstance(operator, BCOO):
+        # TODO: optimize this
+        controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(
+            operator.todense()
+        )
+        return BCOO.fromdense(controlled_op)
+    else:
+        controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(
+            operator
+        )
 
     return controlled_op
 
@@ -327,10 +335,15 @@ def product_state(bitstring: str, sparse: bool = False) -> Array:
         A state corresponding to 'bitstring'.
     """
     n_qubits = len(bitstring)
-    space = jnp.zeros(tuple(2 for _ in range(n_qubits)), dtype=default_dtype)
-    space = space.at[tuple(map(int, bitstring))].set(1.0)
+    shape = tuple(2 for _ in range(n_qubits))
+    bitstr_ind = tuple(map(int, bitstring))
     if sparse:
-        space = BCOO.fromdense(space)
+        data = jnp.array([1.0], dtype=default_dtype)
+        indices = jnp.array([bitstr_ind])
+        space = BCOO((data, indices), shape=shape)
+    else:
+        space = jnp.zeros(shape, dtype=default_dtype)
+        space = space.at[bitstr_ind].set(1.0)
     return space
 
 
