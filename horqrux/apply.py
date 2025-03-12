@@ -324,8 +324,8 @@ def prepare_sequence_reduce(
         if group_gates:
             gate = group_by_index(gate)
         operator = tuple(getattr(g, op_type)(values) for g in gate)
-        target = reduce(add, [g.target for g in gate])
-        control = reduce(add, [g.control for g in gate])
+        target = reduce(add, [g.target for g in gate], tuple())
+        control = reduce(add, [g.control for g in gate], tuple())
         if merge_ops:
             operator, target, control = merge_operators(operator, target, control)
         noise = [g.noise for g in gate]

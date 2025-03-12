@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import random
-from typing import Any, Callable, Set
+from typing import Any, Callable
 
 import hypothesis.strategies as st
 from hypothesis.strategies._internal import SearchStrategy
 
-from horqrux.primitives.primitive import I, H, X, Y, Z, Primitive
-from horqrux.primitives.parametric import RX, RY, RZ, Parametric
 from horqrux.circuit import QuantumCircuit
+from horqrux.primitives.parametric import RX, RY, RZ
+from horqrux.primitives.primitive import H, I, Primitive, X, Y, Z
 
 digital_gateset = [I, H, X, Y, Z, RX, RY, RZ]
 param_gateset = [RX, RY, RZ]
@@ -23,6 +22,7 @@ CIRCUIT_DEPTH_STRATEGY: SearchStrategy[int] = st.integers(
     min_value=MIN_CIRCUIT_DEPTH, max_value=MAX_CIRCUIT_DEPTH
 )
 
+
 # A strategy to generate random blocks.
 def rand_circuits(gate_list: list[Primitive]) -> Callable:
     @st.composite
@@ -32,13 +32,11 @@ def rand_circuits(gate_list: list[Primitive]) -> Callable:
         n_qubits: SearchStrategy[int] = st.integers(min_value=1, max_value=4),
         depth: SearchStrategy[int] = st.integers(min_value=1, max_value=8),
     ) -> QuantumCircuit:
-        
         total_qubits = draw(n_qubits)
         gates_list: list = []
         qubit_indices = {0}
 
         for _ in range(draw(depth)):
-
             gate = draw(st.sampled_from(gate_list))
 
             qubit = draw(st.integers(min_value=0, max_value=total_qubits - 1))
@@ -62,10 +60,11 @@ def rand_circuits(gate_list: list[Primitive]) -> Callable:
                         gates_list.append(gate(target=target, control=qubit, param=st.text()))
                     else:
                         gates_list.append(gate(target=target, control=qubit))
-        
+
         return QuantumCircuit(total_qubits, gates_list)
-    
+
     return blocks
+
 
 @st.composite
 def restricted_circuits(
