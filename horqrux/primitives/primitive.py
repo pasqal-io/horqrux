@@ -5,10 +5,9 @@ from typing import Any, Iterable
 
 import numpy as np
 from jax import Array
-from jax.experimental.sparse import BCOO
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.matrices import OPERATIONS_DICT
+from horqrux.matrices import OPERATIONS_DICT, SPARSE_OPERATIONS_DICT
 from horqrux.noise import NoiseProtocol
 from horqrux.utils import (
     ControlQubits,
@@ -68,7 +67,7 @@ class Primitive:
     @property
     def generator(self) -> Array:
         return (
-            BCOO.fromdense(OPERATIONS_DICT[self.generator_name])
+            SPARSE_OPERATIONS_DICT[self.generator_name]
             if self.sparse
             else OPERATIONS_DICT[self.generator_name]
         )
