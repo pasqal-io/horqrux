@@ -7,6 +7,7 @@ from typing import Any, Iterable, Union
 import jax
 import jax.numpy as jnp
 from jax import Array, random
+from jax.experimental import checkify
 
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
@@ -171,11 +172,19 @@ def finite_shots_fwd(
     return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
 
 
+@jax.vmap
 def validate_permutation_matrix(P: Array) -> Array:
     rows = P.sum(axis=0)
     columns = P.sum(axis=1)
     ones = jnp.ones(P.shape[0], dtype=rows.dtype)
     return ((ones == rows) & (ones == columns)).min()
+
+
+def checkify_valid_permutation(P: Array) -> None:
+    checkify.check(
+        jnp.all(validate_permutation_matrix(P)),
+        "Did not calculate valid permutation matrix",
+    )
 
 
 def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, Array]:
@@ -191,6 +200,7 @@ def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, 
     eigenvector = eigenvectors[0]
 
     P = jax.vmap(lambda mat: permutation_matrix(mat, eigenvector))(eigenvectors)
+    checkify.checkify(checkify_valid_permutation)(P)
     aligned_eigenvalues = jax.vmap(jnp.dot)(eigenvalues, P).T
     return eigenvector, aligned_eigenvalues
 
