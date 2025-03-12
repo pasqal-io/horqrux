@@ -84,8 +84,9 @@ param_value = 1 / 4 * jnp.pi
 new_state = apply_gates(state, RX(param_value, target_qubit, control_qubit, sparse=True))
 ```
 
-!!! warning "Sparse matrices scope"
+!!! warning "Experimental Sparse matrices scope"
     Note that we only support state-vector simulation with only digital operations when using sparse matrices.
+    Also this is an experimental feature. If needed, raise an issue.
 
 ## Analog Operations
 

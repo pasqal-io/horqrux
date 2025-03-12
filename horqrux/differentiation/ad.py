@@ -9,7 +9,7 @@ from jax.experimental.sparse import BCOO
 
 from horqrux.apply import apply_gates, apply_operator
 from horqrux.composite import Observable, OpSequence
-from horqrux.differentiation.sparse_utils import real_sp, stack_sp
+from horqrux.sparse_utils import real_sp, stack_sp
 from horqrux.utils import (
     DensityMatrix,
     OperationType,

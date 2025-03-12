@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any, Optional
+from typing import Any
 
 import jax
 import jax.numpy as jnp
 from jax import Array
-from jax.experimental import checkify
 
 from horqrux.composite import Observable, OpSequence
 from horqrux.differentiation.ad import ad_expectation
@@ -15,7 +14,6 @@ from horqrux.differentiation.gpsr import finite_shots_fwd, no_shots_fwd
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
-    ForwardMode,
     State,
     num_qubits,
     probabilities,
@@ -96,8 +94,7 @@ def expectation(
     observables: list[Observable],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
-    forward_mode: ForwardMode = ForwardMode.EXACT,
-    n_shots: Optional[int] = None,
+    n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -109,8 +106,7 @@ def expectation(
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
-        forward_mode (ForwardMode, optional): Type of forward method. Defaults to ForwardMode.EXACT.
-        n_shots (Optional[int], optional): Number of shots. Defaults to None.
+        n_shots (int): Number of shots. Defaults to 0 for no shots.
         key (Any, optional): Random key. Defaults to jax.random.PRNGKey(0).
 
     Returns:
@@ -123,13 +119,16 @@ def expectation(
             raise TypeError("Adjoint does not support density matrices.")
         return adjoint_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.GPSR:
-        if forward_mode == ForwardMode.SHOTS:
-            checkify.check(
-                type(n_shots) is int and n_shots > 0,
-                "Number of shots must be an integer for finite shots.",
+        if n_shots < 0:
+            raise ValueError("The number of shots should be positive.")
+        if n_shots == 0:
+            return no_shots_fwd(
+                state=state,
+                gates=circuit.operations,
+                observables=observables,
+                values=values,
             )
-            # Type checking is disabled because mypy doesn't parse checkify.check.
-            # type: ignore
+        else:
             return finite_shots_fwd(
                 state=state,
                 gates=circuit.operations,
@@ -137,11 +136,4 @@ def expectation(
                 values=values,
                 n_shots=n_shots,
                 key=key,
-            )
-        else:
-            return no_shots_fwd(
-                state=state,
-                gates=circuit.operations,
-                observables=observables,
-                values=values,
             )

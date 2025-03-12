@@ -18,6 +18,7 @@ from numpy import log2
 
 from ._misc import default_complex_dtype
 from .matrices import _I
+from .sparse_utils import kron_sp
 
 default_dtype = default_complex_dtype()
 
@@ -25,8 +26,6 @@ QubitSupport = tuple[Any, ...]
 ControlQubits = tuple[Union[None, tuple[int, ...]], ...]
 TargetQubits = tuple[tuple[int, ...], ...]
 ATOL = 1e-014
-
-kron_sp = sparsify(jnp.kron)
 
 
 @register_pytree_node_class
@@ -118,11 +117,6 @@ class DiffMode(StrEnum):
                                    Jones & Gacon, 2020."""
     GPSR = "gpsr"
     """Generalized parameter shift rule."""
-
-
-class ForwardMode(StrEnum):
-    EXACT = "exact"
-    SHOTS = "shots"
 
 
 @sparsify
