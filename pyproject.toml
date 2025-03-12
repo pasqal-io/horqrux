@@ -39,7 +39,7 @@ dependencies = [
 
 
 [project.optional-dependencies]
-dev = ["black", "pytest", "pytest-xdist", "pytest-cov", "flake8", "mypy", "pre-commit", "ruff"]
+dev = ["black", "pytest", "pytest-xdist", "pytest-cov", "flake8", "mypy", "pre-commit", "ruff", "hypothesis",]
 
 [tool.hatch.envs.tests]
 features = [

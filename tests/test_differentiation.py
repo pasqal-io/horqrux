@@ -3,16 +3,15 @@ from __future__ import annotations
 import chex
 import jax
 import jax.numpy as jnp
-from absl.testing import parameterized
+import strategies as st
+from hypothesis import given, settings
 
 from horqrux import expectation, random_state, run
 from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
-from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
 from horqrux.utils import density_mat
 
-N_QUBITS = 2
 GPSR_ATOL = 0.0001
 SHOTS_ATOL = 0.01
 N_SHOTS = 100_000
@@ -20,27 +19,23 @@ N_SHOTS = 100_000
 
 class DifferentiationTest(chex.TestCase):
     @chex.variants(with_jit=True, without_jit=True)
-    @parameterized.parameters(True, False)
-    def test_shots(self, same_name: bool) -> None:
-        param_name = "theta"
-        if same_name:
-            x = jax.random.uniform(jax.random.key(0), (1,))
-            ops = [RX(param_name, 0), RX(param_name, 1)]
+    @given(st.restricted_circuits())
+    @settings(deadline=None)
+    def test_shots(self, circuit: QuantumCircuit) -> None:
+        param_names = circuit.param_names
+        x = jax.random.uniform(jax.random.key(0), (len(param_names),))
 
-            def values_to_dict(x):
-                return {param_name: x}
+        def values_to_dict(x):
+            return {param_names[i]: x[i] for i in range(len(param_names))}
 
-        else:
-            x = jax.random.uniform(jax.random.key(0), (2,))
-            param_names = [param_name, param_name + "2"]
-            ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
-
-            def values_to_dict(x):
-                return {param_names[0]: x[0], param_names[1]: x[1]}
-
-        circuit = QuantumCircuit(2, ops)
-        observables = [Observable([Z(0)]), Observable([Z(1)])]
-        state = random_state(N_QUBITS)
+        observables = (
+            [Observable([Z(0)]), Observable([Z(1)])]
+            if circuit.n_qubits > 1
+            else [
+                Observable([Z(0)]),
+            ]
+        )
+        state = random_state(circuit.n_qubits)
 
         @self.variant
         def exact(x):
