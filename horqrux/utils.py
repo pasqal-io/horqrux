@@ -224,7 +224,7 @@ def _(operator: BCOO, n_control: int) -> Array:
 
 
 def controlled(
-    operator: Array | BCOO,
+    operator: Union[Array, BCOO],
     target_qubits: TargetQubits,
     control_qubits: ControlQubits,
 ) -> Array:

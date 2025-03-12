@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any
+from typing import Any, Union
 
 import jax.numpy as jnp
 from jax import Array
@@ -30,7 +30,7 @@ def _ad_expectation_single_observable(
 
 @_ad_expectation_single_observable.register
 def _(
-    state: Array | BCOO,
+    state: Union[Array, BCOO],
     observable: Observable,
     values: dict[str, float],
 ) -> Array:
