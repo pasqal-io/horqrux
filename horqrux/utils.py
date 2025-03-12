@@ -117,11 +117,6 @@ class DiffMode(StrEnum):
     """Generalized parameter shift rule."""
 
 
-class ForwardMode(StrEnum):
-    EXACT = "exact"
-    SHOTS = "shots"
-
-
 def _dagger(operator: Array) -> Array:
     # If the operator is a tensor with repeated 2D axes
     if operator.ndim > 2:

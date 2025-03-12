@@ -11,7 +11,7 @@ from horqrux.apply import apply_gates
 from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, H, I, S, T, X, Y, Z
-from horqrux.utils import ForwardMode, density_mat, product_state, random_state
+from horqrux.utils import density_mat, product_state, random_state
 
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
@@ -183,7 +183,5 @@ def simple_depolarizing_test() -> None:
     assert jnp.allclose(exp_dm, jnp.array([-0.86666667], dtype=jnp.float64))
 
     # test shots expectation
-    exp_dm_shots = expectation(
-        dm_state, ops, [Z(0)], {}, forward_mode=ForwardMode.SHOTS, n_shots=1000
-    )
+    exp_dm_shots = expectation(dm_state, ops, [Z(0)], {}, n_shots=1000)
     assert jnp.allclose(exp_dm, exp_dm_shots, atol=1e-02)
