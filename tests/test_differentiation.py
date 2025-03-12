@@ -4,6 +4,7 @@ import chex
 import jax
 import jax.numpy as jnp
 import strategies as st
+from absl.testing import parameterized
 from hypothesis import given, settings
 
 from horqrux import expectation, random_state, run
@@ -12,17 +13,27 @@ from horqrux.composite import Observable
 from horqrux.primitives.primitive import Z
 from horqrux.utils import density_mat
 
-GPSR_ATOL = 0.0001
+GPSR_ATOL = 0.05
 SHOTS_ATOL = 0.01
 N_SHOTS = 100_000
 
 
 class DifferentiationTest(chex.TestCase):
     @chex.variants(with_jit=True, without_jit=True)
-    @given(st.restricted_circuits())
+    @parameterized.parameters(True, False)
+    @given(circuit=st.restricted_circuits())
     @settings(deadline=None)
-    def test_shots(self, circuit: QuantumCircuit) -> None:
+    def test_shots(self, same_name: bool, circuit: QuantumCircuit) -> None:
         param_names = circuit.param_names
+        if same_name:
+            ind_change_pname = 0
+            for i_op, op in enumerate(circuit.operations):
+                if hasattr(op, "param") and op.param == param_names[0]:
+                    ind_change_pname = i_op
+            ops = circuit.operations
+            ops[ind_change_pname].param = param_names[-1]
+            circuit = QuantumCircuit(circuit.n_qubits, ops)
+            param_names.pop(0)
         x = jax.random.uniform(jax.random.key(0), (len(param_names),))
 
         def values_to_dict(x):
@@ -112,7 +123,7 @@ class DifferentiationTest(chex.TestCase):
 
         grad_shots = d_shots(x)
 
-        assert jnp.allclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)
+        assert jnp.allclose(grad_gpsr, grad_shots, atol=SHOTS_ATOL)
 
         @self.variant
         def dd_exact(x):

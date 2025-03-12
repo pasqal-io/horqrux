@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+import string
 from typing import Any, Callable
 
 import hypothesis.strategies as st
@@ -23,6 +25,12 @@ CIRCUIT_DEPTH_STRATEGY: SearchStrategy[int] = st.integers(
 )
 
 
+def rand_name(length: int) -> str:
+    letters = string.ascii_letters
+    result_str = "".join(random.choice(letters) for i in range(length))
+    return result_str
+
+
 # A strategy to generate random blocks.
 def rand_circuits(gate_list: list[Primitive]) -> Callable:
     @st.composite
@@ -36,7 +44,9 @@ def rand_circuits(gate_list: list[Primitive]) -> Callable:
         gates_list: list = []
         qubit_indices = {0}
 
-        for _ in range(draw(depth)):
+        total_depth = draw(depth)
+        param_len = total_depth
+        for _ in range(total_depth):
             gate = draw(st.sampled_from(gate_list))
 
             qubit = draw(st.integers(min_value=0, max_value=total_qubits - 1))
@@ -44,7 +54,7 @@ def rand_circuits(gate_list: list[Primitive]) -> Callable:
 
             if total_qubits == 1:
                 if gate in param_gateset:
-                    gates_list.append(gate(target=qubit, param=st.text()))
+                    gates_list.append(gate(target=qubit, param=rand_name(param_len)))
                 else:
                     gates_list.append(gate(target=qubit))
             else:
@@ -57,7 +67,9 @@ def rand_circuits(gate_list: list[Primitive]) -> Callable:
                     )
                     qubit_indices = qubit_indices.union({target})
                     if gate in param_gateset:
-                        gates_list.append(gate(target=target, control=qubit, param=st.text()))
+                        gates_list.append(
+                            gate(target=target, control=qubit, param=rand_name(param_len))
+                        )
                     else:
                         gates_list.append(gate(target=target, control=qubit))
 
