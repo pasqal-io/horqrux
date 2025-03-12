@@ -94,7 +94,7 @@ def expectation(
     observables: list[Observable],
     values: dict[str, float],
     diff_mode: DiffMode = DiffMode.AD,
-    n_shots: int | None = None,
+    n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
@@ -106,7 +106,7 @@ def expectation(
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
-        n_shots (int, optional): Number of shots. Defaults to None.
+        n_shots (int): Number of shots. Defaults to 0 for no shots.
         key (Any, optional): Random key. Defaults to jax.random.PRNGKey(0).
 
     Returns:
@@ -119,7 +119,9 @@ def expectation(
             raise TypeError("Adjoint does not support density matrices.")
         return adjoint_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.GPSR:
-        if n_shots is None:
+        if n_shots < 0:
+            raise ValueError("The number of shots should be positive.")
+        if n_shots == 0:
             return no_shots_fwd(
                 state=state,
                 gates=circuit.operations,
@@ -127,10 +129,6 @@ def expectation(
                 values=values,
             )
         else:
-            if not isinstance(n_shots, int):
-                raise TypeError("The number of shots should be of type `int`")
-            if n_shots <= 0:
-                raise ValueError("The number of shots should be strictly positive.")
             return finite_shots_fwd(
                 state=state,
                 gates=circuit.operations,

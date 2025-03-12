@@ -191,8 +191,8 @@ def align_eigenvectors(eigenvalues: Array, eigenvectors: Array) -> tuple[Array, 
     eigenvector = eigenvectors[0]
 
     P = jax.vmap(lambda mat: permutation_matrix(mat, eigenvector))(eigenvectors)
-    eigenvalues_aligned = jax.vmap(jnp.dot)(eigenvalues, P).T
-    return eigenvector, eigenvalues_aligned
+    aligned_eigenvalues = jax.vmap(jnp.dot)(eigenvalues, P).T
+    return eigenvector, aligned_eigenvalues
 
 
 def permutation_matrix(mat: Array, eigenvector_matrix: Array) -> Array:
