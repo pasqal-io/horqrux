@@ -4,13 +4,13 @@ from collections import Counter
 from typing import Any
 
 import jax
-import jax.numpy as jnp
 from jax import Array
 
 from horqrux.composite import Observable, OpSequence
 from horqrux.differentiation.ad import ad_expectation
 from horqrux.differentiation.adjoint import adjoint_expectation as apply_adjoint
 from horqrux.differentiation.gpsr import finite_shots_fwd, no_shots_fwd
+from horqrux.sparse_utils import stack_sp
 from horqrux.utils import (
     DensityMatrix,
     DiffMode,
@@ -85,7 +85,7 @@ def adjoint_expectation(
             observables,
         )
     )
-    return jnp.stack(outputs)
+    return stack_sp(outputs)
 
 
 def expectation(
