@@ -28,7 +28,7 @@ We can also make any gate controlled, in the case of X, we have to pass the targ
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
-from horqrux import X, product_state, equivalent_state, apply_gates
+from horqrux import X, product_state, apply_gates
 
 n_qubits = 2
 state = product_state('11')

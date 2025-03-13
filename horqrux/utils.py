@@ -148,7 +148,7 @@ def _(generator: Array, theta: float) -> Array:
 
 
 @_unitary.register
-def _(generator: BCOO, theta: float) -> Array:
+def _(generator: BCOO, theta: float) -> BCOO:
     return (
         jnp.cos(theta / 2) * jax.experimental.sparse.eye(2, dtype=default_dtype)
         - 1j * jnp.sin(theta / 2) * generator
@@ -171,7 +171,7 @@ def _(generator: Array, theta: float) -> Array:
 
 
 @_jacobian.register
-def _(generator: BCOO, theta: float) -> Array:
+def _(generator: BCOO, theta: float) -> BCOO:
     return (
         -1
         / 2
@@ -207,7 +207,7 @@ def _(operator: Array, n_control: int) -> Array:
 
 
 @_controlled.register
-def _(operator: BCOO, n_control: int) -> Array:
+def _(operator: BCOO, n_control: int) -> BCOO:
     """
     Create a controlled quantum operator with specified number of control qubits.
 
@@ -232,24 +232,9 @@ def controlled(
     raise NotImplementedError("controlled is not implemented")
 
 
-@controlled.register
-def _(
-    operator: Array,
-    target_qubits: TargetQubits,
-    control_qubits: ControlQubits,
-) -> Array:
-    """
-    Create a controlled quantum operator with specified control and target qubit indices.
-
-    Args:
-        operator (Array): The base quantum operator to be controlled.
-            Note the operator is defined only on `target_qubits`.
-        control_qubits (int or tuple of ints): Index or indices of control qubits
-        target_qubits (int or tuple of ints): Index or indices of target qubits
-
-    Returns:
-        Array: The controlled quantum operator matrix
-    """
+def prepare_controlled(
+    operator: ArrayLike, target_qubits: TargetQubits, control_qubits: ControlQubits
+) -> tuple[int, ArrayLike]:
     controls: tuple = tuple()
     targets: tuple = tuple()
     if isinstance(control_qubits[0], tuple):
@@ -278,7 +263,28 @@ def _(
     # Create indices for the controlled subspace
     indices = jnp.arange(full_dim)
     controlled_indices = indices[(indices & control_mask) == control_mask]
+    return full_dim, controlled_indices
 
+
+@controlled.register
+def _(
+    operator: Array,
+    target_qubits: TargetQubits,
+    control_qubits: ControlQubits,
+) -> Array:
+    """
+    Create a controlled quantum operator with specified control and target qubit indices.
+
+    Args:
+        operator (Array): The base quantum operator to be controlled.
+            Note the operator is defined only on `target_qubits`.
+        control_qubits (int or tuple of ints): Index or indices of control qubits
+        target_qubits (int or tuple of ints): Index or indices of target qubits
+
+    Returns:
+        Array: The controlled quantum operator matrix
+    """
+    full_dim, controlled_indices = prepare_controlled(operator, target_qubits, control_qubits)
     # Initialize the controlled operator as an identity matrix
     # and set the controlled subspace to the operator
     controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
@@ -305,39 +311,12 @@ def _(
     Returns:
         Array: The controlled quantum operator matrix
     """
-    controls: tuple = tuple()
-    targets: tuple = tuple()
-    if isinstance(control_qubits[0], tuple):
-        controls = control_qubits[0]
-    if isinstance(target_qubits[0], tuple):
-        targets = target_qubits[0]
-    n_qop = int(log(operator.shape[0], 2))
-    n_targets = len(targets)
-    if n_qop != n_targets:
-        raise ValueError("`target_qubits` length should match the shape of operator.")
-    # Determine the total number of qubits and order of controls
-    ntotal_qubits = len(controls) + n_targets
-    qubit_support = sorted(controls + targets)
-    control_ind_support = tuple(i for i, q in enumerate(qubit_support) if q in controls)
-
-    # Create the full Hilbert space dimension
-    full_dim = 2**ntotal_qubits
-
-    # Compute the control mask using bit manipulation
-    control_mask = jnp.sum(
-        jnp.array(
-            [1 << (ntotal_qubits - control_qubit - 1) for control_qubit in control_ind_support]
-        )
-    )
-
-    # Create indices for the controlled subspace
-    indices = jnp.arange(full_dim)
-    controlled_indices = indices[(indices & control_mask) == control_mask]
+    full_dim, controlled_indices = prepare_controlled(operator, target_qubits, control_qubits)
 
     # Initialize the controlled operator as an identity matrix
     # and set the controlled subspace to the operator
-    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
     # TODO: optimize this
+    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
     controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(
         operator.todense()
     )
@@ -451,7 +430,7 @@ def overlap(state: Array, projection: Array) -> Array:
     return jnp.power(inner(state, projection), 2).real
 
 
-def uniform_state(n_qubits: int, sparse: bool = False) -> Array:
+def uniform_state(n_qubits: int, sparse: bool = False) -> ArrayLike:
     state = jnp.ones(2**n_qubits, dtype=default_dtype)
     state = state / jnp.sqrt(jnp.array(2**n_qubits, dtype=default_dtype))
     if sparse:
@@ -467,7 +446,7 @@ def is_controlled(qubit_support: Union[tuple[Union[int, None], ...], int, None])
     return False
 
 
-def random_state(n_qubits: int, sparse: bool = False) -> Array:
+def random_state(n_qubits: int, sparse: bool = False) -> ArrayLike:
     def _normalize(wf: Array) -> Array:
         return wf / jnp.sqrt((jnp.sum(jnp.abs(wf) ** 2)))
 
