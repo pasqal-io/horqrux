@@ -380,7 +380,51 @@ def prepare_sequence_reduce(
 
 @apply_gates.register
 def _(
-    state: Array | BCOO,
+    state: Array,
+    gate: Union[Primitive, Iterable[Primitive]],
+    values: dict[str, float] = dict(),
+    op_type: OperationType = OperationType.UNITARY,
+    group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
+    merge_ops: bool = True,
+) -> State:
+    """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
+    Arguments:
+        state: Array or DensityMatrix to operate on.
+        gate: Gate(s) to apply.
+        values: A dictionary with parameter values.
+        op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
+        group_gates: Group gates together which are acting on the same qubit.
+        merge_ops: Attempt to merge operators acting on the same qubit.
+
+    Returns:
+        Array or density matrix after applying 'gate'.
+    """
+    operator, target, control, noise = prepare_sequence_reduce(
+        gate, values, op_type, group_gates, merge_ops
+    )
+
+    # faster way to check has_noise
+    has_noise = noise != [None] * len(noise)
+    if has_noise:
+        state = density_mat(state)
+
+        output_state = reduce(
+            lambda state, gate: apply_operator_with_noise(state, *gate),
+            zip(operator, target, control, noise),
+            state,
+        )
+    else:
+        output_state = reduce(
+            lambda state, gate: apply_operator(state, *gate),
+            zip(operator, target, control),
+            state,
+        )
+    return output_state
+
+
+@apply_gates.register
+def _(
+    state: BCOO,
     gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
