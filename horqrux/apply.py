@@ -450,13 +450,7 @@ def _(
     # faster way to check has_noise
     has_noise = noise != [None] * len(noise)
     if has_noise:
-        state = density_mat(state)
-
-        output_state = reduce(
-            lambda state, gate: apply_operator_with_noise(state, *gate),
-            zip(operator, target, control, noise),
-            state,
-        )
+        raise NotImplementedError("Currently, noise is not supported with sparse operators.")
     else:
         output_state = reduce(
             lambda state, gate: apply_operator(state, *gate),

@@ -85,8 +85,8 @@ new_state = apply_gates(state, RX(param_value, target_qubit, control_qubit, spar
 ```
 
 !!! warning "Experimental Sparse matrices scope"
-    Note that we only support state-vector simulation with only digital operations when using sparse matrices.
-    Also this is an experimental feature. If needed, raise an issue.
+    Note this is an experimental feature (raise an issue if needed).
+    We only support noiseless state-vector simulation with only digital operations when using sparse matrices.
 
 ## Analog Operations
 
