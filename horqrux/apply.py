@@ -380,7 +380,7 @@ def prepare_sequence_reduce(
 
 @apply_gates.register
 def _(
-    state: Union[Array, BCOO],
+    state: Array | BCOO,
     gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
     op_type: OperationType = OperationType.UNITARY,
