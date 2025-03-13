@@ -223,8 +223,18 @@ def _(operator: BCOO, n_control: int) -> Array:
     return control
 
 
+@singledispatch
 def controlled(
-    operator: Array | BCOO,
+    operator: Any,
+    target_qubits: TargetQubits,
+    control_qubits: ControlQubits,
+) -> Any:
+    raise NotImplementedError("controlled is not implemented")
+
+
+@controlled.register
+def _(
+    operator: Array,
     target_qubits: TargetQubits,
     control_qubits: ControlQubits,
 ) -> Array:
@@ -272,18 +282,66 @@ def controlled(
     # Initialize the controlled operator as an identity matrix
     # and set the controlled subspace to the operator
     controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
-    if isinstance(operator, BCOO):
-        # TODO: optimize this
-        controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(
-            operator.todense()
-        )
-        return BCOO.fromdense(controlled_op)
-    else:
-        controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(
-            operator
-        )
+    controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(operator)
 
     return controlled_op
+
+
+@controlled.register
+def _(
+    operator: BCOO,
+    target_qubits: TargetQubits,
+    control_qubits: ControlQubits,
+) -> BCOO:
+    """
+    Create a controlled quantum operator with specified control and target qubit indices.
+
+    Args:
+        operator (Array): The base quantum operator to be controlled.
+            Note the operator is defined only on `target_qubits`.
+        control_qubits (int or tuple of ints): Index or indices of control qubits
+        target_qubits (int or tuple of ints): Index or indices of target qubits
+
+    Returns:
+        Array: The controlled quantum operator matrix
+    """
+    controls: tuple = tuple()
+    targets: tuple = tuple()
+    if isinstance(control_qubits[0], tuple):
+        controls = control_qubits[0]
+    if isinstance(target_qubits[0], tuple):
+        targets = target_qubits[0]
+    n_qop = int(log(operator.shape[0], 2))
+    n_targets = len(targets)
+    if n_qop != n_targets:
+        raise ValueError("`target_qubits` length should match the shape of operator.")
+    # Determine the total number of qubits and order of controls
+    ntotal_qubits = len(controls) + n_targets
+    qubit_support = sorted(controls + targets)
+    control_ind_support = tuple(i for i, q in enumerate(qubit_support) if q in controls)
+
+    # Create the full Hilbert space dimension
+    full_dim = 2**ntotal_qubits
+
+    # Compute the control mask using bit manipulation
+    control_mask = jnp.sum(
+        jnp.array(
+            [1 << (ntotal_qubits - control_qubit - 1) for control_qubit in control_ind_support]
+        )
+    )
+
+    # Create indices for the controlled subspace
+    indices = jnp.arange(full_dim)
+    controlled_indices = indices[(indices & control_mask) == control_mask]
+
+    # Initialize the controlled operator as an identity matrix
+    # and set the controlled subspace to the operator
+    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
+    # TODO: optimize this
+    controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(
+        operator.todense()
+    )
+    return BCOO.fromdense(controlled_op)
 
 
 def expand_operator(

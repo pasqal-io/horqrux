@@ -30,7 +30,20 @@ def _ad_expectation_single_observable(
 
 @_ad_expectation_single_observable.register
 def _(
-    state: Array | BCOO,
+    state: Array,
+    observable: Observable,
+    values: dict[str, float],
+) -> Array:
+    projected_state = observable(
+        state,
+        values,
+    )
+    return inner(state, projected_state).real
+
+
+@_ad_expectation_single_observable.register
+def _(
+    state: BCOO,
     observable: Observable,
     values: dict[str, float],
 ) -> Array:
