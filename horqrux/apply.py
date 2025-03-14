@@ -97,7 +97,7 @@ def _(
     control: tuple[Union[int, None], ...],
 ) -> Array:
     """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given state
-       of shape [2 for _ in range(n_qubits)] for a given set of target and control qubits.
+       of shape [2] * n_qubits for a given set of target and control qubits.
        In case of a controlled operation, the 'operator' array will be embedded into a controlled array.
 
        Since dimension 'i' in 'state' corresponds to all amplitudes where qubit 'i' is 1,
