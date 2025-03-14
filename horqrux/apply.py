@@ -81,7 +81,7 @@ def _(
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
     n_qubits_op = int(np.log2(operator.shape[1]))
-    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
+    operator = operator.reshape((2,) * (2 * n_qubits_op))
     op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     # Apply operator
     new_state_dims = tuple(range(len(state_dims)))
@@ -121,7 +121,7 @@ def _(
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
     n_qubits_op = int(np.log2(operator.shape[1]))
-    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
+    operator = operator.reshape((2,) * (2 * n_qubits_op))
     op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     # Apply operator
     new_state_dims = tuple(range(len(state_dims)))
@@ -158,7 +158,7 @@ def _(
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
     n_qubits_op = int(np.log2(operator.shape[1]))
-    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
+    operator = operator.reshape((2,) * (2 * n_qubits_op))
     op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     op_in_dims = tuple(np.arange(0, operator.ndim // 2, dtype=int))
     new_state_dims = tuple(range(len(state_dims)))
@@ -195,11 +195,11 @@ def apply_kraus_operator(
     """
     state_dims: tuple[int, ...] = target
     n_qubits = int(np.log2(kraus.size))
-    kraus = kraus.reshape(tuple(2 for _ in np.arange(n_qubits)))
+    kraus = kraus.reshape((2,) * n_qubits)
     op_dims = tuple(np.arange(kraus.ndim // 2, kraus.ndim, dtype=int))
 
     array = jnp.tensordot(a=kraus, b=array, axes=(op_dims, state_dims))
-    new_state_dims = tuple(i for i in range(len(state_dims)))
+    new_state_dims = tuple(range(len(state_dims)))
     array = jnp.moveaxis(a=array, source=new_state_dims, destination=state_dims)
 
     array = jnp.tensordot(a=kraus, b=_dagger(array), axes=(op_dims, state_dims))
