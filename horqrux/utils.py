@@ -229,7 +229,7 @@ def controlled(
     target_qubits: TargetQubits,
     control_qubits: ControlQubits,
 ) -> Any:
-    raise NotImplementedError("controlled is not implemented")
+    raise NotImplementedError(f"Controlled is not implemented for this operator type: {type(operator)}.")
 
 
 def prepare_controlled(
