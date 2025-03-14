@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import jax.numpy as jnp
 from jax import config
+from jax.experimental.sparse import BCOO
 
 from ._misc import default_complex_dtype
 
@@ -53,3 +54,5 @@ OPERATIONS_DICT = {
     "I": _I,
     "SWAP": _SWAP,
 }
+
+SPARSE_OPERATIONS_DICT = {k: BCOO.fromdense(mat) for k, mat in OPERATIONS_DICT.items()}
