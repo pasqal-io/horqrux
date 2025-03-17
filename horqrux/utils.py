@@ -219,7 +219,7 @@ def _(operator: BCOO, n_control: int) -> BCOO:
     """
     n_qubits = int(log2(operator.shape[0]))
     shape_dim = 2 ** (n_control + n_qubits)
-    control_elements = shape_dim - 2 ** n_qubits
+    control_elements = shape_dim - 2**n_qubits
     control_id = jax.experimental.sparse.eye(control_elements, dtype=default_dtype)
     data_control = jnp.concatenate((control_id.data, operator.data))
     indices_control = jnp.concatenate((control_id.indices, operator.indices + control_elements))
