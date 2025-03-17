@@ -148,11 +148,13 @@ def test_bell_states(bitstring: str, expected_state: Array, sparse: bool):
         ("1001001", "1000011", SWAP(target=(5, 3), control=(6, 0))),
     ],
 )
-def test_swap_gate(inputs: tuple[str, str, Array]) -> None:
+@pytest.mark.parametrize("sparse", [False, True])
+def test_swap_gate(inputs: tuple[str, str, Array], sparse: bool) -> None:
     bitstring, expected_bitstring, op = inputs
-    state = product_state(bitstring)
+    op.sparse = sparse
+    state = product_state(bitstring, sparse=sparse)
     out_state = apply_gates(state, op)
-    assert verify_arrays(out_state, product_state(expected_bitstring))
+    assert verify_arrays(out_state, product_state(expected_bitstring, sparse=sparse))
 
 
 @pytest.mark.parametrize("sparse", [False, True])
@@ -210,19 +212,20 @@ def flip_bit_wrt_control(bitstring: str, control: int, target: int) -> str:
         "10",
     ],
 )
-def test_cnot_product_state(bitstring: str):
-    cnot0 = NOT(target=1, control=0)
-    state = product_state(bitstring)
+@pytest.mark.parametrize("sparse", [False, True])
+def test_cnot_product_state(bitstring: str, sparse: bool):
+    cnot0 = NOT(target=1, control=0, sparse=sparse)
+    state = product_state(bitstring, sparse=sparse)
     state = apply_gates(state, cnot0)
-    expected_state = product_state(flip_bit_wrt_control(bitstring, 0, 1))
-    assert jnp.allclose(state, expected_state)
+    expected_state = product_state(flip_bit_wrt_control(bitstring, 0, 1), sparse=sparse)
+    assert verify_arrays(state, expected_state)
 
     # reverse control and target
-    cnot1 = NOT(target=0, control=1)
-    state = product_state(bitstring)
+    cnot1 = NOT(target=0, control=1, sparse=sparse)
+    state = product_state(bitstring, sparse=sparse)
     state = apply_gates(state, cnot1)
-    expected_state = product_state(flip_bit_wrt_control(bitstring, 1, 0))
-    assert jnp.allclose(state, expected_state)
+    expected_state = product_state(flip_bit_wrt_control(bitstring, 1, 0), sparse=sparse)
+    assert verify_arrays(state, expected_state)
 
 
 @pytest.mark.parametrize("sparse", [False, True])

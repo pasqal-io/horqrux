@@ -18,7 +18,6 @@ from numpy import log2
 
 from ._misc import default_complex_dtype
 from .matrices import _I
-from .sparse_utils import kron_sp
 
 default_dtype = default_complex_dtype()
 
@@ -218,8 +217,15 @@ def _(operator: BCOO, n_control: int) -> BCOO:
     Returns:
         jnp.ndarray: The controlled quantum operator matrix
     """
-    control = jax.experimental.sparse.eye(2**n_control, dtype=default_dtype)
-    control = kron_sp(control, operator)
+    n_qubits = int(log2(operator.shape[0]))
+    shape_dim = 2 ** (n_control + n_qubits)
+    control_elements = shape_dim - 2 ** n_qubits
+    control_id = jax.experimental.sparse.eye(control_elements, dtype=default_dtype)
+    data_control = jnp.concatenate((control_id.data, operator.data))
+    indices_control = jnp.concatenate((control_id.indices, operator.indices + control_elements))
+    control = jax.experimental.sparse.BCOO(
+        (data_control, indices_control), shape=(shape_dim, shape_dim)
+    )
     return control
 
 
