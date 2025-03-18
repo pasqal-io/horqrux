@@ -8,6 +8,7 @@ from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, H, I, S, T, X, Y, Z
+from horqrux.utils.conversion import to_sparse
 from horqrux.utils.operator_utils import DiffMode
 from tests.utils import verify_arrays
 
@@ -18,17 +19,10 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 def test_gradcheck() -> None:
     ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0), NOT(1, 0), RX("omega", 0, 1)]
-    ops_sparse = [
-        RX("theta", 0, sparse=True),
-        RY("epsilon", 0, sparse=True),
-        RX("phi", 0, sparse=True),
-        NOT(1, 0, sparse=True),
-        RX("omega", 0, 1, sparse=True),
-    ]
     circuit = QuantumCircuit(2, ops)
-    circuit_sparse = QuantumCircuit(2, ops_sparse)
+    circuit_sparse = to_sparse(circuit)
     observable = [Observable([Z(0)])]
-    observable_sparse = [Observable([Z(0, sparse=True)])]
+    observable_sparse = [to_sparse(observable[0])]
     values = {
         "theta": np.random.uniform(0, 1),
         "epsilon": np.random.uniform(0, 1),

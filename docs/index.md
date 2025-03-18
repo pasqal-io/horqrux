@@ -70,18 +70,20 @@ new_state = apply_gates(state, RX(param_value, target_qubit, control_qubit))
 
 ### Using sparse matrices
 
-`horqrux` also provide the possibility to use sparse matrices when performing operations using [Batched-coordinate (BCOO) sparse matrices](https://docs.jax.dev/en/latest/jax.experimental.sparse.html#batched-coordinate-bcoo-sparse-matrices). For this, the input state and all operations should be initialized with `sparse=True`.
+`horqrux` also provide the possibility to use sparse matrices when performing operations using [Batched-coordinate (BCOO) sparse matrices](https://docs.jax.dev/en/latest/jax.experimental.sparse.html#batched-coordinate-bcoo-sparse-matrices). For this, the input state and all operations should be initialized with `sparse=True`. One can also perform the sparse conversion of operators using the `to_sparse` method.
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
 from horqrux import RX, product_state, apply_gates
+from horqrux.utils.conversion import to_sparse
 
 n_qubits = 2
 target_qubit = 1
 control_qubit = 0
 state = product_state('11', sparse=True)
 param_value = 1 / 4 * jnp.pi
-new_state = apply_gates(state, RX(param_value, target_qubit, control_qubit, sparse=True))
+gate = to_sparse(RX(param_value, target_qubit, control_qubit))
+new_state = apply_gates(state, gate)
 ```
 
 !!! warning "Experimental Sparse matrices scope"

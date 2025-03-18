@@ -10,6 +10,7 @@ from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
+from horqrux.utils.conversion import to_sparse
 from horqrux.utils.operator_utils import density_mat
 from tests.utils import verify_arrays
 
@@ -132,29 +133,11 @@ class DifferentiationTest(chex.TestCase):
 
     @chex.variants(with_jit=True, without_jit=True)
     def test_sparse_diff(self) -> None:
-        ops = [RX("theta", 0, sparse=True)]
+        ops = [RX("theta", 0)]
         circuit = QuantumCircuit(2, ops)
-        observables = [Observable([Z(0, sparse=True)]), Observable([Z(1, sparse=True)])]
-        state = random_state(N_QUBITS, sparse=True)
+        observables = [Observable([Z(0)]), Observable([Z(1)])]
+        state = random_state(N_QUBITS)
         x = jnp.pi * 0.5
-
-        @self.variant
-        def exact_sparse(x):
-            values = {"theta": x}
-            return expectation(state, circuit, observables, values, diff_mode="ad")
-
-        @self.variant
-        def exact_gpsr_sparse(x):
-            values = {"theta": x}
-            return expectation(state, circuit, observables, values, diff_mode="gpsr")
-
-        exp_exact_sparse = exact_sparse(x)
-        exp_gpsr_sparse = exact_gpsr_sparse(x)
-
-        ops = [RX("theta", 0, sparse=False)]
-        circuit = QuantumCircuit(2, ops)
-        observables = [Observable([Z(0, sparse=False)]), Observable([Z(1, sparse=False)])]
-        state = random_state(N_QUBITS, sparse=False)
 
         @self.variant
         def exact(x):
@@ -168,6 +151,23 @@ class DifferentiationTest(chex.TestCase):
 
         exp_exact = exact(x)
         exp_gpsr = exact_gpsr(x)
+
+        circuit = to_sparse(circuit)
+        observables = [to_sparse(obs) for obs in observables]
+        state = random_state(N_QUBITS, sparse=True)
+
+        @self.variant
+        def exact_sparse(x):
+            values = {"theta": x}
+            return expectation(state, circuit, observables, values, diff_mode="ad")
+
+        @self.variant
+        def exact_gpsr_sparse(x):
+            values = {"theta": x}
+            return expectation(state, circuit, observables, values, diff_mode="gpsr")
+
+        exp_exact_sparse = exact_sparse(x)
+        exp_gpsr_sparse = exact_gpsr_sparse(x)
 
         verify_arrays(exp_exact, exp_exact_sparse.todense())
         verify_arrays(exp_gpsr, exp_gpsr_sparse.todense())
