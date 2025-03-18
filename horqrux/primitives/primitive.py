@@ -7,11 +7,13 @@ import numpy as np
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
+from horqrux.apply import apply_gates
 from horqrux.matrices import OPERATIONS_DICT
 from horqrux.noise import NoiseProtocol
 from horqrux.utils import (
     ControlQubits,
     QubitSupport,
+    State,
     TargetQubits,
     _dagger,
     controlled,
@@ -48,6 +50,9 @@ class Primitive:
             self.control = none_like(self.target)
         else:
             self.control = Primitive.parse_idx(self.control)
+
+    def __call__(self, state: State, values: dict[str, Array] = dict()) -> State:
+        return apply_gates(state, self, values)
 
     def __iter__(self) -> Iterable:
         return iter((self.generator_name, self.target, self.control, self.noise))

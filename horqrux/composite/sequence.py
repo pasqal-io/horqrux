@@ -8,15 +8,13 @@ import jax.numpy as jnp
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.apply import apply_gates
-from horqrux.primitives import Primitive
-from horqrux.utils import State, zero_state
+from horqrux.utils import State
 
 
 @register_pytree_node_class
 @dataclass
 class OpSequence:
-    operations: list[Primitive] = field(default_factory=list)
+    operations: list = field(default_factory=list)
 
     def tree_flatten(self) -> tuple:
         children = (self.operations,)
@@ -31,10 +29,8 @@ class OpSequence:
     def qubit_support(self) -> tuple:
         return tuple(set().union(*(op.qubit_support for op in self.operations)))
 
-    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
-        if state is None:
-            state = zero_state(len(self.qubit_support))
-        return apply_gates(state, self.operations, values)
+    def __call__(self, state: State, values: dict[str, Array] = dict()) -> State:
+        return reduce(lambda state, gate: gate.__call__(state, values), self.operations, state)
 
     def tensor(self, values: dict[str, float] = dict()) -> Array:
         """Obtain the unitary.
