@@ -113,3 +113,7 @@ def test_sequence_in_sequence() -> None:
     qc_in_qc_output = qc_in_qc(orig_state, values)
 
     assert jnp.allclose(qc2output, qc_in_qc_output)
+
+    seq = OpSequence([qc, qc])
+    seq_output = seq(orig_state, values)
+    assert jnp.allclose(qc2output, seq_output)
