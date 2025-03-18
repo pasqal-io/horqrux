@@ -185,3 +185,14 @@ def simple_depolarizing_test() -> None:
     # test shots expectation
     exp_dm_shots = expectation(dm_state, ops, [Z(0)], {}, n_shots=1000)
     assert jnp.allclose(exp_dm, exp_dm_shots, atol=1e-02)
+
+
+def test_error_noisy_gate_sparse() -> None:
+    noise_type = ALL_NOISES[0]
+    noise = noise_instance(noise_type)
+
+    noisy_gate = X(0, noise=(noise,), sparse=True)
+    state = product_state("00", sparse=True)
+
+    with pytest.raises(NotImplementedError):
+        state_output = apply_gates(state, noisy_gate)
