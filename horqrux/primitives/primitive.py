@@ -7,7 +7,6 @@ import numpy as np
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.apply import apply_gates
 from horqrux.matrices import OPERATIONS_DICT
 from horqrux.noise import NoiseProtocol
 from horqrux.utils import (
@@ -52,6 +51,8 @@ class Primitive:
             self.control = Primitive.parse_idx(self.control)
 
     def __call__(self, state: State, values: dict[str, Array] = dict()) -> State:
+        from horqrux.apply import apply_gates
+
         return apply_gates(state, self, values)
 
     def __iter__(self) -> Iterable:

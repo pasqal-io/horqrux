@@ -94,3 +94,22 @@ def test_add() -> None:
         add_state,
         apply_gates(orig_state, chosen_gates[0]) + apply_gates(orig_state, chosen_gates[1]),
     )
+
+
+def test_sequence_in_sequence() -> None:
+    ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0), NOT(1, 0), RX("omega", 0, 1)]
+    values = {
+        "theta": np.random.uniform(0, 1),
+        "epsilon": np.random.uniform(0, 1),
+        "phi": np.random.uniform(0, 1),
+        "omega": np.random.uniform(0, 1),
+    }
+    orig_state = random_state(MAX_QUBITS)
+    qc = QuantumCircuit(2, ops)
+    qc_output = qc(orig_state, values)
+    qc2output = qc(qc_output, values)
+
+    qc_in_qc = QuantumCircuit(2, [qc, qc])
+    qc_in_qc_output = qc_in_qc(orig_state, values)
+
+    assert jnp.allclose(qc2output, qc_in_qc_output)
