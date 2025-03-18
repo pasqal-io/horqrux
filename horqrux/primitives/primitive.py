@@ -51,7 +51,7 @@ class Primitive:
             self.control = Primitive.parse_idx(self.control)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.noise))
+        return iter((self.generator_name, self.target, self.control, self.noise, self.sparse))
 
     def tree_flatten(
         self,
