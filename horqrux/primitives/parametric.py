@@ -12,8 +12,7 @@ from jax.tree_util import register_pytree_node_class
 
 from horqrux._misc import default_complex_dtype
 from horqrux.noise import NoiseProtocol
-from horqrux.sparse_utils import eigvalsh_sp
-from horqrux.utils import (
+from horqrux.utils.operator_utils import (
     ControlQubits,
     QubitSupport,
     TargetQubits,
@@ -21,6 +20,7 @@ from horqrux.utils import (
     _unitary,
     is_controlled,
 )
+from horqrux.utils.sparse_utils import eigvalsh_sp
 
 from .primitive import Primitive
 

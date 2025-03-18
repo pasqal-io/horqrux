@@ -6,7 +6,7 @@ from typing import Any, Callable, Iterable, Union
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.utils import (
+from horqrux.utils.operator_utils import (
     StrEnum,
 )
 

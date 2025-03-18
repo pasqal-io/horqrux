@@ -10,7 +10,7 @@ from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
-from horqrux.utils import density_mat
+from horqrux.utils.operator_utils import density_mat
 from tests.utils import verify_arrays
 
 N_QUBITS = 2

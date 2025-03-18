@@ -6,8 +6,8 @@ from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.primitives.parametric import Parametric
 from horqrux.primitives.primitive import Primitive
-from horqrux.sparse_utils import real_sp
-from horqrux.utils import OperationType, inner
+from horqrux.utils.operator_utils import OperationType, inner
+from horqrux.utils.sparse_utils import real_sp
 
 
 def ad_expectation(

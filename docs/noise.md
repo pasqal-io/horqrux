@@ -87,7 +87,7 @@ For instance, an $X$ gate flips the state of the qubit: $X|0\rangle = |1\rangle$
 from horqrux import X, QuantumCircuit
 from horqrux.api import sample
 from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
-from horqrux.utils import density_mat, product_state
+from horqrux.utils.operator_utils import density_mat, product_state
 
 noise = (DigitalNoiseInstance(DigitalNoiseType.BITFLIP, 0.1),)
 ops = QuantumCircuit(1, [X(0)])

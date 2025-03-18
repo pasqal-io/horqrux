@@ -16,8 +16,8 @@ from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from numpy import log2
 
-from ._misc import default_complex_dtype
-from .matrices import _I
+from horqrux._misc import default_complex_dtype
+from horqrux.matrices import _I
 
 default_dtype = default_complex_dtype()
 

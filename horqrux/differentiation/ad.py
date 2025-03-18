@@ -9,14 +9,14 @@ from jax.experimental.sparse import BCOO
 
 from horqrux.apply import apply_gates, apply_operator
 from horqrux.composite import Observable, OpSequence
-from horqrux.sparse_utils import real_sp, stack_sp
-from horqrux.utils import (
+from horqrux.utils.operator_utils import (
     DensityMatrix,
     OperationType,
     State,
     inner,
     num_qubits,
 )
+from horqrux.utils.sparse_utils import real_sp, stack_sp
 
 
 @singledispatch

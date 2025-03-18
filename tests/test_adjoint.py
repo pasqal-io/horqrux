@@ -8,7 +8,7 @@ from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, H, I, S, T, X, Y, Z
-from horqrux.utils import DiffMode
+from horqrux.utils.operator_utils import DiffMode
 from tests.utils import verify_arrays
 
 MAX_QUBITS = 7

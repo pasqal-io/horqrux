@@ -97,7 +97,7 @@ Note that it expects a hamiltonian and a time evolution parameter passed as `num
 from jax.numpy import pi, array, diag, kron, cdouble
 from horqrux.analog import HamiltonianEvolution
 from horqrux.apply import apply_gates
-from horqrux.utils import uniform_state
+from horqrux.utils.operator_utils import uniform_state
 
 sigmaz = diag(array([1.0, -1.0], dtype=cdouble))
 Hbase = kron(sigmaz, sigmaz)
@@ -119,7 +119,7 @@ import jax.numpy as jnp
 from horqrux import Z, RX, RY, NOT, expectation
 from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
-from horqrux.utils import zero_state
+from horqrux.utils.operator_utils import zero_state
 
 ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0), NOT(1, 0), RX("omega", 0, 1)]
 circuit = QuantumCircuit(2, ops)

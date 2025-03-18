@@ -11,7 +11,7 @@ from jax.experimental.sparse import BCOO
 from horqrux.apply import apply_gates, apply_operator
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
-from horqrux.utils import OperationType, density_mat, product_state, random_state
+from horqrux.utils.operator_utils import OperationType, density_mat, product_state, random_state
 from tests.utils import verify_arrays
 
 MAX_QUBITS = 7

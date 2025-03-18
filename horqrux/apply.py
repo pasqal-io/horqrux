@@ -10,10 +10,9 @@ import numpy as np
 from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 
+from horqrux.noise import NoiseProtocol
 from horqrux.primitives.primitive import Primitive
-
-from .noise import NoiseProtocol
-from .utils import (
+from horqrux.utils.operator_utils import (
     DensityMatrix,
     OperationType,
     State,

@@ -6,7 +6,7 @@ from .circuit import QuantumCircuit
 from .composite import Add, Observable, Scale
 from .primitives.parametric import PHASE, RX, RY, RZ
 from .primitives.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
-from .utils import (
+from .utils.operator_utils import (
     DiffMode,
     equivalent_state,
     hilbert_reshape,

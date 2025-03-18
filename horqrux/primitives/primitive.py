@@ -9,7 +9,7 @@ from jax.tree_util import register_pytree_node_class
 
 from horqrux.matrices import OPERATIONS_DICT, SPARSE_OPERATIONS_DICT
 from horqrux.noise import NoiseProtocol
-from horqrux.utils import (
+from horqrux.utils.operator_utils import (
     ControlQubits,
     QubitSupport,
     TargetQubits,
