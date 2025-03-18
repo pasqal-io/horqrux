@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+from typing import Any
+from functools import singledispatch
+from horqrux.primitives.primitive import Primitive
+from horqrux.primitives.parametric import Parametric
+from horqrux.composite.sequence import OpSequence
+from horqrux.composite.compose import Scale
+from horqrux.circuit import QuantumCircuit
+
+@singledispatch
+def to_sparse(operations: Any) -> Any:
+    raise NotImplementedError(f"to_sparse is not implemented for this argument type: {type(operations)}")
+
+@to_sparse.register
+def _(operations: Primitive) -> Any:
+    children, aux_data = operations.tree_flatten()
+    return operations.tree_unflatten(aux_data[:-1] + (True,), children)
+
+@to_sparse.register
+def _(operations: Parametric) -> Any:
+    children, aux_data = operations.tree_flatten()
+    return operations.tree_unflatten(aux_data[:-3] + (True, aux_data[-2:]), children)
+
+@to_sparse.register
+def _(operations: OpSequence) -> OpSequence:
+    return type(operations)([to_sparse(op) for op in operations.operations])
+
+@to_sparse.register
+def _(operations: Scale) -> Scale:
+    return Scale(to_sparse(operations.operations[0]), operations.parameter)
+
+@to_sparse.register
+def _(operations: QuantumCircuit) -> QuantumCircuit:
+    return QuantumCircuit(operations.n_qubits, [to_sparse(op) for op in operations.operations])
