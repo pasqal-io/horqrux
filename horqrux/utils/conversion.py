@@ -3,6 +3,9 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import Any
 
+from jax import Array
+from jax.experimental.sparse import BCOO
+
 from horqrux.circuit import QuantumCircuit
 from horqrux.composite.compose import Scale
 from horqrux.composite.sequence import OpSequence
@@ -15,6 +18,11 @@ def to_sparse(operations: Any) -> Any:
     raise NotImplementedError(
         f"to_sparse is not implemented for this argument type: {type(operations)}"
     )
+
+
+@to_sparse.register
+def _(operations: Array) -> BCOO:
+    return BCOO.fromdense(operations)
 
 
 @to_sparse.register

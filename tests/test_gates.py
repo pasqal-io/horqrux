@@ -6,11 +6,11 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 from jax import Array
-from jax.experimental.sparse import BCOO
 
 from horqrux.apply import apply_gates, apply_operator
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, SWAP, H, I, S, T, X, Y, Z
+from horqrux.utils.conversion import to_sparse
 from horqrux.utils.operator_utils import OperationType, density_mat, product_state, random_state
 from tests.utils import verify_arrays
 
@@ -236,8 +236,8 @@ def test_cnot_tensor(sparse: bool) -> None:
     t0 = jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     t1 = jnp.array([[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]])
     if sparse:
-        t0 = BCOO.fromdense(t0)
-        t1 = BCOO.fromdense(t1)
+        t0 = to_sparse(t0)
+        t1 = to_sparse(t1)
 
     assert verify_arrays(cnot0.tensor(), t0)
     assert verify_arrays(cnot1.tensor(), t1)
@@ -250,8 +250,8 @@ def test_crx_tensor(sparse: bool) -> None:
     t0 = jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0.9950, -0.0998j], [0, 0, -0.0998j, 0.9950]])
     t1 = jnp.array([[1, 0, 0, 0], [0, 0.9950, 0, -0.0998j], [0, 0, 1, 0], [0, -0.0998j, 0, 0.9950]])
     if sparse:
-        t0 = BCOO.fromdense(t0)
-        t1 = BCOO.fromdense(t1)
+        t0 = to_sparse(t0)
+        t1 = to_sparse(t1)
 
     assert verify_arrays(
         crx0.tensor(),
