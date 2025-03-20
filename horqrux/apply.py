@@ -8,11 +8,11 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from jax.experimental.sparse import BCOO, sparsify
 
+from horqrux.noise import NoiseProtocol
 from horqrux.primitives.primitive import Primitive
-
-from .noise import NoiseProtocol
-from .utils import (
+from horqrux.utils.operator_utils import (
     DensityMatrix,
     OperationType,
     State,
@@ -80,12 +80,56 @@ def _(
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
     n_qubits_op = int(np.log2(operator.shape[1]))
-    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
+    operator = operator.reshape((2,) * (2 * n_qubits_op))
     op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     # Apply operator
     new_state_dims = tuple(range(len(state_dims)))
     state = jnp.tensordot(a=operator, b=state, axes=(op_out_dims, state_dims))
     return jnp.moveaxis(a=state, source=new_state_dims, destination=state_dims)
+
+
+@apply_operator.register
+def _(
+    state: BCOO,
+    operator: BCOO,
+    target: tuple[int, ...],
+    control: tuple[Union[int, None], ...],
+) -> Array:
+    """Applies an operator, i.e. a single array of shape [2, 2, ...], on a given state
+       of shape [2] * n_qubits for a given set of target and control qubits.
+       In case of a controlled operation, the 'operator' array will be embedded into a controlled array.
+
+       Since dimension 'i' in 'state' corresponds to all amplitudes where qubit 'i' is 1,
+       target and control qubits represent the dimensions over which to contract the 'operator'.
+       Contraction means applying the 'dot' operation between the operator array and dimension 'i'
+       of 'state, resulting in a new state where the result of the 'dot' operation has been moved to
+       dimension 'i' of 'state'. To restore the former order of dimensions, the affected dimensions
+       are moved to their original positions and the state is returned.
+
+    Args:
+        state (Array): Array to operate on.
+        operator (Array): Array to contract over 'state'.
+        target (tuple[int, ...]): tuple of target qubits on which to apply the 'operator' to.
+        control (tuple[int  |  None, ...]): tuple of control qubits.
+
+    Returns:
+        Array after applying 'operator'.
+    """
+    state_dims: tuple[int, ...] = target
+    if is_controlled(control):
+        operator = _controlled(operator, len(control))
+        state_dims = (*control, *target)  # type: ignore[arg-type]
+    n_qubits_op = int(np.log2(operator.shape[1]))
+    operator = operator.reshape((2,) * (2 * n_qubits_op))
+    op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
+    # Apply operator
+    new_state_dims = tuple(range(len(state_dims)))
+    tensordot_sp = sparsify(lambda a, b: jnp.tensordot(a=a, b=b, axes=(op_out_dims, state_dims)))
+    moveaxis_sp = sparsify(
+        lambda a: jnp.moveaxis(a=a, source=new_state_dims, destination=state_dims)
+    )
+    state = tensordot_sp(operator, state)
+    return moveaxis_sp(state)
 
 
 @apply_operator.register
@@ -113,7 +157,7 @@ def _(
         operator = _controlled(operator, len(control))
         state_dims = (*control, *target)  # type: ignore[arg-type]
     n_qubits_op = int(np.log2(operator.shape[1]))
-    operator = operator.reshape(tuple(2 for _ in np.arange(2 * n_qubits_op)))
+    operator = operator.reshape((2,) * (2 * n_qubits_op))
     op_out_dims = tuple(np.arange(operator.ndim // 2, operator.ndim, dtype=int))
     op_in_dims = tuple(np.arange(0, operator.ndim // 2, dtype=int))
     new_state_dims = tuple(range(len(state_dims)))
@@ -150,11 +194,11 @@ def apply_kraus_operator(
     """
     state_dims: tuple[int, ...] = target
     n_qubits = int(np.log2(kraus.size))
-    kraus = kraus.reshape(tuple(2 for _ in np.arange(n_qubits)))
+    kraus = kraus.reshape((2,) * n_qubits)
     op_dims = tuple(np.arange(kraus.ndim // 2, kraus.ndim, dtype=int))
 
     array = jnp.tensordot(a=kraus, b=array, axes=(op_dims, state_dims))
-    new_state_dims = tuple(i for i in range(len(state_dims)))
+    new_state_dims = tuple(range(len(state_dims)))
     array = jnp.moveaxis(a=array, source=new_state_dims, destination=state_dims)
 
     array = jnp.tensordot(a=kraus, b=_dagger(array), axes=(op_dims, state_dims))
@@ -368,6 +412,44 @@ def _(
             zip(operator, target, control, noise),
             state,
         )
+    else:
+        output_state = reduce(
+            lambda state, gate: apply_operator(state, *gate),
+            zip(operator, target, control),
+            state,
+        )
+    return output_state
+
+
+@apply_gates.register
+def _(
+    state: BCOO,
+    gate: Union[Primitive, Iterable[Primitive]],
+    values: dict[str, float] = dict(),
+    op_type: OperationType = OperationType.UNITARY,
+    group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
+    merge_ops: bool = True,
+) -> State:
+    """Wrapper function for 'apply_operator' which applies a gate or a series of gates to a given state.
+    Arguments:
+        state: Array or DensityMatrix to operate on.
+        gate: Gate(s) to apply.
+        values: A dictionary with parameter values.
+        op_type: The type of operation to perform: Unitary, Dagger or Jacobian.
+        group_gates: Group gates together which are acting on the same qubit.
+        merge_ops: Attempt to merge operators acting on the same qubit.
+
+    Returns:
+        Array or density matrix after applying 'gate'.
+    """
+    operator, target, control, noise = prepare_sequence_reduce(
+        gate, values, op_type, group_gates, merge_ops
+    )
+
+    # faster way to check has_noise
+    has_noise = noise != [None] * len(noise)
+    if has_noise:
+        raise NotImplementedError("Noisy simulations are not supported with sparse operators.")
     else:
         output_state = reduce(
             lambda state, gate: apply_operator(state, *gate),

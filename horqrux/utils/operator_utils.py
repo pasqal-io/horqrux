@@ -11,12 +11,13 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from jax.experimental.sparse import BCOO, sparsify
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from numpy import log2
 
-from ._misc import default_complex_dtype
-from .matrices import _I
+from horqrux._misc import default_complex_dtype
+from horqrux.matrices import _I
 
 default_dtype = default_complex_dtype()
 
@@ -117,6 +118,7 @@ class DiffMode(StrEnum):
     """Generalized parameter shift rule."""
 
 
+@sparsify
 def _dagger(operator: Array) -> Array:
     # If the operator is a tensor with repeated 2D axes
     if operator.ndim > 2:
@@ -132,13 +134,33 @@ def _dagger(operator: Array) -> Array:
         return jnp.conjugate(operator.T)
 
 
-def _unitary(generator: Array, theta: float) -> Array:
+@singledispatch
+def _unitary(generator: Any, theta: float) -> Any:
+    raise NotImplementedError("_unitary is not implemented")
+
+
+@_unitary.register
+def _(generator: Array, theta: float) -> Array:
     return (
         jnp.cos(theta / 2) * jnp.eye(2, dtype=default_dtype) - 1j * jnp.sin(theta / 2) * generator
     )
 
 
-def _jacobian(generator: Array, theta: float) -> Array:
+@_unitary.register
+def _(generator: BCOO, theta: float) -> BCOO:
+    return (
+        jnp.cos(theta / 2) * jax.experimental.sparse.eye(2, dtype=default_dtype)
+        - 1j * jnp.sin(theta / 2) * generator
+    )
+
+
+@singledispatch
+def _jacobian(generator: Any, theta: float) -> Any:
+    raise NotImplementedError("_jacobian is not implemented")
+
+
+@_jacobian.register
+def _(generator: Array, theta: float) -> Array:
     return (
         -1
         / 2
@@ -147,7 +169,26 @@ def _jacobian(generator: Array, theta: float) -> Array:
     )
 
 
-def _controlled(operator: Array, n_control: int) -> Array:
+@_jacobian.register
+def _(generator: BCOO, theta: float) -> BCOO:
+    return (
+        -1
+        / 2
+        * (
+            jnp.sin(theta / 2) * jax.experimental.sparse.eye(2, dtype=default_dtype)
+            + 1j * jnp.cos(theta / 2)
+        )
+        * generator
+    )
+
+
+@singledispatch
+def _controlled(operator: Any, n_control: int) -> Any:
+    raise NotImplementedError("_controlled is not implemented")
+
+
+@_controlled.register
+def _(operator: Array, n_control: int) -> Array:
     """
     Create a controlled quantum operator with specified number of control qubits.
 
@@ -164,23 +205,44 @@ def _controlled(operator: Array, n_control: int) -> Array:
     return control
 
 
-def controlled(
-    operator: jnp.ndarray,
-    target_qubits: TargetQubits,
-    control_qubits: ControlQubits,
-) -> jnp.ndarray:
+@_controlled.register
+def _(operator: BCOO, n_control: int) -> BCOO:
     """
-    Create a controlled quantum operator with specified control and target qubit indices.
+    Create a controlled quantum operator with specified number of control qubits.
 
     Args:
         operator (jnp.ndarray): The base quantum operator to be controlled.
-            Note the operator is defined only on `target_qubits`.
-        control_qubits (int or tuple of ints): Index or indices of control qubits
-        target_qubits (int or tuple of ints): Index or indices of target qubits
+        n_control (int): Number of control qubits.
 
     Returns:
         jnp.ndarray: The controlled quantum operator matrix
     """
+    n_qubits = int(log2(operator.shape[0]))
+    shape_dim = 2 ** (n_control + n_qubits)
+    control_elements = shape_dim - 2**n_qubits
+    control_id = jax.experimental.sparse.eye(control_elements, dtype=default_dtype)
+    data_control = jnp.concatenate((control_id.data, operator.data))
+    indices_control = jnp.concatenate((control_id.indices, operator.indices + control_elements))
+    control = jax.experimental.sparse.BCOO(
+        (data_control, indices_control), shape=(shape_dim, shape_dim)
+    )
+    return control
+
+
+@singledispatch
+def controlled(
+    operator: Any,
+    target_qubits: TargetQubits,
+    control_qubits: ControlQubits,
+) -> Any:
+    raise NotImplementedError(
+        f"Controlled is not implemented for this operator type: {type(operator)}."
+    )
+
+
+def prepare_controlled(
+    operator: ArrayLike, target_qubits: TargetQubits, control_qubits: ControlQubits
+) -> tuple[int, ArrayLike]:
     controls: tuple = tuple()
     targets: tuple = tuple()
     if isinstance(control_qubits[0], tuple):
@@ -199,9 +261,6 @@ def controlled(
     # Create the full Hilbert space dimension
     full_dim = 2**ntotal_qubits
 
-    # Initialize the controlled operator as an identity matrix
-    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
-
     # Compute the control mask using bit manipulation
     control_mask = jnp.sum(
         jnp.array(
@@ -212,11 +271,64 @@ def controlled(
     # Create indices for the controlled subspace
     indices = jnp.arange(full_dim)
     controlled_indices = indices[(indices & control_mask) == control_mask]
+    return full_dim, controlled_indices
 
-    # Set the controlled subspace to the operator
+
+@controlled.register
+def _(
+    operator: Array,
+    target_qubits: TargetQubits,
+    control_qubits: ControlQubits,
+) -> Array:
+    """
+    Create a controlled quantum operator with specified control and target qubit indices.
+
+    Args:
+        operator (Array): The base quantum operator to be controlled.
+            Note the operator is defined only on `target_qubits`.
+        control_qubits (int or tuple of ints): Index or indices of control qubits
+        target_qubits (int or tuple of ints): Index or indices of target qubits
+
+    Returns:
+        Array: The controlled quantum operator matrix
+    """
+    full_dim, controlled_indices = prepare_controlled(operator, target_qubits, control_qubits)
+    # Initialize the controlled operator as an identity matrix
+    # and set the controlled subspace to the operator
+    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
     controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(operator)
 
     return controlled_op
+
+
+@controlled.register
+def _(
+    operator: BCOO,
+    target_qubits: TargetQubits,
+    control_qubits: ControlQubits,
+) -> BCOO:
+    """
+    Create a controlled quantum operator with specified control and target qubit indices.
+
+    Args:
+        operator (Array): The base quantum operator to be controlled.
+            Note the operator is defined only on `target_qubits`.
+        control_qubits (int or tuple of ints): Index or indices of control qubits
+        target_qubits (int or tuple of ints): Index or indices of target qubits
+
+    Returns:
+        Array: The controlled quantum operator matrix
+    """
+    full_dim, controlled_indices = prepare_controlled(operator, target_qubits, control_qubits)
+
+    # Initialize the controlled operator as an identity matrix
+    # and set the controlled subspace to the operator
+    # TODO: optimize this
+    controlled_op = jnp.eye(full_dim, dtype=operator.dtype)
+    controlled_op = controlled_op.at[jnp.ix_(controlled_indices, controlled_indices)].set(
+        operator.todense()
+    )
+    return BCOO.fromdense(controlled_op)
 
 
 def expand_operator(
@@ -252,7 +364,7 @@ def expand_operator(
     return kron_operator
 
 
-def product_state(bitstring: str) -> Array:
+def product_state(bitstring: str, sparse: bool = False) -> Array:
     """Generates a state of shape [2 for _ in range(len(bitstring))].
 
     Args:
@@ -262,13 +374,20 @@ def product_state(bitstring: str) -> Array:
         A state corresponding to 'bitstring'.
     """
     n_qubits = len(bitstring)
-    space = jnp.zeros(tuple(2 for _ in range(n_qubits)), dtype=default_dtype)
-    space = space.at[tuple(map(int, bitstring))].set(1.0)
+    shape = tuple(2 for _ in range(n_qubits))
+    bitstr_ind = tuple(map(int, bitstring))
+    if sparse:
+        data = jnp.array([1.0], dtype=default_dtype)
+        indices = jnp.array([bitstr_ind])
+        space = BCOO((data, indices), shape=shape)
+    else:
+        space = jnp.zeros(shape, dtype=default_dtype)
+        space = space.at[bitstr_ind].set(1.0)
     return space
 
 
-def zero_state(n_qubits: int) -> Array:
-    return product_state("0" * n_qubits)
+def zero_state(n_qubits: int, sparse: bool = False) -> Array:
+    return product_state("0" * n_qubits, sparse)
 
 
 def none_like(x: Iterable) -> tuple[None, ...]:
@@ -310,6 +429,7 @@ def equivalent_state(s0: Array, s1: Array) -> bool:
     return jnp.allclose(overlap(s0, s1), 1.0, atol=ATOL)  # type: ignore[no-any-return]
 
 
+@sparsify
 def inner(state: Array, projection: Array) -> Array:
     return jnp.dot(jnp.conj(state.flatten()), projection.flatten())
 
@@ -318,11 +438,11 @@ def overlap(state: Array, projection: Array) -> Array:
     return jnp.power(inner(state, projection), 2).real
 
 
-def uniform_state(
-    n_qubits: int,
-) -> Array:
+def uniform_state(n_qubits: int, sparse: bool = False) -> ArrayLike:
     state = jnp.ones(2**n_qubits, dtype=default_dtype)
     state = state / jnp.sqrt(jnp.array(2**n_qubits, dtype=default_dtype))
+    if sparse:
+        state = BCOO.fromdense(state)
     return state.reshape([2] * n_qubits)
 
 
@@ -334,7 +454,7 @@ def is_controlled(qubit_support: Union[tuple[Union[int, None], ...], int, None])
     return False
 
 
-def random_state(n_qubits: int) -> Array:
+def random_state(n_qubits: int, sparse: bool = False) -> ArrayLike:
     def _normalize(wf: Array) -> Array:
         return wf / jnp.sqrt((jnp.sum(jnp.abs(wf) ** 2)))
 
@@ -343,9 +463,12 @@ def random_state(n_qubits: int) -> Array:
     x = -jnp.log(jax.random.uniform(key, shape=(N,)))
     sumx = jnp.sum(x)
     phases = jax.random.uniform(key, shape=(N,)) * 2.0 * jnp.pi
-    return _normalize(
+    state = _normalize(
         (jnp.sqrt(x / sumx) * jnp.exp(1j * phases)).reshape(tuple(2 for _ in range(n_qubits)))
     )
+    if sparse:
+        state = BCOO.fromdense(state)
+    return state
 
 
 def is_normalized(state: Array) -> bool:

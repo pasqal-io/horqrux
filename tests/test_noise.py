@@ -11,7 +11,7 @@ from horqrux.apply import apply_gates
 from horqrux.noise import DigitalNoiseInstance, DigitalNoiseType
 from horqrux.primitives.parametric import PHASE, RX, RY, RZ
 from horqrux.primitives.primitive import NOT, H, I, S, T, X, Y, Z
-from horqrux.utils import density_mat, product_state, random_state
+from horqrux.utils.operator_utils import density_mat, product_state, random_state
 
 MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
@@ -185,3 +185,14 @@ def simple_depolarizing_test() -> None:
     # test shots expectation
     exp_dm_shots = expectation(dm_state, ops, [Z(0)], {}, n_shots=1000)
     assert jnp.allclose(exp_dm, exp_dm_shots, atol=1e-02)
+
+
+def test_error_noisy_gate_sparse() -> None:
+    noise_type = ALL_NOISES[0]
+    noise = noise_instance(noise_type)
+
+    noisy_gate = X(0, noise=(noise,), sparse=True)
+    state = product_state("00", sparse=True)
+
+    with pytest.raises(NotImplementedError):
+        state_output = apply_gates(state, noisy_gate)

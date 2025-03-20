@@ -7,7 +7,7 @@ from jax import jit, vmap
 
 from horqrux.analog import HamiltonianEvolution
 from horqrux.apply import apply_gates
-from horqrux.utils import is_normalized, overlap, random_state, uniform_state
+from horqrux.utils.operator_utils import is_normalized, overlap, random_state, uniform_state
 
 sigmaz = jnp.diag(jnp.array([1.0, -1.0], dtype=jnp.cdouble))
 Hbase = jnp.kron(sigmaz, sigmaz)

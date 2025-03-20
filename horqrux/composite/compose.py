@@ -9,7 +9,7 @@ from jax import Array
 from jax.tree_util import register_pytree_node_class
 
 from horqrux.primitives import Primitive
-from horqrux.utils import State
+from horqrux.utils.operator_utils import State
 
 from .sequence import OpSequence
 

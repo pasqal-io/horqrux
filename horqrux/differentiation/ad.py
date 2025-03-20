@@ -5,16 +5,18 @@ from typing import Any
 
 import jax.numpy as jnp
 from jax import Array
+from jax.experimental.sparse import BCOO
 
 from horqrux.apply import apply_gates, apply_operator
 from horqrux.composite import Observable, OpSequence
-from horqrux.utils import (
+from horqrux.utils.operator_utils import (
     DensityMatrix,
     OperationType,
     State,
     inner,
     num_qubits,
 )
+from horqrux.utils.sparse_utils import real_sp, stack_sp
 
 
 @singledispatch
@@ -37,6 +39,19 @@ def _(
         values,
     )
     return inner(state, projected_state).real
+
+
+@_ad_expectation_single_observable.register
+def _(
+    state: BCOO,
+    observable: Observable,
+    values: dict[str, float],
+) -> Array:
+    projected_state = observable(
+        state,
+        values,
+    )
+    return real_sp(inner(state, projected_state))
 
 
 @_ad_expectation_single_observable.register
@@ -80,4 +95,4 @@ def ad_expectation(
             observables,
         )
     )
-    return jnp.stack(outputs)
+    return stack_sp(outputs)

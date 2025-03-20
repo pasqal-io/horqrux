@@ -8,7 +8,7 @@ import jax.numpy as jnp
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.utils import State
+from horqrux.utils.operator_utils import State
 
 
 @register_pytree_node_class

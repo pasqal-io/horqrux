@@ -7,9 +7,9 @@ import numpy as np
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.matrices import OPERATIONS_DICT
+from horqrux.matrices import OPERATIONS_DICT, SPARSE_OPERATIONS_DICT
 from horqrux.noise import NoiseProtocol
-from horqrux.utils import (
+from horqrux.utils.operator_utils import (
     ControlQubits,
     QubitSupport,
     State,
@@ -31,6 +31,7 @@ class Primitive:
     target: QubitSupport
     control: QubitSupport
     noise: NoiseProtocol = None
+    sparse: bool = False
 
     @staticmethod
     def parse_idx(
@@ -56,16 +57,26 @@ class Primitive:
         return apply_gates(state, self, values)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.noise))
+        return iter((self.generator_name, self.target, self.control, self.noise, self.sparse))
 
-    def tree_flatten(self) -> tuple[tuple, tuple[str, TargetQubits, ControlQubits, NoiseProtocol]]:
+    def tree_flatten(
+        self,
+    ) -> tuple[tuple, tuple[str, TargetQubits, ControlQubits, NoiseProtocol, bool]]:
         children = ()
-        aux_data = (self.generator_name, self.target[0], self.control[0], self.noise)
+        aux_data = (self.generator_name, self.target[0], self.control[0], self.noise, self.sparse)
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
+
+    @property
+    def generator(self) -> Array:
+        return (
+            SPARSE_OPERATIONS_DICT[self.generator_name]
+            if self.sparse
+            else OPERATIONS_DICT[self.generator_name]
+        )
 
     def _unitary(self, values: dict[str, float] = dict()) -> Array:
         """Obtain the base unitary from `generator_name`.
@@ -76,7 +87,7 @@ class Primitive:
         Returns:
             Array: The base unitary from `generator_name`.
         """
-        return OPERATIONS_DICT[self.generator_name]
+        return self.generator
 
     def dagger(self, values: dict[str, float] = dict()) -> Array:
         """Obtain the dagger of the base unitary from `generator_name`.
@@ -133,7 +144,10 @@ class Primitive:
 
 
 def I(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
     """Identity / I gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -144,15 +158,19 @@ def I(
         target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
+        sparse: True to use sparse arrays.
 
     Returns:
         A Primitive instance.
     """
-    return Primitive("I", target, control, noise)
+    return Primitive("I", target, control, noise, sparse)
 
 
 def X(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
     """The definition for the X gate.
 
@@ -166,18 +184,22 @@ def X(
         target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
+        sparse: True to use sparse arrays.
 
     Returns:
         A Primitive instance.
     """
-    return Primitive("X", target, control, noise)
+    return Primitive("X", target, control, noise, sparse)
 
 
 NOT = X
 
 
 def Y(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
     """Y gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -189,15 +211,19 @@ def Y(
         target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
+        sparse: True to use sparse arrays.
 
     Returns:
         A Primitive instance.
     """
-    return Primitive("Y", target, control, noise)
+    return Primitive("Y", target, control, noise, sparse)
 
 
 def Z(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
     """Z gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -209,15 +235,19 @@ def Z(
         target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
+        sparse: True to use sparse arrays.
 
     Returns:
         A Primitive instance.
     """
-    return Primitive("Z", target, control, noise)
+    return Primitive("Z", target, control, noise, sparse)
 
 
 def H(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
     """H/ Hadamard gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -228,15 +258,19 @@ def H(
         target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
+        sparse: True to use sparse arrays.
 
     Returns:
         A Primitive instance.
     """
-    return Primitive("H", target, control, noise)
+    return Primitive("H", target, control, noise, sparse)
 
 
 def S(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
     """S gate or constant phase gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -247,15 +281,19 @@ def S(
         target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
+        sparse: True to use sparse arrays.
 
     Returns:
         A Primitive instance.
     """
-    return Primitive("S", target, control, noise)
+    return Primitive("S", target, control, noise, sparse)
 
 
 def T(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
     """T gate. This function returns an instance of 'Primitive' and does *not* apply the gate.
     By providing tuple of ints to 'control', it turns into a controlled gate.
@@ -266,18 +304,22 @@ def T(
         target: tuple of ints describing the qubits to apply to.
         control: Optional tuple of ints indicating the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
+        sparse: True to use sparse arrays.
 
     Returns:
         A Primitive instance.
     """
-    return Primitive("T", target, control, noise)
+    return Primitive("T", target, control, noise, sparse)
 
 
 # Multi (target) qubit gates
 
 
 def SWAP(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
     """SWAP gate. By providing a control, it turns into a controlled gate (Fredkin gate),
        use None for no control qubits.
@@ -290,26 +332,36 @@ def SWAP(
         control: Optional tuple of ints or None describing
         the control qubits. Defaults to (None,).
         noise: The noise instance. Defaults to None.
+        sparse: True to use sparse arrays.
 
     Returns:
         A Primitive instance.
     """
-    return Primitive("SWAP", target, control, noise)
+    return Primitive("SWAP", target, control, noise, sparse)
 
 
 def SQRTSWAP(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
-    return Primitive("SQSWAP", target, control, noise)
+    return Primitive("SQSWAP", target, control, noise, sparse)
 
 
 def ISWAP(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
-    return Primitive("ISWAP", target, control, noise)
+    return Primitive("ISWAP", target, control, noise, sparse)
 
 
 def ISQRTSWAP(
-    target: TargetQubits, control: ControlQubits = (None,), noise: NoiseProtocol = None
+    target: TargetQubits,
+    control: ControlQubits = (None,),
+    noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Primitive:
-    return Primitive("ISQSWAP", target, control, noise)
+    return Primitive("ISQSWAP", target, control, noise, sparse)

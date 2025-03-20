@@ -13,7 +13,8 @@ from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.differentiation.ad import _ad_expectation_single_observable
 from horqrux.primitives import Parametric, Primitive
-from horqrux.utils import DensityMatrix, State, expand_operator, num_qubits
+from horqrux.utils.operator_utils import DensityMatrix, State, expand_operator, num_qubits
+from horqrux.utils.sparse_utils import stack_sp
 
 
 def is_parametric(gate: Primitive) -> bool:
@@ -138,7 +139,7 @@ def no_shots_fwd(
             observables,
         )
     )
-    return jnp.stack(outputs)
+    return stack_sp(outputs)
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
