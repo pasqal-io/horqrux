@@ -70,12 +70,12 @@ new_state = apply_gates(state, RX(param_value, target_qubit, control_qubit))
 
 ### Using sparse matrices
 
-`horqrux` also provide the possibility to use sparse matrices when performing operations using [Batched-coordinate (BCOO) sparse matrices](https://docs.jax.dev/en/latest/jax.experimental.sparse.html#batched-coordinate-bcoo-sparse-matrices). Note though that Jax's sparse matrices are still considered an experimental feature. For this, the input state and all operations should be initialized with `sparse=True`. One can also perform the sparse conversion of operators using the `to_sparse` method.
+`horqrux` also provide the possibility to use sparse matrices when performing operations using [Batched-coordinate (BCOO) sparse matrices](https://docs.jax.dev/en/latest/jax.experimental.sparse.html#batched-coordinate-bcoo-sparse-matrices). Note though that Jax's sparse matrices are still considered an experimental feature. For this, the input state and all operations should be initialized with `sparse=True`. One can also perform the sparse conversion of operators using the `to_sparse` method. And one can perform the reverse conversion using the `to_dense` method.
 
 ```python exec="on" source="material-block"
 import jax.numpy as jnp
 from horqrux import RX, product_state, apply_gates
-from horqrux.utils.conversion import to_sparse
+from horqrux.utils.conversion import to_sparse, to_dense
 
 n_qubits = 2
 target_qubit = 1
@@ -83,6 +83,10 @@ control_qubit = 0
 state = product_state('11', sparse=True)
 param_value = 1 / 4 * jnp.pi
 gate = to_sparse(RX(param_value, target_qubit, control_qubit))
+new_state = apply_gates(state, gate)
+
+gate_dense = to_dense(RX(param_value, target_qubit, control_qubit))
+state = product_state('11')
 new_state = apply_gates(state, gate)
 ```
 
