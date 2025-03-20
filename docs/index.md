@@ -85,8 +85,8 @@ param_value = 1 / 4 * jnp.pi
 gate = to_sparse(RX(param_value, target_qubit, control_qubit))
 new_state = apply_gates(state, gate)
 
-gate_dense = to_dense(RX(param_value, target_qubit, control_qubit))
-state = product_state('11')
+gate = to_dense(RX(param_value, target_qubit, control_qubit))
+state = to_dense(state)
 new_state = apply_gates(state, gate)
 ```
 
