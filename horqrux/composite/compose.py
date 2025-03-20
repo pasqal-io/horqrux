@@ -38,7 +38,7 @@ class Scale(OpSequence):
         super().__init__(operations_to_list(operations))
         self.parameter: str | float = parameter_name
 
-    def __call__(self, state: State, values: dict[str, Array] = dict()) -> Array:
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> Array:
         param = values[self.parameter] if isinstance(self.parameter, str) else self.parameter
         return jnp.array(param) * super().__call__(state, values)
 
@@ -85,7 +85,7 @@ class Add(OpSequence):
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def __call__(self, state: State, values: dict[str, Array] = dict()) -> State:
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
         return reduce(add, map(lambda op: op(state, values), self.operations))
 
     def tensor(self, values: dict[str, float] = dict()) -> Array:

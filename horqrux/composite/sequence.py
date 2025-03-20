@@ -29,7 +29,7 @@ class OpSequence:
     def qubit_support(self) -> tuple:
         return tuple(set().union(*(op.qubit_support for op in self.operations)))
 
-    def __call__(self, state: State, values: dict[str, Array] = dict()) -> State:
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
         return reduce(lambda state, gate: gate.__call__(state, values), self.operations, state)
 
     def tensor(self, values: dict[str, float] = dict()) -> Array:

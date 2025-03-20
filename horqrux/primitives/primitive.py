@@ -18,6 +18,7 @@ from horqrux.utils.operator_utils import (
     controlled,
     is_controlled,
     none_like,
+    zero_state,
 )
 
 
@@ -51,9 +52,11 @@ class Primitive:
         else:
             self.control = Primitive.parse_idx(self.control)
 
-    def __call__(self, state: State, values: dict[str, Array] = dict()) -> State:
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
         from horqrux.apply import apply_gates
 
+        if state is None:
+            state = zero_state(len(self.qubit_support))
         return apply_gates(state, self, values)
 
     def __iter__(self) -> Iterable:
