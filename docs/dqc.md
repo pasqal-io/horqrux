@@ -25,7 +25,7 @@ from horqrux import Z, RX, RY, NOT, zero_state, apply_gates
 from horqrux.circuit import QuantumCircuit, hea
 from horqrux.primitives.primitive import Primitive
 from horqrux.primitives.parametric import Parametric
-from horqrux.utils import DiffMode
+from horqrux.utils.operator_utils import DiffMode
 
 
 n_qubits = 5
@@ -144,7 +144,7 @@ from horqrux.circuit import QuantumCircuit, hea
 from horqrux import NOT, RX, RY, Z, apply_gates, zero_state, Observable
 from horqrux.primitives.primitive import Primitive
 from horqrux.primitives.parametric import Parametric
-from horqrux.utils import inner
+from horqrux.utils.operator_utils import inner
 
 LEARNING_RATE = 0.01
 N_QUBITS = 4

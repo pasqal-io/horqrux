@@ -10,7 +10,7 @@ from jax.tree_util import register_pytree_node_class
 
 from horqrux.apply import apply_gates
 from horqrux.primitives import Primitive
-from horqrux.utils import State, zero_state
+from horqrux.utils.operator_utils import State, zero_state
 
 from .sequence import OpSequence
 

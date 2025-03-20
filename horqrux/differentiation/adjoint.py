@@ -6,7 +6,8 @@ from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.primitives.parametric import Parametric
 from horqrux.primitives.primitive import Primitive
-from horqrux.utils import OperationType, inner
+from horqrux.utils.operator_utils import OperationType, inner
+from horqrux.utils.sparse_utils import real_sp
 
 
 def ad_expectation(
@@ -18,7 +19,7 @@ def ad_expectation(
     """
     out_state = apply_gates(state, gates, values, OperationType.UNITARY)
     projected_state = observable(out_state, values)
-    return inner(out_state, projected_state).real
+    return real_sp(inner(out_state, projected_state))
 
 
 @custom_vjp

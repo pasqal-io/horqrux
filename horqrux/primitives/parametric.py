@@ -7,12 +7,12 @@ from typing import Any, Iterable
 import jax
 import jax.numpy as jnp
 from jax import Array
+from jax.experimental.sparse import BCOO, bcoo_concatenate, empty
 from jax.tree_util import register_pytree_node_class
 
 from horqrux._misc import default_complex_dtype
-from horqrux.matrices import OPERATIONS_DICT
 from horqrux.noise import NoiseProtocol
-from horqrux.utils import (
+from horqrux.utils.operator_utils import (
     ControlQubits,
     QubitSupport,
     TargetQubits,
@@ -20,6 +20,7 @@ from horqrux.utils import (
     _unitary,
     is_controlled,
 )
+from horqrux.utils.sparse_utils import eigvalsh_sp
 
 from .primitive import Primitive
 
@@ -37,6 +38,7 @@ class Parametric(Primitive):
     target: QubitSupport
     control: QubitSupport
     noise: NoiseProtocol = None
+    sparse: bool = False
     param: str | float = ""
     shift: float = 0.0
 
@@ -54,13 +56,14 @@ class Parametric(Primitive):
 
     def tree_flatten(  # type: ignore[override]
         self,
-    ) -> tuple[tuple, tuple[str, tuple, tuple, NoiseProtocol, str | float, float]]:
+    ) -> tuple[tuple, tuple[str, tuple, tuple, NoiseProtocol, bool, str | float, float]]:
         children = ()
         aux_data = (
             self.generator_name,
             self.target[0],
             self.control[0],
             self.noise,
+            self.sparse,
             self.param,
             self.shift,
         )
@@ -68,7 +71,15 @@ class Parametric(Primitive):
 
     def __iter__(self) -> Iterable:
         return iter(
-            (self.generator_name, self.target, self.control, self.noise, self.param, self.shift)
+            (
+                self.generator_name,
+                self.target,
+                self.control,
+                self.noise,
+                self.sparse,
+                self.param,
+                self.shift,
+            )
         )
 
     @classmethod
@@ -76,10 +87,10 @@ class Parametric(Primitive):
         return cls(*children, *aux_data)
 
     def _unitary(self, values: dict[str, float] = dict()) -> Array:
-        return _unitary(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
+        return _unitary(self.generator, self.parse_values(values))
 
     def jacobian(self, values: dict[str, float] = dict()) -> Array:
-        return _jacobian(OPERATIONS_DICT[self.generator_name], self.parse_values(values))
+        return _jacobian(self.generator, self.parse_values(values))
 
     @property
     def name(self) -> str:
@@ -102,11 +113,20 @@ class Parametric(Primitive):
         Returns:
             Array: Eigenvalues of the operation.
         """
-        eig_vals_generator = jnp.linalg.eigvalsh(OPERATIONS_DICT[self.generator_name])
+        eig_vals_generator = eigvalsh_sp(self.generator)
         if is_controlled(self.control):
-            eig_vals_generator = jnp.concatenate(
-                (jnp.zeros(2 ** (len(self.control))), eig_vals_generator)
-            )
+            if not self.sparse:
+                eig_vals_generator = jnp.concatenate(
+                    (
+                        jnp.zeros(2 ** (len(self.control)), dtype=eig_vals_generator.dtype),
+                        eig_vals_generator,
+                    )
+                )
+            else:
+                eig_vals_generator = bcoo_concatenate(
+                    empty(2 ** (len(self.control)), dtype=eig_vals_generator.dtype),
+                    eig_vals_generator,
+                )
         return eig_vals_generator
 
     @cached_property
@@ -129,6 +149,7 @@ def RX(
     target: TargetQubits,
     control: ControlQubits = (None,),
     noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Parametric:
     """RX gate.
 
@@ -141,7 +162,7 @@ def RX(
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("X", target, control, noise, param)
+    return Parametric("X", target, control, noise, param=param, sparse=sparse)
 
 
 def RY(
@@ -149,6 +170,7 @@ def RY(
     target: TargetQubits,
     control: ControlQubits = (None,),
     noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Parametric:
     """RY gate.
 
@@ -161,7 +183,7 @@ def RY(
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("Y", target, control, noise, param)
+    return Parametric("Y", target, control, noise, param=param, sparse=sparse)
 
 
 def RZ(
@@ -169,6 +191,7 @@ def RZ(
     target: TargetQubits,
     control: ControlQubits = (None,),
     noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Parametric:
     """RZ gate.
 
@@ -181,18 +204,22 @@ def RZ(
     Returns:
         Parametric: A Parametric gate object.
     """
-    return Parametric("Z", target, control, noise, param)
+    return Parametric("Z", target, control, noise, param=param, sparse=sparse)
 
 
 class _PHASE(Parametric):
     def _unitary(self, values: dict[str, float] = dict()) -> Array:
         u = jnp.eye(2, 2, dtype=default_dtype)
         u = u.at[(1, 1)].set(jnp.exp(1.0j * self.parse_values(values)))
+        if self.sparse:
+            u = BCOO.fromdense(u)
         return u
 
     def jacobian(self, values: dict[str, float] = dict()) -> Array:
         jac = jnp.zeros((2, 2), dtype=default_dtype)
         jac = jac.at[(1, 1)].set(1j * jnp.exp(1.0j * self.parse_values(values)))
+        if self.sparse:
+            jac = BCOO.fromdense(jac)
         return jac
 
     @property
@@ -206,6 +233,7 @@ def PHASE(
     target: TargetQubits,
     control: ControlQubits = (None,),
     noise: NoiseProtocol = None,
+    sparse: bool = False,
 ) -> Parametric:
     """Phase gate.
 
@@ -219,4 +247,4 @@ def PHASE(
         Parametric: A Parametric gate object.
     """
 
-    return _PHASE("I", target, control, noise, param)
+    return _PHASE("I", target, control, noise, param=param, sparse=sparse)

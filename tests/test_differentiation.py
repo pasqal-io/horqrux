@@ -10,7 +10,9 @@ from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
-from horqrux.utils import density_mat
+from horqrux.utils.conversion import to_sparse
+from horqrux.utils.operator_utils import density_mat
+from tests.utils import verify_arrays
 
 N_QUBITS = 2
 GPSR_ATOL = 0.0001
@@ -128,3 +130,44 @@ class DifferentiationTest(chex.TestCase):
             return jax.hessian(lambda x: exact_gpsr(x).sum())(x)
 
         assert jnp.allclose(dd_exact(x), dd_gpsr(x), atol=GPSR_ATOL)
+
+    @chex.variants(with_jit=True, without_jit=True)
+    def test_sparse_diff(self) -> None:
+        ops = [RX("theta", 0)]
+        circuit = QuantumCircuit(2, ops)
+        observables = [Observable([Z(0)]), Observable([Z(1)])]
+        state = random_state(N_QUBITS)
+        x = jnp.pi * 0.5
+
+        @self.variant
+        def exact(x):
+            values = {"theta": x}
+            return expectation(state, circuit, observables, values, diff_mode="ad")
+
+        @self.variant
+        def exact_gpsr(x):
+            values = {"theta": x}
+            return expectation(state, circuit, observables, values, diff_mode="gpsr")
+
+        exp_exact = exact(x)
+        exp_gpsr = exact_gpsr(x)
+
+        circuit = to_sparse(circuit)
+        observables = [to_sparse(obs) for obs in observables]
+        state = random_state(N_QUBITS, sparse=True)
+
+        @self.variant
+        def exact_sparse(x):
+            values = {"theta": x}
+            return expectation(state, circuit, observables, values, diff_mode="ad")
+
+        @self.variant
+        def exact_gpsr_sparse(x):
+            values = {"theta": x}
+            return expectation(state, circuit, observables, values, diff_mode="gpsr")
+
+        exp_exact_sparse = exact_sparse(x)
+        exp_gpsr_sparse = exact_gpsr_sparse(x)
+
+        verify_arrays(exp_exact, exp_exact_sparse.todense())
+        verify_arrays(exp_gpsr, exp_gpsr_sparse.todense())
