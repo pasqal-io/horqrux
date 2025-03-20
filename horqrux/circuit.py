@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from jax.tree_util import register_pytree_node_class
 
+from horqrux.composite.compose import operations_to_list
 from horqrux.composite.sequence import OpSequence
 from horqrux.primitives.parametric import RX, RY, Parametric
 from horqrux.primitives.primitive import NOT, Primitive
@@ -24,8 +25,10 @@ class QuantumCircuit(OpSequence):
                 The corresponding operations compose the `feature map`.
     """
 
-    def __init__(self, n_qubits: int, operations: list[Primitive], fparams: list[str] = list()):
-        super().__init__(operations)
+    def __init__(
+        self, n_qubits: int, operations: Primitive | OpSequence | list, fparams: list[str] = list()
+    ):
+        super().__init__(operations_to_list(operations))
         self.n_qubits = n_qubits
         self.fparams = fparams
 

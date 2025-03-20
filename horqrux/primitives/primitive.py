@@ -12,11 +12,13 @@ from horqrux.noise import NoiseProtocol
 from horqrux.utils.operator_utils import (
     ControlQubits,
     QubitSupport,
+    State,
     TargetQubits,
     _dagger,
     controlled,
     is_controlled,
     none_like,
+    zero_state,
 )
 
 
@@ -49,6 +51,13 @@ class Primitive:
             self.control = none_like(self.target)
         else:
             self.control = Primitive.parse_idx(self.control)
+
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
+        from horqrux.apply import apply_gates
+
+        if state is None:
+            state = zero_state(len(self.qubit_support))
+        return apply_gates(state, self, values)
 
     def __iter__(self) -> Iterable:
         return iter((self.generator_name, self.target, self.control, self.noise, self.sparse))
