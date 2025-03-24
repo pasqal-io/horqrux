@@ -190,7 +190,7 @@ class PDESolver(QuantumCircuit):
         out_state = apply_gates(
             self.state, self.operations, {**param_dict, **{"f_x": x, "f_y": y}}
         )
-        return self.observable(out_state, {})
+        return self.observable.forward(out_state, {})
 
 
 fm =  [RX("f_x", i) for i in range(N_QUBITS // 2)] + [
