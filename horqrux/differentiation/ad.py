@@ -34,7 +34,7 @@ def _(
     observable: Observable,
     values: dict[str, float],
 ) -> Array:
-    projected_state = observable(
+    projected_state = observable.forward(
         state,
         values,
     )
@@ -47,7 +47,7 @@ def _(
     observable: Observable,
     values: dict[str, float],
 ) -> Array:
-    projected_state = observable(
+    projected_state = observable.forward(
         state,
         values,
     )

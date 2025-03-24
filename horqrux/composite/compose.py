@@ -115,3 +115,20 @@ class Observable(Add):
 
     def __init__(self, operations: Primitive | OpSequence | list) -> None:
         super().__init__(operations_to_list(operations))
+
+    def forward(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
+        return super().__call__(state, values)
+
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> Array:
+        """Compute the expectation value using the observable.
+
+        Args:
+            state (State | None, optional): Input state. Defaults to None.
+            values (dict[str, Array], optional): Parameter values. Defaults to dict().
+
+        Returns:
+            Array: Expectation values.
+        """
+        from horqrux.differentiation.ad import _ad_expectation_single_observable
+
+        return _ad_expectation_single_observable(state, self, values)

@@ -42,14 +42,14 @@ def test_observable_gate(gate_fn: Callable, sparse: bool) -> None:
     orig_state = random_state(MAX_QUBITS, sparse=sparse)
 
     state = apply_gates(orig_state, gate)
-    obs_state = obs_gate(orig_state)
+    obs_state = obs_gate.forward(orig_state)
     assert verify_arrays(state, obs_state)
 
     # test density matrix
     if not sparse:
         orig_state = density_mat(orig_state)
         state = apply_gates(orig_state, gate)
-        obs_state = obs_gate(orig_state)
+        obs_state = obs_gate.forward(orig_state)
         assert verify_arrays(state.array, obs_state.array)
 
 
