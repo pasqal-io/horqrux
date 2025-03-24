@@ -61,6 +61,16 @@ def adjoint_expectation_single_observable_bwd(
     grads = {k: None for k in values.keys()}
 
     def gate_bwd_apply(i: int, intermediate_states: tuple[Array, Array]) -> tuple[Array, Array]:
+        """Apply a backward operation, that is the dagger representation of gate indexed i.
+        One can consider this function as the uncompute part of the method.
+
+        Args:
+            i (int): Index of gate.
+            intermediate_states (tuple[Array, Array]): The output and projected states before uncomputing.
+
+        Returns:
+            tuple[Array, Array]: output and projected states after uncomputing gate i.
+        """
         out_state, projected_state = intermediate_states
         gate = gates[i]
         out_state = apply_gates(out_state, gate, values, OperationType.DAGGER)
