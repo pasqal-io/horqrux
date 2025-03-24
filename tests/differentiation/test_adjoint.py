@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import numpy as np
-from jax import Array, grad
 import chex
+import numpy as np
+from absl.testing import parameterized
+from jax import Array, grad
 
 from horqrux import expectation, random_state
 from horqrux.circuit import QuantumCircuit
@@ -17,22 +18,21 @@ MAX_QUBITS = 7
 PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
 PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
+
 class AdjointTest(chex.TestCase):
     # TODO: fix with jit
     @chex.variants(with_jit=False, without_jit=True)
-    def test_gradcheck(self) -> None:
-
-        ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0), NOT(1, 0), RX("omega", 0, 1)]
+    @parameterized.parameters(True, False)
+    def test_gradcheck(self, same_name: bool) -> None:
+        names = ["theta", "epsilon", "phi", "omega"]
+        if same_name:
+            names = np.random.choice(names, len(names))
+        ops = [RX(names[0], 0), RY(names[1], 0), RX(names[2], 0), NOT(1, 0), RX(names[3], 0, 1)]
         circuit = QuantumCircuit(2, ops)
         circuit_sparse = to_sparse(circuit)
         observable = [Observable([Z(0)])]
         observable_sparse = [to_sparse(observable[0])]
-        values = {
-            "theta": np.random.uniform(0, 1),
-            "epsilon": np.random.uniform(0, 1),
-            "phi": np.random.uniform(0, 1),
-            "omega": np.random.uniform(0, 1),
-        }
+        values = {name: np.random.uniform(0, 1) for name in set(names)}
         state = random_state(MAX_QUBITS)
         state_sparse = random_state(MAX_QUBITS, sparse=True)
 
@@ -44,11 +44,15 @@ class AdjointTest(chex.TestCase):
         def exp_fn_sparse(values: dict, diff_mode: DiffMode = "ad") -> Array:
             return (
                 expectation(state_sparse, circuit_sparse, observable_sparse, values, diff_mode)
-                .todense().item()
+                .todense()
+                .item()
             )
 
-        sum_exp_fn = lambda x, diff: exp_fn(x, diff)
-        sum_exp_fn_sparse = lambda x, diff: exp_fn_sparse(x, diff)
+        def sum_exp_fn(x, diff):
+            return exp_fn(x, diff)
+
+        def sum_exp_fn_sparse(x, diff):
+            return exp_fn_sparse(x, diff)
 
         grad_ad = grad(sum_exp_fn)(values, "ad")
         grads_adjoint = grad(sum_exp_fn)(values, "adjoint")

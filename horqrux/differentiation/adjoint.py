@@ -4,7 +4,7 @@ from jax import Array, custom_vjp
 
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable, OpSequence
-from horqrux.primitives.parametric import Parametric
+from horqrux.differentiation.gpsr import is_parametric
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import OperationType, inner
 from horqrux.utils.sparse_utils import real_sp
@@ -57,12 +57,16 @@ def adjoint_expectation_single_observable_bwd(
     """
 
     out_state, projected_state, gates, values = res
-    grads = {}
+    grads = {k: None for k in values.keys()}
     for gate in gates[::-1]:
         out_state = apply_gates(out_state, gate, values, OperationType.DAGGER)
-        if isinstance(gate, Parametric):
+        if is_parametric(gate):
             mu = apply_gates(out_state, gate, values, OperationType.JACOBIAN)
-            grads[gate.param] = tangent * 2 * inner(mu, projected_state).real
+            grad = tangent * 2 * inner(mu, projected_state).real
+            if gate.param not in grads:  # type: ignore[attr-defined]
+                grads[gate.param] = grad  # type: ignore[attr-defined]
+            else:
+                grads[gate.param] += grad  # type: ignore[attr-defined]
         projected_state = apply_gates(projected_state, gate, values, OperationType.DAGGER)
     return (None, None, None, grads)
 
