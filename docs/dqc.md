@@ -159,7 +159,7 @@ def total_magnetization(n_qubits:int) -> Callable:
     paulis = Observable([Z(i) for i in range(n_qubits)])
 
     def _total_magnetization(out_state: Array, values: dict[str, Array]) -> Array:
-        projected_state = paulis(out_state, values)
+        projected_state = paulis.forward(out_state, values)
         return inner(out_state, projected_state).real
     return _total_magnetization
 
@@ -190,7 +190,7 @@ class PDESolver(QuantumCircuit):
         out_state = apply_gates(
             self.state, self.operations, {**param_dict, **{"f_x": x, "f_y": y}}
         )
-        return self.observable.forward(out_state, {})
+        return self.observable(out_state, {})
 
 
 fm =  [RX("f_x", i) for i in range(N_QUBITS // 2)] + [
