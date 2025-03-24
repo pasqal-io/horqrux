@@ -3,7 +3,7 @@ from __future__ import annotations
 from jax import Array, custom_vjp
 
 from horqrux.apply import apply_gates
-from horqrux.composite import Observable
+from horqrux.composite import Observable, OpSequence
 from horqrux.primitives.parametric import Parametric
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import OperationType, inner
@@ -11,36 +11,41 @@ from horqrux.utils.sparse_utils import real_sp
 
 
 def ad_expectation(
-    state: Array, gates: list[Primitive], observable: Observable, values: dict[str, float]
+    state: Array, circuit: OpSequence, observable: Observable, values: dict[str, float]
 ) -> Array:
     """
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    out_state = apply_gates(state, gates, values, OperationType.UNITARY)
+    out_state = apply_gates(state, circuit.operations, values, OperationType.UNITARY)
     projected_state = observable.forward(out_state, values)
     return real_sp(inner(out_state, projected_state))
 
 
 @custom_vjp
 def __adjoint_expectation_single_observable(
-    state: Array, gates: list[Primitive], observable: Observable, values: dict[str, float]
+    state: Array, circuit: OpSequence, observable: Observable, values: dict[str, float]
 ) -> Array:
-    return ad_expectation(state, gates, observable, values)
+    return ad_expectation(state, circuit, observable, values)
 
 
 def adjoint_expectation(
-    state: Array, gates: list[Primitive], observable: Observable, values: dict[str, float]
+    state: Array, circuit: OpSequence, observable: Observable, values: dict[str, float]
 ) -> Array:
-    return ad_expectation(state, gates, observable, values)  # type: ignore[arg-type]
+    return ad_expectation(state, circuit, observable, values)  # type: ignore[arg-type]
 
 
 def adjoint_expectation_single_observable_fwd(
-    state: Array, gates: list[Primitive], observable: Observable, values: dict[str, float]
+    state: Array, circuit: OpSequence, observable: Observable, values: dict[str, float]
 ) -> tuple[Array, tuple[Array, Array, list[Primitive], dict[str, float]]]:
-    out_state = apply_gates(state, gates, values, OperationType.UNITARY)
+    out_state = apply_gates(state, circuit.operations, values, OperationType.UNITARY)
     projected_state = observable.forward(out_state, values)
-    return inner(out_state, projected_state).real, (out_state, projected_state, gates, values)
+    return inner(out_state, projected_state).real, (
+        out_state,
+        projected_state,
+        circuit.operations,
+        values,
+    )
 
 
 def adjoint_expectation_single_observable_bwd(

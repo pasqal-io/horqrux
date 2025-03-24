@@ -81,7 +81,7 @@ def adjoint_expectation(
     """
     outputs = list(
         map(
-            lambda observable: apply_adjoint(state, circuit.operations, observable, values),
+            lambda observable: apply_adjoint(state, circuit, observable, values),
             observables,
         )
     )
