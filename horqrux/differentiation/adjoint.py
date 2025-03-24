@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import jax
 from jax import Array, custom_vjp
 
 from horqrux.apply import apply_gates
@@ -58,7 +59,10 @@ def adjoint_expectation_single_observable_bwd(
 
     out_state, projected_state, gates, values = res
     grads = {k: None for k in values.keys()}
-    for gate in gates[::-1]:
+
+    def gate_bwd_apply(i: int, intermediate_states: tuple[Array, Array]) -> tuple[Array, Array]:
+        out_state, projected_state = intermediate_states
+        gate = gates[i]
         out_state = apply_gates(out_state, gate, values, OperationType.DAGGER)
         if is_parametric(gate):
             mu = apply_gates(out_state, gate, values, OperationType.JACOBIAN)
@@ -68,6 +72,9 @@ def adjoint_expectation_single_observable_bwd(
             else:
                 grads[gate.param] += grad  # type: ignore[attr-defined]
         projected_state = apply_gates(projected_state, gate, values, OperationType.DAGGER)
+        return out_state, projected_state
+
+    jax.lax.fori_loop(len(gates) - 1, 0, gate_bwd_apply, (out_state, projected_state))
     return (None, None, None, grads)
 
 
