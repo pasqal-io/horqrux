@@ -28,7 +28,14 @@ class AdjointTest(chex.TestCase):
         if same_name:
             while len(set(names)) > 3:
                 names = np.random.choice(names, len(names))
-        ops = [RX(names[0], 0), RY(names[1], 0), RX(names[2], 0), NOT(1, 0), RX(names[3], 0, 1)]
+        ops = [
+            RX(names[0], 0),
+            RY(names[1], 0),
+            RX(names[2], 0),
+            NOT(1, 0),
+            RX(names[3], 0, 1),
+            NOT(1, 0),
+        ]
         circuit = QuantumCircuit(2, ops)
         circuit_sparse = to_sparse(circuit)
         observable = [Observable([Z(0)])]

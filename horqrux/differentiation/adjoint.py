@@ -5,7 +5,7 @@ from jax import Array, custom_vjp
 
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable, OpSequence
-from horqrux.differentiation.gpsr import is_parametric
+from horqrux.differentiation.utils import is_parametric
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import OperationType, inner
 from horqrux.utils.sparse_utils import real_sp

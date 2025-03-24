@@ -12,13 +12,10 @@ from jax.experimental import checkify
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.differentiation.ad import _ad_expectation_single_observable
+from horqrux.differentiation.utils import is_parametric
 from horqrux.primitives import Parametric, Primitive
 from horqrux.utils.operator_utils import DensityMatrix, State, expand_operator, num_qubits
 from horqrux.utils.sparse_utils import stack_sp
-
-
-def is_parametric(gate: Primitive) -> bool:
-    return isinstance(gate, Parametric) and isinstance(gate.param, str)
 
 
 @singledispatch
