@@ -26,7 +26,8 @@ class AdjointTest(chex.TestCase):
     def test_gradcheck(self, same_name: bool) -> None:
         names = ["theta", "epsilon", "phi", "omega"]
         if same_name:
-            names = np.random.choice(names, len(names))
+            while len(set(names)) > 3:
+                names = np.random.choice(names, len(names))
         ops = [RX(names[0], 0), RY(names[1], 0), RX(names[2], 0), NOT(1, 0), RX(names[3], 0, 1)]
         circuit = QuantumCircuit(2, ops)
         circuit_sparse = to_sparse(circuit)
