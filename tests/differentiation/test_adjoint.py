@@ -35,6 +35,7 @@ class AdjointTest(chex.TestCase):
             NOT(1, 0),
             RX(names[3], 0, 1),
             NOT(1, 0),
+            RY(1.0, 0),
         ]
         circuit = QuantumCircuit(2, ops)
         circuit_sparse = to_sparse(circuit)
