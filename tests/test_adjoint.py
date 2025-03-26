@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import unittest
-
+import chex
 import jax
 import numpy as np
 from jax import Array, value_and_grad
@@ -20,7 +19,8 @@ PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
 PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 
-class TestAdjoint(unittest.TestCase):
+class TestAdjoint(chex.TestCase):
+    @chex.variants(with_jit=False, without_jit=True)
     def test_gradcheck(self) -> None:
         ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0), NOT(1, 0), RX("omega", 0, 1)]
         circuit = QuantumCircuit(2, ops)
@@ -36,9 +36,11 @@ class TestAdjoint(unittest.TestCase):
         state = random_state(MAX_QUBITS)
         state_sparse = random_state(MAX_QUBITS, sparse=True)
 
+        @self.variant
         def exp_fn(values: dict, diff_mode: DiffMode = "ad") -> Array:
             return expectation(state, circuit, observable, values, diff_mode).sum()
 
+        @self.variant
         def exp_fn_sparse(values: dict, diff_mode: DiffMode = "ad") -> Array:
             return expectation(
                 state_sparse, circuit_sparse, observable_sparse, values, diff_mode
@@ -57,4 +59,3 @@ class TestAdjoint(unittest.TestCase):
 
         for param, ad_grad in grad_ad.items():
             assert verify_arrays(grads_adjoint[param], ad_grad, atol=1.0e-3)
-            # assert verify_arrays(grads_adjoint_sparse[param], grads_adjoint[param])
