@@ -370,9 +370,10 @@ def prepare_sequence_reduce(
         operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
-        if merge_ops:
-            operator, target, control = merge_operators(operator, target, control)
         noise = [g.noise for g in gate]
+        # merge when no noise is present
+        if (noise == [None] * len(noise)) and merge_ops:
+            operator, target, control = merge_operators(operator, target, control)
 
     return operator, target, control, noise
 
