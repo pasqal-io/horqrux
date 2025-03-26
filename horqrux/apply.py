@@ -10,7 +10,7 @@ import numpy as np
 from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 
-from horqrux.noise import NoiseProtocol
+from horqrux.noise import DigitalNoiseInstance, NoiseProtocol
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import (
     DensityMatrix,
@@ -237,6 +237,30 @@ def apply_kraus_sum(
     return DensityMatrix(output_dm)
 
 
+def filter_noise(noise: NoiseProtocol) -> NoiseProtocol:
+    """Return None when all numbers in `error_probability` equal zero.
+
+    Args:
+        noise (NoiseProtocol): Noise instance.
+
+    Returns:
+        NoiseProtocol: Filtered noise from instances
+            when all numbers in`error_probability` equal zero.
+    """
+    if noise is None:
+        return noise
+
+    def check_zero_proba(digital_noise: DigitalNoiseInstance) -> bool:
+        if isinstance(digital_noise.error_probability, float):
+            return digital_noise.error_probability != 0
+        return all(p != 0 for p in digital_noise.error_probability)
+
+    nonzero_noise = tuple(filter(lambda digital_noise: check_zero_proba(digital_noise), noise))
+    if not nonzero_noise:
+        return None
+    return nonzero_noise
+
+
 def apply_operator_with_noise(
     state: DensityMatrix,
     operator: Array,
@@ -262,6 +286,7 @@ def apply_operator_with_noise(
         Array: Output state or density matrix.
     """
     state_gate = apply_operator(state, operator, target, control)
+    noise = filter_noise(noise)
     if noise is None:
         return state_gate
     else:
@@ -370,9 +395,10 @@ def prepare_sequence_reduce(
         operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
-        if merge_ops:
-            operator, target, control = merge_operators(operator, target, control)
         noise = [g.noise for g in gate]
+        # merge when no noise is present
+        if (noise == [None] * len(noise)) and merge_ops:
+            operator, target, control = merge_operators(operator, target, control)
 
     return operator, target, control, noise
 
@@ -406,7 +432,6 @@ def _(
     has_noise = noise != [None] * len(noise)
     if has_noise:
         state = density_mat(state)
-
         output_state = reduce(
             lambda state, gate: apply_operator_with_noise(state, *gate),
             zip(operator, target, control, noise),
