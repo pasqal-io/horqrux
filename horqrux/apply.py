@@ -10,7 +10,7 @@ import numpy as np
 from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 
-from horqrux.noise import NoiseProtocol
+from horqrux.noise import DigitalNoiseInstance, NoiseProtocol
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import (
     DensityMatrix,
@@ -337,11 +337,26 @@ def apply_gates(
 
 
 def filter_noise(noise: NoiseProtocol) -> NoiseProtocol:
+    """Return None when all numbers in `error_probability` equal zero.
+
+    Args:
+        noise (NoiseProtocol): Noise instance.
+
+    Returns:
+        NoiseProtocol: Filtered noise from instances
+            when all numbers in`error_probability` equal zero.
+    """
     if noise is None:
         return noise
+
+    def check_zero_proba(digital_noise: DigitalNoiseInstance) -> bool:
+        return all(tuple(digital_noise.error_probability))  # type: ignore[arg-type]
+
     nonzero_noise = tuple(
-        (digital_noise for digital_noise in noise if all(tuple(digital_noise.error_probability)))  # type: ignore[arg-type]
+        (digital_noise for digital_noise in noise if check_zero_proba(digital_noise))
     )
+    if len(nonzero_noise) == 0:
+        return None
     return nonzero_noise
 
 
