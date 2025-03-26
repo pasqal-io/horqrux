@@ -93,6 +93,7 @@ new_state = apply_gates(state, gate)
 !!! warning "Experimental Sparse matrices scope"
     Note this is an experimental feature (raise an issue if needed).
     We only support noiseless state-vector simulation with digital operations when using sparse matrices.
+    Note that `jax.grad` or `jax.experimental.sparse.grad` does not work with sparse expectation operations.
 
 ## Analog Operations
 
