@@ -10,7 +10,7 @@ import numpy as np
 from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 
-from horqrux.noise import DigitalNoiseInstance, NoiseProtocol
+from horqrux.noise import NoiseProtocol
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import (
     DensityMatrix,
@@ -336,30 +336,6 @@ def apply_gates(
     raise NotImplementedError("apply_gate is not implemented")
 
 
-def filter_noise(noise: NoiseProtocol) -> NoiseProtocol:
-    """Return None when all numbers in `error_probability` equal zero.
-
-    Args:
-        noise (NoiseProtocol): Noise instance.
-
-    Returns:
-        NoiseProtocol: Filtered noise from instances
-            when all numbers in`error_probability` equal zero.
-    """
-    if noise is None:
-        return noise
-
-    def check_zero_proba(digital_noise: DigitalNoiseInstance) -> bool:
-        return all(tuple(digital_noise.error_probability))  # type: ignore[arg-type]
-
-    nonzero_noise = tuple(
-        (digital_noise for digital_noise in noise if check_zero_proba(digital_noise))
-    )
-    if len(nonzero_noise) == 0:
-        return None
-    return nonzero_noise
-
-
 def prepare_sequence_reduce(
     gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
@@ -394,11 +370,9 @@ def prepare_sequence_reduce(
         operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
-        noise = [filter_noise(g.noise) for g in gate]
-        has_noise = noise != [None] * len(noise)
-        # merge is not possible with noise
-        if (not has_noise) and merge_ops:
+        if merge_ops:
             operator, target, control = merge_operators(operator, target, control)
+        noise = [g.noise for g in gate]
 
     return operator, target, control, noise
 
