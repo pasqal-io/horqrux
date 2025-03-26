@@ -336,6 +336,15 @@ def apply_gates(
     raise NotImplementedError("apply_gate is not implemented")
 
 
+def filter_noise(noise: NoiseProtocol) -> NoiseProtocol:
+    if noise is None:
+        return noise
+    nonzero_noise = tuple(
+        (digital_noise for digital_noise in noise if all(tuple(digital_noise.error_probability)))  # type: ignore[arg-type]
+    )
+    return nonzero_noise
+
+
 def prepare_sequence_reduce(
     gate: Union[Primitive, Iterable[Primitive]],
     values: dict[str, float] = dict(),
@@ -370,9 +379,11 @@ def prepare_sequence_reduce(
         operator = tuple(getattr(g, op_type)(values) for g in gate)
         target = reduce(add, [g.target for g in gate])
         control = reduce(add, [g.control for g in gate])
-        if merge_ops:
+        noise = [filter_noise(g.noise) for g in gate]
+        has_noise = noise != [None] * len(noise)
+        # merge is not possible with noise
+        if (not has_noise) and merge_ops:
             operator, target, control = merge_operators(operator, target, control)
-        noise = [g.noise for g in gate]
 
     return operator, target, control, noise
 
