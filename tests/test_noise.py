@@ -121,9 +121,10 @@ def test_noisy_primitive(gate_fn: Callable, noise_type: DigitalNoiseType, zero: 
 
 @pytest.mark.parametrize("gate_fn", PARAMETRIC_GATES)
 @pytest.mark.parametrize("noise_type", ALL_NOISES)
-def test_noisy_parametric(gate_fn: Callable, noise_type: DigitalNoiseType) -> None:
+@pytest.mark.parametrize("zero", [False, True])
+def test_noisy_parametric(gate_fn: Callable, noise_type: DigitalNoiseType, zero: bool) -> None:
     target = np.random.randint(0, MAX_QUBITS)
-    noise = noise_instance(noise_type)
+    noise = noise_instance(noise_type, zero)
     noisy_gate = gate_fn("theta", target, noise=(noise,))
     values = {"theta": np.random.uniform(0.1, 2 * np.pi)}
     orig_state = random_state(MAX_QUBITS)
@@ -146,7 +147,10 @@ def test_noisy_parametric(gate_fn: Callable, noise_type: DigitalNoiseType) -> No
 
     perfect_gate = gate_fn("theta", target)
     perfect_output = density_mat(apply_gates(orig_state, perfect_gate, values))
-    assert not jnp.allclose(perfect_output.array, output_dm.array)
+    if zero:
+        assert jnp.allclose(perfect_output.array, output_dm.array)
+    else:
+        assert not jnp.allclose(perfect_output.array, output_dm.array)
 
 
 def simple_depolarizing_test() -> None:
