@@ -252,13 +252,11 @@ def filter_noise(noise: NoiseProtocol) -> NoiseProtocol:
 
     def check_zero_proba(digital_noise: DigitalNoiseInstance) -> bool:
         if isinstance(digital_noise.error_probability, float):
-            return digital_noise.error_probability == 0
-        return all(p == 0 for p in digital_noise.error_probability)
+            return digital_noise.error_probability != 0
+        return all(p != 0 for p in digital_noise.error_probability)
 
-    nonzero_noise = tuple(
-        (digital_noise for digital_noise in noise if not check_zero_proba(digital_noise))
-    )
-    if len(nonzero_noise) == 0:
+    nonzero_noise = tuple(filter(lambda digital_noise: check_zero_proba(digital_noise), noise))
+    if not nonzero_noise:
         return None
     return nonzero_noise
 
