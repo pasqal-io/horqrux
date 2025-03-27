@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import chex
+import jax
 import numpy as np
 from absl.testing import parameterized
-import jax
 from jax import Array, value_and_grad
 
 from horqrux import expectation, random_state
@@ -51,10 +51,9 @@ class TestAdjoint(chex.TestCase):
 
         @self.variant(static_argnums=(1,))
         def exp_fn_sparse(values: dict, diff_mode: DiffMode = "ad") -> Array:
-            return (
-                expectation(state_sparse, circuit_sparse, observable_sparse, values, diff_mode)
-                .sum()
-            )
+            return expectation(
+                state_sparse, circuit_sparse, observable_sparse, values, diff_mode
+            ).sum()
 
         exp_ad, grad_ad = value_and_grad(exp_fn)(values)
         exp_adjoint, grads_adjoint = value_and_grad(exp_fn)(values, "adjoint")
