@@ -3,7 +3,8 @@ from __future__ import annotations
 import chex
 import numpy as np
 from absl.testing import parameterized
-from jax import Array, grad
+import jax
+from jax import Array, value_and_grad
 
 from horqrux import expectation, random_state
 from horqrux.circuit import QuantumCircuit
@@ -19,8 +20,7 @@ PARAMETRIC_GATES = (RX, RY, RZ, PHASE)
 PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 
-class AdjointTest(chex.TestCase):
-    # TODO: fix with jit
+class TestAdjoint(chex.TestCase):
     @chex.variants(with_jit=False, without_jit=True)
     @parameterized.parameters(True, False)
     def test_gradcheck(self, same_name: bool) -> None:
@@ -47,26 +47,25 @@ class AdjointTest(chex.TestCase):
 
         @self.variant(static_argnums=(1,))
         def exp_fn(values: dict, diff_mode: DiffMode = "ad") -> Array:
-            return expectation(state, circuit, observable, values, diff_mode).item()
+            return expectation(state, circuit, observable, values, diff_mode).sum()
 
         @self.variant(static_argnums=(1,))
         def exp_fn_sparse(values: dict, diff_mode: DiffMode = "ad") -> Array:
             return (
                 expectation(state_sparse, circuit_sparse, observable_sparse, values, diff_mode)
-                .todense()
-                .item()
+                .sum()
             )
 
-        def sum_exp_fn(x, diff):
-            return exp_fn(x, diff)
+        exp_ad, grad_ad = value_and_grad(exp_fn)(values)
+        exp_adjoint, grads_adjoint = value_and_grad(exp_fn)(values, "adjoint")
+        assert verify_arrays(exp_ad, exp_adjoint)
 
-        def sum_exp_fn_sparse(x, diff):
-            return exp_fn_sparse(x, diff)
+        # note grad does not work for sparse operations
+        exp_adjoint_sparse = exp_fn_sparse(values, "adjoint")
+        with self.assertRaises(NotImplementedError):
+            jax.experimental.sparse.grad(exp_fn_sparse)(values, "adjoint")
 
-        grad_ad = grad(sum_exp_fn)(values, "ad")
-        grads_adjoint = grad(sum_exp_fn)(values, "adjoint")
-        grads_adjoint_sparse = grad(sum_exp_fn_sparse)(values, "adjoint")
+        assert verify_arrays(exp_adjoint, exp_adjoint_sparse)
 
         for param, ad_grad in grad_ad.items():
             assert verify_arrays(grads_adjoint[param], ad_grad, atol=1.0e-3)
-            assert verify_arrays(grads_adjoint_sparse[param], grads_adjoint[param])
