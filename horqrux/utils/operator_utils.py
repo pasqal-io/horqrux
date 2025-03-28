@@ -71,12 +71,12 @@ def permute_basis(operator: Array | BCOO, qubit_support: tuple, inv: bool = Fals
     columns according to the order of the qubit support.
 
     Args:
-        operator (Tensor): Operator to permute over.
+        operator (Array | BCOO): Operator to permute over.
         qubit_support (tuple): Qubit support.
         inv (bool): Applies the inverse permutation instead.
 
     Returns:
-        Tensor: Permuted operator.
+        Array | BCOO: Permuted operator.
     """
     ordered_support = np.argsort(qubit_support)
     ranked_support = np.argsort(ordered_support)
@@ -338,13 +338,13 @@ def _(
 
 def expand_operator(
     operator: Array | BCOO, qubit_support: tuple[int, ...], full_support: tuple[int, ...]
-) -> Array:
+) -> Array | BCOO:
     """
     Expands an operator acting on a given qubit_support to act on a larger full_support
     by explicitly filling in identity matrices on all remaining qubits.
 
     Args:
-        operator (Array): Operator to expand
+        operator (Array | BCOO): Operator to expand
         qubit_support (tuple[int, ...]): Qubit support the operator is initially defined over.
         full_support (tuple[int, ...]): Qubit support the operator will be defined over.
 
@@ -352,7 +352,7 @@ def expand_operator(
         ValueError: When `full_support` larger than or equal to the `qubit_support`
 
     Returns:
-        Array: Expanded operator.
+        Array | BCOO: Expanded operator.
     """
     full_support = tuple(sorted(full_support))
     qubit_support = tuple(sorted(qubit_support))
