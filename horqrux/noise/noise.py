@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Union
+from typing import Any, Callable, Union
 
 from jax import Array
 from jax.tree_util import register_pytree_node_class
@@ -45,9 +45,6 @@ PROTOCOL_TO_KRAUS_FN: dict[str, Callable] = {
 class DigitalNoiseInstance:
     type: DigitalNoiseType
     error_probability: tuple[float, ...] | float
-
-    def __iter__(self) -> Iterable:
-        return iter((self.kraus, self.error_probability))
 
     def tree_flatten(
         self,

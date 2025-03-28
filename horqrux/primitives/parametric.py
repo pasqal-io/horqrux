@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Iterable
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -68,19 +68,6 @@ class Parametric(Primitive):
             self.shift,
         )
         return (children, aux_data)
-
-    def __iter__(self) -> Iterable:
-        return iter(
-            (
-                self.generator_name,
-                self.target,
-                self.control,
-                self.noise,
-                self.sparse,
-                self.param,
-                self.shift,
-            )
-        )
 
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:

@@ -60,7 +60,7 @@ class Primitive:
         return apply_gates(state, self, values)
 
     def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.noise, self.sparse))
+        return iter((self,))
 
     def tree_flatten(
         self,

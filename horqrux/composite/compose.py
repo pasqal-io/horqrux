@@ -14,14 +14,6 @@ from horqrux.utils.operator_utils import State
 from .sequence import OpSequence
 
 
-def operations_to_list(operations: Primitive | OpSequence | list) -> list:
-    if not isinstance(operations, list):
-        op_list = [operations] if isinstance(operations, Primitive) else operations.operations
-    else:
-        op_list = operations
-    return op_list
-
-
 @register_pytree_node_class
 class Scale(OpSequence):
     """
@@ -35,7 +27,7 @@ class Scale(OpSequence):
     def __init__(
         self, operations: Primitive | OpSequence | list, parameter_name: str | float
     ) -> None:
-        super().__init__(operations_to_list(operations))
+        super().__init__(list(operations))  # type:ignore[arg-type]
         self.parameter: str | float = parameter_name
 
     def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> Array:
@@ -74,7 +66,7 @@ class Add(OpSequence):
     """
 
     def __init__(self, operations: Primitive | OpSequence | list) -> None:
-        super().__init__(operations_to_list(operations))
+        super().__init__(list(operations))  # type:ignore[arg-type]
 
     def tree_flatten(self) -> tuple:
         children = (self.operations,)
@@ -114,7 +106,7 @@ class Observable(Add):
     """
 
     def __init__(self, operations: Primitive | OpSequence | list) -> None:
-        super().__init__(operations_to_list(operations))
+        super().__init__(list(operations))  # type:ignore[arg-type]
 
     def forward(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
         return super().__call__(state, values)
