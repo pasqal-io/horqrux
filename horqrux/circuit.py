@@ -24,8 +24,10 @@ class QuantumCircuit(OpSequence):
                 The corresponding operations compose the `feature map`.
     """
 
-    def __init__(self, n_qubits: int, operations: list[Primitive], fparams: list[str] = list()):
-        super().__init__(operations)
+    def __init__(
+        self, n_qubits: int, operations: Primitive | OpSequence | list, fparams: list[str] = list()
+    ):
+        super().__init__(list(operations))  # type:ignore[arg-type]
         self.n_qubits = n_qubits
         self.fparams = fparams
 

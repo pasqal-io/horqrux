@@ -159,7 +159,7 @@ def total_magnetization(n_qubits:int) -> Callable:
     paulis = Observable([Z(i) for i in range(n_qubits)])
 
     def _total_magnetization(out_state: Array, values: dict[str, Array]) -> Array:
-        projected_state = paulis(out_state, values)
+        projected_state = paulis.forward(out_state, values)
         return inner(out_state, projected_state).real
     return _total_magnetization
 

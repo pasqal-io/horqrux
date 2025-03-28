@@ -12,11 +12,13 @@ from horqrux.noise import NoiseProtocol
 from horqrux.utils.operator_utils import (
     ControlQubits,
     QubitSupport,
+    State,
     TargetQubits,
     _dagger,
     controlled,
     is_controlled,
     none_like,
+    zero_state,
 )
 
 
@@ -50,8 +52,15 @@ class Primitive:
         else:
             self.control = Primitive.parse_idx(self.control)
 
-    def __iter__(self) -> Iterable:
-        return iter((self.generator_name, self.target, self.control, self.noise, self.sparse))
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
+        from horqrux.apply import apply_gates
+
+        if state is None:
+            state = zero_state(len(self.qubit_support))
+        return apply_gates(state, self, values)
+
+    def __iter__(self) -> Iterable[Primitive]:
+        return iter((self,))
 
     def tree_flatten(
         self,
@@ -132,6 +141,10 @@ class Primitive:
                 )
             )
         )
+
+    @property
+    def is_parametric(self) -> bool:
+        return False
 
     def __repr__(self) -> str:
         return self.name + f"(target={self.target}, control={self.control})"

@@ -81,7 +81,7 @@ def adjoint_expectation(
     """
     outputs = list(
         map(
-            lambda observable: apply_adjoint(state, circuit.operations, observable, values),
+            lambda observable: apply_adjoint(state, circuit, observable, values),
             observables,
         )
     )
@@ -124,14 +124,14 @@ def expectation(
         if n_shots == 0:
             return no_shots_fwd(
                 state=state,
-                gates=circuit.operations,
+                gates=list(iter(circuit)),  # type: ignore[type-var]
                 observables=observables,
                 values=values,
             )
         else:
             return finite_shots_fwd(
                 state=state,
-                gates=circuit.operations,
+                gates=list(iter(circuit)),  # type: ignore[type-var]
                 observables=observables,
                 values=values,
                 n_shots=n_shots,
