@@ -1,7 +1,7 @@
 # Variational quantum eigensolver
 
-We will demonstrate how to perform a Variational quantum eigensolver (VQE)[^1] task on a molecular example. 
-VQE boils down to finding a quantum state (a ground state) $| \psi(\theta) \rangle$ minimizing the energy wrt a hamiltonian of interest denoted $H$ : 
+We will demonstrate how to perform a Variational quantum eigensolver (VQE)[^1] task on a molecular example.
+VQE boils down to finding a quantum state (a ground state) $| \psi(\theta) \rangle$ minimizing the energy wrt a hamiltonian of interest denoted $H$ :
 $$\langle \psi(\theta) | H | \psi(\theta) \rangle$$
 
 ## Hamiltonian
@@ -28,7 +28,7 @@ H2_hamiltonian = Observable([
   Scale(I(0), -0.09963387941370971),
   Scale(Z(0), 0.17110545123720233),
   Scale(Z(1), 0.17110545123720225),
-  Scale(OpSequence([Z(0) , Z(1)]), 0.16859349595532533), 
+  Scale(OpSequence([Z(0) , Z(1)]), 0.16859349595532533),
   Scale(OpSequence([Y(0) , X(1) , X(2) , Y(3)]), 0.04533062254573469),
   Scale( OpSequence([Y(0) , Y(1) , X(2) , X(3)]) , -0.04533062254573469),
   Scale( OpSequence([X(0) , X(1) , Y(2) , Y(3)]) , -0.04533062254573469),
@@ -58,7 +58,7 @@ print("Number of variational parameters: ", ansatz.n_vparams) # markdown-exec: h
 
 ## Optimization
 
-We will optimize the variational parameters of our ansatz using the Adam optimizer. Below we show how to set up a train function. 
+We will optimize the variational parameters of our ansatz using the Adam optimizer. Below we show how to set up a train function.
 We first consider the non-jitted version of the training function to compare later the timing with the jitted-version.
 
 ```python exec="on" source="material-block" session="vqe"
