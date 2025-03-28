@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Iterable
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -69,19 +69,6 @@ class Parametric(Primitive):
         )
         return (children, aux_data)
 
-    def __iter__(self) -> Iterable:
-        return iter(
-            (
-                self.generator_name,
-                self.target,
-                self.control,
-                self.noise,
-                self.sparse,
-                self.param,
-                self.shift,
-            )
-        )
-
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
@@ -142,6 +129,10 @@ class Parametric(Primitive):
         # atm only size 2 is acceptable given all possible generators in OPERATIONS_DICT
         spectral_gap = unique_jit(jnp.abs(jnp.tril(diffs)), size=2)
         return spectral_gap[nonzero_jit(spectral_gap, size=1)]
+
+    @property
+    def is_parametric(self) -> bool:
+        return isinstance(self.param, str)
 
 
 def RX(

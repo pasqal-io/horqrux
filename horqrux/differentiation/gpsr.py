@@ -17,10 +17,6 @@ from horqrux.utils.operator_utils import DensityMatrix, State, expand_operator, 
 from horqrux.utils.sparse_utils import stack_sp
 
 
-def is_parametric(gate: Primitive) -> bool:
-    return isinstance(gate, Parametric) and isinstance(gate.param, str)
-
-
 @singledispatch
 def eigen_probabilities(state: Any, eigvecs: Array) -> Array:
     """Obtain the probabilities using an input state and the eigenvectors decomposition
@@ -405,7 +401,7 @@ def prepare_param_gates_seq(
     """
     param_to_gates: dict[str, tuple] = dict.fromkeys(param_names, tuple())
     for i, gate in enumerate(gates):
-        if is_parametric(gate) and gate.param in param_names:  # type: ignore[attr-defined]
+        if gate.is_parametric and gate.param in param_names:  # type: ignore[attr-defined]
             param_to_gates[gate.param] += (i,)  # type: ignore[attr-defined]
     return param_to_gates
 

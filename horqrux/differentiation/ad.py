@@ -34,7 +34,7 @@ def _(
     observable: Observable,
     values: dict[str, float],
 ) -> Array:
-    projected_state = observable(
+    projected_state = observable.forward(
         state,
         values,
     )
@@ -47,7 +47,7 @@ def _(
     observable: Observable,
     values: dict[str, float],
 ) -> Array:
-    projected_state = observable(
+    projected_state = observable.forward(
         state,
         values,
     )
@@ -88,7 +88,7 @@ def ad_expectation(
     outputs = list(
         map(
             lambda observable: _ad_expectation_single_observable(
-                apply_gates(state, circuit.operations, values, OperationType.UNITARY),
+                apply_gates(state, list(iter(circuit)), values, OperationType.UNITARY),  # type: ignore[type-var]
                 observable,
                 values,
             ),

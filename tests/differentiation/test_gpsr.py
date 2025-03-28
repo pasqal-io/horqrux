@@ -20,7 +20,7 @@ SHOTS_ATOL = 0.01
 N_SHOTS = 100_000
 
 
-class DifferentiationTest(chex.TestCase):
+class GPSRTest(chex.TestCase):
     @chex.variants(with_jit=True, without_jit=True)
     @parameterized.parameters(True, False)
     def test_shots(self, same_name: bool) -> None:

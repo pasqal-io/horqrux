@@ -3,6 +3,7 @@ from __future__ import annotations
 import chex
 import jax
 import numpy as np
+from absl.testing import parameterized
 from jax import Array, value_and_grad
 
 from horqrux import expectation, random_state
@@ -21,26 +22,34 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 
 class TestAdjoint(chex.TestCase):
     @chex.variants(with_jit=False, without_jit=True)
-    def test_gradcheck(self) -> None:
-        ops = [RX("theta", 0), RY("epsilon", 0), RX("phi", 0), NOT(1, 0), RX("omega", 0, 1)]
+    @parameterized.parameters(True, False)
+    def test_gradcheck(self, same_name: bool) -> None:
+        names = ["theta", "epsilon", "phi", "omega"]
+        if same_name:
+            while len(set(names)) > 3:
+                names = np.random.choice(names, len(names))
+        ops = [
+            RX(names[0], 0),
+            RY(names[1], 0),
+            RX(names[2], 0),
+            NOT(1, 0),
+            RX(names[3], 0, 1),
+            NOT(1, 0),
+            RY(1.0, 0),
+        ]
         circuit = QuantumCircuit(2, ops)
         circuit_sparse = to_sparse(circuit)
         observable = [Observable([Z(0)])]
         observable_sparse = [to_sparse(observable[0])]
-        values = {
-            "theta": np.random.uniform(0, 1),
-            "epsilon": np.random.uniform(0, 1),
-            "phi": np.random.uniform(0, 1),
-            "omega": np.random.uniform(0, 1),
-        }
+        values = {name: np.random.uniform(0, 1) for name in set(names)}
         state = random_state(MAX_QUBITS)
         state_sparse = random_state(MAX_QUBITS, sparse=True)
 
-        @self.variant
+        @self.variant(static_argnums=(1,))
         def exp_fn(values: dict, diff_mode: DiffMode = "ad") -> Array:
             return expectation(state, circuit, observable, values, diff_mode).sum()
 
-        @self.variant
+        @self.variant(static_argnums=(1,))
         def exp_fn_sparse(values: dict, diff_mode: DiffMode = "ad") -> Array:
             return expectation(
                 state_sparse, circuit_sparse, observable_sparse, values, diff_mode

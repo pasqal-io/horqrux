@@ -2,15 +2,14 @@ from __future__ import annotations
 
 from functools import reduce
 from operator import add
-from typing import Any
+from typing import Any, Iterable
 
 import jax.numpy as jnp
 from jax import Array
 from jax.tree_util import register_pytree_node_class
 
-from horqrux.apply import apply_gates
 from horqrux.primitives import Primitive
-from horqrux.utils.operator_utils import State, zero_state
+from horqrux.utils.operator_utils import State
 
 from .sequence import OpSequence
 
@@ -25,9 +24,10 @@ class Scale(OpSequence):
         parameter_name: Name of the parameter to multiply operations with.
     """
 
-    def __init__(self, operations: Primitive | OpSequence, parameter_name: str | float) -> None:
-        op_list = [operations] if isinstance(operations, Primitive) else operations.operations
-        super().__init__(op_list)
+    def __init__(
+        self, operations: Primitive | OpSequence | list, parameter_name: str | float
+    ) -> None:
+        super().__init__(list(operations))  # type:ignore[arg-type]
         self.parameter: str | float = parameter_name
 
     def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> Array:
@@ -42,6 +42,9 @@ class Scale(OpSequence):
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
+
+    def __iter__(self) -> Iterable[Scale]:
+        return iter((self,))
 
     def tensor(
         self,
@@ -70,10 +73,8 @@ class Add(OpSequence):
         operations: List of operations to add up.
     """
 
-    def __init__(self, operations: list[Primitive | OpSequence]) -> None:
-        primitives = [[op] if isinstance(op, Primitive) else op.operations for op in operations]
-        added_primitives: list[Primitive] = reduce(add, primitives)
-        super().__init__(added_primitives)
+    def __init__(self, operations: Primitive | OpSequence | list) -> None:
+        super().__init__(list(operations))  # type:ignore[arg-type]
 
     def tree_flatten(self) -> tuple:
         children = (self.operations,)
@@ -85,9 +86,7 @@ class Add(OpSequence):
         return cls(*children, *aux_data)
 
     def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
-        if state is None:
-            state = zero_state(len(self.qubit_support))
-        return reduce(add, map(lambda op: apply_gates(state, op, values), self.operations))
+        return reduce(add, map(lambda op: op(state, values), self.operations))
 
     def tensor(
         self,
@@ -126,5 +125,22 @@ class Observable(Add):
         operations: List of operations.
     """
 
-    def __init__(self, operations: list[Primitive | OpSequence]) -> None:
-        super().__init__(operations)
+    def __init__(self, operations: Primitive | OpSequence | list) -> None:
+        super().__init__(list(operations))  # type:ignore[arg-type]
+
+    def forward(self, state: State | None = None, values: dict[str, Array] = dict()) -> State:
+        return super().__call__(state, values)
+
+    def __call__(self, state: State | None = None, values: dict[str, Array] = dict()) -> Array:
+        """Compute the expectation value using the observable.
+
+        Args:
+            state (State | None, optional): Input state. Defaults to None.
+            values (dict[str, Array], optional): Parameter values. Defaults to dict().
+
+        Returns:
+            Array: Expectation values.
+        """
+        from horqrux.differentiation.ad import _ad_expectation_single_observable
+
+        return _ad_expectation_single_observable(state, self, values)
