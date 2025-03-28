@@ -66,7 +66,7 @@ def density_mat(state: ArrayLike) -> DensityMatrix:
     return DensityMatrix(ket * bra)
 
 
-def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> Array:
+def permute_basis(operator: Array | BCOO, qubit_support: tuple, inv: bool = False) -> Array | BCOO:
     """Takes an operator tensor and permutes the rows and
     columns according to the order of the qubit support.
 
@@ -87,7 +87,10 @@ def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> A
     perm = tuple(ranked_support) + tuple(ranked_support + n_qubits)
     if inv:
         perm = np.argsort(perm)
-    return jax.lax.transpose(operator, perm)
+    transpose_fn = (
+        jax.experimental.sparse.bcoo_transpose if isinstance(operator, BCOO) else jax.lax.transpose
+    )
+    return transpose_fn(operator, permutation=perm)
 
 
 class StrEnum(str, Enum):

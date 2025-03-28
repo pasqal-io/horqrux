@@ -24,6 +24,7 @@ PRIMITIVE_GATES = (NOT, H, X, Y, Z, I, S, T)
 @pytest.mark.parametrize("sparse", [False, True])
 def test_scale(gate_fn: Callable, sparse: bool) -> None:
     target = np.random.randint(0, MAX_QUBITS)
+    full_support = tuple(range(MAX_QUBITS))
     gate = gate_fn(target, sparse=sparse)
     scale_gate = Scale(gate, 2.0)
     orig_state = random_state(MAX_QUBITS, sparse=sparse)
@@ -31,6 +32,10 @@ def test_scale(gate_fn: Callable, sparse: bool) -> None:
     state = apply_gates(orig_state, gate)
     scale_state = scale_gate(orig_state)
     assert verify_arrays(jnp.array(2.0) * state, scale_state)
+    assert verify_arrays(
+        jnp.array(2.0) * gate.tensor(full_support=full_support),
+        scale_gate.tensor(full_support=full_support),
+    )
 
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
