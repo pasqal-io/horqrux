@@ -42,6 +42,7 @@ def test_scale(gate_fn: Callable, sparse: bool) -> None:
 @pytest.mark.parametrize("sparse", [False, True])
 def test_observable_gate(gate_fn: Callable, sparse: bool) -> None:
     target = np.random.randint(0, MAX_QUBITS)
+    full_support = tuple(range(MAX_QUBITS))
     gate = gate_fn(target, sparse=sparse)
     obs_gate = Observable([gate])
     orig_state = random_state(MAX_QUBITS, sparse=sparse)
@@ -49,6 +50,9 @@ def test_observable_gate(gate_fn: Callable, sparse: bool) -> None:
     state = apply_gates(orig_state, gate)
     obs_state = obs_gate(orig_state)
     assert verify_arrays(state, obs_state)
+    assert verify_arrays(
+        obs_gate.tensor(full_support=full_support), gate.tensor(full_support=full_support)
+    )
 
     # test density matrix
     if not sparse:
@@ -98,6 +102,7 @@ def test_sequence(sparse: bool) -> None:
 @pytest.mark.parametrize("sparse", [False, True])
 def test_add(sparse: bool) -> None:
     num_gates = 2
+    full_support = tuple(range(MAX_QUBITS))
     orig_state = random_state(MAX_QUBITS, sparse=sparse)
     chosen_gate_ids = np.random.randint(0, len(PRIMITIVE_GATES), (num_gates,))
 
@@ -111,4 +116,9 @@ def test_add(sparse: bool) -> None:
     assert verify_arrays(
         add_state,
         apply_gates(orig_state, chosen_gates[0]) + apply_gates(orig_state, chosen_gates[1]),
+    )
+    assert verify_arrays(
+        add_operator.tensor(full_support=full_support),
+        chosen_gates[0].tensor(full_support=full_support)
+        + chosen_gates[1].tensor(full_support=full_support),
     )
