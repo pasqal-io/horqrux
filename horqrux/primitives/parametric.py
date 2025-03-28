@@ -143,6 +143,10 @@ class Parametric(Primitive):
         spectral_gap = unique_jit(jnp.abs(jnp.tril(diffs)), size=2)
         return spectral_gap[nonzero_jit(spectral_gap, size=1)]
 
+    @property
+    def is_parametric(self) -> bool:
+        return isinstance(self.param, str)
+
 
 def RX(
     param: float | str,

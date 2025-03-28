@@ -12,7 +12,6 @@ from jax.experimental import checkify
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.differentiation.ad import _ad_expectation_single_observable
-from horqrux.differentiation.utils import is_parametric
 from horqrux.primitives import Parametric, Primitive
 from horqrux.utils.operator_utils import DensityMatrix, State, expand_operator, num_qubits
 from horqrux.utils.sparse_utils import stack_sp
@@ -402,7 +401,7 @@ def prepare_param_gates_seq(
     """
     param_to_gates: dict[str, tuple] = dict.fromkeys(param_names, tuple())
     for i, gate in enumerate(gates):
-        if is_parametric(gate) and gate.param in param_names:  # type: ignore[attr-defined]
+        if gate.is_parametric and gate.param in param_names:  # type: ignore[attr-defined]
             param_to_gates[gate.param] += (i,)  # type: ignore[attr-defined]
     return param_to_gates
 

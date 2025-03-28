@@ -142,6 +142,10 @@ class Primitive:
             )
         )
 
+    @property
+    def is_parametric(self) -> bool:
+        return False
+
     def __repr__(self) -> str:
         return self.name + f"(target={self.target}, control={self.control})"
 
