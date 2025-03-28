@@ -33,6 +33,11 @@ def test_scale(gate_fn: Callable, sparse: bool) -> None:
     scale_state = scale_gate(orig_state)
     assert verify_arrays(jnp.array(2.0) * state, scale_state)
 
+    # try with sequences
+    scale_gate_seq = Scale(OpSequence([gate]), 2.0)
+    scale_state_seq = scale_gate_seq(orig_state)
+    assert verify_arrays(jnp.array(2.0) * state, scale_state)
+
 
 @pytest.mark.parametrize("gate_fn", PRIMITIVE_GATES)
 @pytest.mark.parametrize("sparse", [False, True])
