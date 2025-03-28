@@ -43,7 +43,7 @@ class Scale(OpSequence):
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def __iter__(self) -> Iterable:
+    def __iter__(self) -> Iterable[Scale]:
         return iter((self,))
 
     def tensor(self, values: dict[str, float] = dict()) -> Array:

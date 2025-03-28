@@ -7,6 +7,7 @@ from typing import Any, Iterable
 import jax.numpy as jnp
 from jax import Array
 from jax.tree_util import register_pytree_node_class
+from jaxtyping import PyTree
 
 from horqrux.utils.operator_utils import State
 
@@ -43,8 +44,8 @@ class OpSequence:
         """
         return reduce(jnp.matmul, map(lambda x: x.tensor(values), self.operations))
 
-    def __iter__(self) -> Iterable:
-        def flatten(item: Any) -> Iterable:
+    def __iter__(self) -> Iterable[PyTree]:
+        def flatten(item: Any) -> Iterable[PyTree]:
             # If the item is a OpSequence, iterate through its operations
             if isinstance(item, OpSequence):
                 for sub_item in item.operations:

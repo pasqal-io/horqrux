@@ -59,7 +59,7 @@ class Primitive:
             state = zero_state(len(self.qubit_support))
         return apply_gates(state, self, values)
 
-    def __iter__(self) -> Iterable:
+    def __iter__(self) -> Iterable[Primitive]:
         return iter((self,))
 
     def tree_flatten(
