@@ -19,6 +19,8 @@ from numpy import log2
 from horqrux._misc import default_complex_dtype
 from horqrux.matrices import _I
 
+from .sparse_utils import kron_sp
+
 default_dtype = default_complex_dtype()
 
 QubitSupport = tuple[Any, ...]
@@ -64,17 +66,17 @@ def density_mat(state: ArrayLike) -> DensityMatrix:
     return DensityMatrix(ket * bra)
 
 
-def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> Array:
+def permute_basis(operator: Array | BCOO, qubit_support: tuple, inv: bool = False) -> Array | BCOO:
     """Takes an operator tensor and permutes the rows and
     columns according to the order of the qubit support.
 
     Args:
-        operator (Tensor): Operator to permute over.
+        operator (Array | BCOO): Operator to permute over.
         qubit_support (tuple): Qubit support.
         inv (bool): Applies the inverse permutation instead.
 
     Returns:
-        Tensor: Permuted operator.
+        Array | BCOO: Permuted operator.
     """
     ordered_support = np.argsort(qubit_support)
     ranked_support = np.argsort(ordered_support)
@@ -85,7 +87,10 @@ def permute_basis(operator: Array, qubit_support: tuple, inv: bool = False) -> A
     perm = tuple(ranked_support) + tuple(ranked_support + n_qubits)
     if inv:
         perm = np.argsort(perm)
-    return jax.lax.transpose(operator, perm)
+    transpose_fn = (
+        jax.experimental.sparse.bcoo_transpose if isinstance(operator, BCOO) else jax.lax.transpose
+    )
+    return transpose_fn(operator, permutation=perm)
 
 
 class StrEnum(str, Enum):
@@ -332,14 +337,14 @@ def _(
 
 
 def expand_operator(
-    operator: Array, qubit_support: tuple[int, ...], full_support: tuple[int, ...]
-) -> Array:
+    operator: Array | BCOO, qubit_support: tuple[int, ...], full_support: tuple[int, ...]
+) -> Array | BCOO:
     """
     Expands an operator acting on a given qubit_support to act on a larger full_support
     by explicitly filling in identity matrices on all remaining qubits.
 
     Args:
-        operator (Array): Operator to expand
+        operator (Array | BCOO): Operator to expand
         qubit_support (tuple[int, ...]): Qubit support the operator is initially defined over.
         full_support (tuple[int, ...]): Qubit support the operator will be defined over.
 
@@ -347,10 +352,11 @@ def expand_operator(
         ValueError: When `full_support` larger than or equal to the `qubit_support`
 
     Returns:
-        Array: Expanded operator.
+        Array | BCOO: Expanded operator.
     """
     full_support = tuple(sorted(full_support))
     qubit_support = tuple(sorted(qubit_support))
+    n_full = 2 ** len(full_support)
     if not set(qubit_support).issubset(set(full_support)):
         raise ValueError(
             "Expanding tensor operation requires a `full_support` argument "
@@ -358,9 +364,17 @@ def expand_operator(
         )
 
     kron_qubits = tuple(sorted(set(full_support) - set(qubit_support)))
-    kron_operator = reduce(jnp.kron, [operator] + [_I] * len(kron_qubits))
+    if isinstance(operator, BCOO):
+        kron_operator = reduce(
+            kron_sp,
+            [operator] + [jax.experimental.sparse.eye(2, dtype=default_dtype)] * len(kron_qubits),
+        )
+    else:
+        kron_operator = reduce(jnp.kron, [operator] + [_I] * len(kron_qubits))
+
     kron_operator = hilbert_reshape(kron_operator)
     kron_operator = permute_basis(kron_operator, qubit_support + kron_qubits, True)
+    kron_operator = kron_operator.reshape((n_full, n_full))
     return kron_operator
 
 

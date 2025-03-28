@@ -16,6 +16,7 @@ from horqrux.utils.operator_utils import (
     TargetQubits,
     _dagger,
     controlled,
+    expand_operator,
     is_controlled,
     none_like,
     zero_state,
@@ -103,19 +104,27 @@ class Primitive:
         """
         return _dagger(self._unitary(values))
 
-    def tensor(self, values: dict[str, float] = dict()) -> Array:
+    def tensor(
+        self,
+        values: dict[str, float] = dict(),
+        full_support: tuple[int, ...] | None = None,
+    ) -> Array:
         """Obtain the unitary taking into account the qubit support for controlled operations.
 
         Args:
             values (dict[str, float], optional): Parameter values. Defaults to dict().
+            full_support (tuple[int, ...], optional): The qubit support of definition for the unitary.
 
         Returns:
             Array: Unitary representation taking into account the qubit support.
         """
         base_unitary = self._unitary(values)
         if is_controlled(self.control):
-            return controlled(base_unitary, self.target, self.control)
-        return base_unitary
+            base_unitary = controlled(base_unitary, self.target, self.control)
+        if full_support is None:
+            return base_unitary
+        else:
+            return expand_operator(base_unitary, self.qubit_support, full_support)
 
     @property
     def name(self) -> str:
