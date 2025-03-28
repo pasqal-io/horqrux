@@ -17,7 +17,7 @@ def ad_expectation(
     Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectation given an observable.
     """
-    out_state = apply_gates(state, circuit.operations, values, OperationType.UNITARY)
+    out_state = apply_gates(state, list(iter(circuit)), values, OperationType.UNITARY)  # type: ignore[type-var]
     projected_state = observable.forward(out_state, values)
     return real_sp(inner(out_state, projected_state))
 
@@ -38,12 +38,12 @@ def adjoint_expectation(
 def adjoint_expectation_single_observable_fwd(
     state: Array, circuit: OpSequence, observable: Observable, values: dict[str, float]
 ) -> tuple[Array, tuple[Array, Array, list[Primitive], dict[str, float]]]:
-    out_state = apply_gates(state, circuit.operations, values, OperationType.UNITARY)
+    out_state = apply_gates(state, list(iter(circuit)), values, OperationType.UNITARY)  # type: ignore[type-var]
     projected_state = observable.forward(out_state, values)
     return inner(out_state, projected_state).real, (
         out_state,
         projected_state,
-        circuit.operations,
+        list(iter(circuit)),  # type: ignore[type-var]
         values,
     )
 

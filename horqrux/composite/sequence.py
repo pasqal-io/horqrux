@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import reduce
-from typing import Any
+from typing import Any, Iterable
 
 import jax.numpy as jnp
 from jax import Array
@@ -42,3 +42,17 @@ class OpSequence:
             Array: Unitary representation.
         """
         return reduce(jnp.matmul, map(lambda x: x.tensor(values), self.operations))
+
+    def __iter__(self) -> Iterable:
+        def flatten(item: Any) -> Iterable:
+            # If the item is a OpSequence, iterate through its operations
+            if isinstance(item, OpSequence):
+                for sub_item in item.operations:
+                    yield from flatten(sub_item)
+            # If the item is not a OpSequence, yield it directly
+            else:
+                yield item
+
+        # Iterate through the operations and flatten
+        for operation in self.operations:
+            yield from flatten(operation)

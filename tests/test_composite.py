@@ -7,6 +7,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
+from horqrux.api import expectation
 from horqrux.apply import apply_gates
 from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Add, Observable, OpSequence, Scale
@@ -130,3 +131,16 @@ def test_sequence_in_sequence() -> None:
     seq = OpSequence([qc, qc])
     seq_output = seq(orig_state, values)
     assert jnp.allclose(qc2output, seq_output)
+
+    # test expectation
+    obs = Observable([Z(0)])
+    exp_seq = expectation(orig_state, seq, observables=[obs], values=values)
+
+    exp_qc2output = expectation(qc_output, qc, observables=[obs], values=values)
+    assert jnp.allclose(exp_qc2output, exp_seq)
+
+    exp_seq_ad = expectation(orig_state, seq, observables=[obs], values=values, diff_mode="adjoint")
+    assert jnp.allclose(exp_qc2output, exp_seq_ad)
+
+    exp_seq_gpsr = expectation(orig_state, seq, observables=[obs], values=values, diff_mode="gpsr")
+    assert jnp.allclose(exp_qc2output, exp_seq_gpsr)

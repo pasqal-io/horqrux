@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import reduce
 from operator import add
-from typing import Any
+from typing import Any, Iterable
 
 import jax.numpy as jnp
 from jax import Array
@@ -42,6 +42,9 @@ class Scale(OpSequence):
     @classmethod
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
+
+    def __iter__(self) -> Iterable:
+        return iter((self,))
 
     def tensor(self, values: dict[str, float] = dict()) -> Array:
         """Obtain the unitary.
