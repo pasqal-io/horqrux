@@ -19,6 +19,8 @@ from numpy import log2
 from horqrux._misc import default_complex_dtype
 from horqrux.matrices import _I
 
+from .sparse_utils import kron_sp
+
 default_dtype = default_complex_dtype()
 
 QubitSupport = tuple[Any, ...]
@@ -332,7 +334,7 @@ def _(
 
 
 def expand_operator(
-    operator: Array, qubit_support: tuple[int, ...], full_support: tuple[int, ...]
+    operator: Array | BCOO, qubit_support: tuple[int, ...], full_support: tuple[int, ...]
 ) -> Array:
     """
     Expands an operator acting on a given qubit_support to act on a larger full_support
@@ -351,6 +353,7 @@ def expand_operator(
     """
     full_support = tuple(sorted(full_support))
     qubit_support = tuple(sorted(qubit_support))
+    n_full = 2 ** len(full_support)
     if not set(qubit_support).issubset(set(full_support)):
         raise ValueError(
             "Expanding tensor operation requires a `full_support` argument "
@@ -358,9 +361,17 @@ def expand_operator(
         )
 
     kron_qubits = tuple(sorted(set(full_support) - set(qubit_support)))
-    kron_operator = reduce(jnp.kron, [operator] + [_I] * len(kron_qubits))
+    if isinstance(operator, BCOO):
+        kron_operator = reduce(
+            kron_sp,
+            [operator] + [jax.experimental.sparse.eye(2, dtype=default_dtype)] * len(kron_qubits),
+        )
+    else:
+        kron_operator = reduce(jnp.kron, [operator] + [_I] * len(kron_qubits))
+
     kron_operator = hilbert_reshape(kron_operator)
     kron_operator = permute_basis(kron_operator, qubit_support + kron_qubits, True)
+    kron_operator = kron_operator.reshape((n_full, n_full))
     return kron_operator
 
 

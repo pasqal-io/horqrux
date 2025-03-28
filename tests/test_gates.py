@@ -234,13 +234,31 @@ def test_cnot_tensor(sparse: bool) -> None:
     cnot1 = NOT(target=0, control=1, sparse=sparse)
 
     t0 = jnp.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    t0kron = jnp.kron(t0, jnp.eye(2))
     t1 = jnp.array([[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]])
+    t1kron = jnp.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0],
+        ]
+    )
     if sparse:
         t0 = to_sparse(t0)
         t1 = to_sparse(t1)
+        t0kron = to_sparse(t0kron)
+        t1kron = to_sparse(t1kron)
 
     assert verify_arrays(cnot0.tensor(), t0)
     assert verify_arrays(cnot1.tensor(), t1)
+
+    assert verify_arrays(cnot0.tensor(full_support=(0, 1, 2)), t0kron)
+    assert verify_arrays(cnot1.tensor(full_support=(0, 1, 2)), t1kron)
 
 
 @pytest.mark.parametrize("sparse", [False, True])

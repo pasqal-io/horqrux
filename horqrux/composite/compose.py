@@ -103,6 +103,13 @@ class Add(OpSequence):
         Returns:
             Array: Unitary representation.
         """
+        if full_support is None:
+            full_support = self.qubit_support
+        elif not set(self.qubit_support).issubset(set(full_support)):
+            raise ValueError(
+                "Expanding tensor operation requires a `full_support` argument "
+                "larger than or equal to the `qubit_support`."
+            )
         return reduce(add, map(lambda op: op.tensor(values, full_support), self.operations))
 
 
