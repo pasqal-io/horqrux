@@ -43,17 +43,22 @@ class Scale(OpSequence):
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
-    def tensor(self, values: dict[str, float] = dict()) -> Array:
-        """Obtain the unitary.
+    def tensor(
+        self,
+        values: dict[str, float] = dict(),
+        full_support: tuple[int, ...] | None = None,
+    ) -> Array:
+        """Obtain the tensor representation.
 
         Args:
             values (dict[str, float], optional): Parameter values. Defaults to dict().
+            full_support (tuple[int, ...], optional): The qubit support of definition for the unitary.
 
         Returns:
             Array: Unitary representation.
         """
         param = values[self.parameter] if isinstance(self.parameter, str) else self.parameter
-        return param * super().tensor(values)
+        return param * super().tensor(values, full_support)
 
 
 @register_pytree_node_class
@@ -84,16 +89,21 @@ class Add(OpSequence):
             state = zero_state(len(self.qubit_support))
         return reduce(add, map(lambda op: apply_gates(state, op, values), self.operations))
 
-    def tensor(self, values: dict[str, float] = dict()) -> Array:
+    def tensor(
+        self,
+        values: dict[str, float] = dict(),
+        full_support: tuple[int, ...] | None = None,
+    ) -> Array:
         """Obtain the unitary.
 
         Args:
             values (dict[str, float], optional): Parameter values. Defaults to dict().
+            full_support (tuple[int, ...], optional): The qubit support of definition for the unitary.
 
         Returns:
             Array: Unitary representation.
         """
-        return reduce(add, map(lambda op: op.tensor(values), self.operations))
+        return reduce(add, map(lambda op: op.tensor(values, full_support), self.operations))
 
 
 @register_pytree_node_class
