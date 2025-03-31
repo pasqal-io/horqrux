@@ -1,7 +1,7 @@
 # Variational quantum eigensolver
 
 We will demonstrate how to perform a Variational quantum eigensolver (VQE)[^1] task on a molecular example using Horqrux.
-VQE boils down to finding a quantum state (a ground state) $| \psi(\theta) \rangle$ minimizing the energy wrt a hamiltonian of interest denoted $H$ :
+VQE boils down to finding the molecular ground state $| \psi(\theta) \rangle$ that minimizes the energy with respect to a molecular hamiltonian of interest denoted $H$ :
 $$\langle \psi(\theta) | H | \psi(\theta) \rangle$$
 
 ## Hamiltonian
