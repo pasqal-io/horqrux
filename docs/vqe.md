@@ -82,8 +82,8 @@ def loss_fn(param_vals: Array) -> Array:
 
 print(f"Initial loss: {loss_fn(init_param_vals):.3f}") # markdown-exec: hide
 
-def train_step(i: int, paramvals_w_optstate: tuple) -> tuple:
-    param_vals, opt_state = paramvals_w_optstate
+def train_step(i: int, param_vals_opt_state: tuple) -> tuple:
+    param_vals, opt_state = param_vals_opt_state
     loss, grads = jax.value_and_grad(loss_fn)(param_vals)
     return optimize_step(param_vals, opt_state, grads)
 
@@ -105,7 +105,7 @@ print(f"Final loss: {loss_fn(param_vals):.3f}") # markdown-exec: hide
 
 ```
 
-Now, we will jit the `train_step` function with `jax.lax.fori_loop` and improve execution time:
+Now, we will jit the `train_step` function with `jax.lax.fori_loop` and improve execution time (expecting at least $10$ times faster, depending on system):
 
 ```python exec="on" source="material-block" session="vqe"
 # reset state and parameters
