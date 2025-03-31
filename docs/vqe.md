@@ -6,7 +6,7 @@ $$\langle \psi(\theta) | H | \psi(\theta) \rangle$$
 
 ## Hamiltonian
 
-In this example, we run VQE for the $H2$ molecule in the STO-3G basis with a bondlength of $0.742 \mathring{A}$. The groud-state energy is around $-1.137$.
+In this example, we run VQE for the $H2$ molecule in the STO-3G basis with a bondlength of $0.742 \mathring{A}$[^2]. The groud-state energy is around $-1.137$.
 
 ```python exec="on" source="material-block" session="vqe"
 
@@ -123,3 +123,4 @@ print(f"Time speedup: {time_nonjit / time_jit:.3f}")
 
 
 [^1]: [Tilly et al., The Variational Quantum Eigensolver: a review of methods and best practices (2022)](https://arxiv.org/abs/2111.05176)
+[^2]: [Pennylane, Quantum Datasets](https://docs.pennylane.ai/en/stable/introduction/data.html)
