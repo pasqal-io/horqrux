@@ -7,6 +7,7 @@ $$\langle \psi(\theta) | H | \psi(\theta) \rangle$$
 ## Hamiltonian
 
 In this example, we run VQE for the $H2$ molecule in the STO-3G basis with a bondlength of $0.742 \mathring{A}$[^2]. The groud-state energy is around $-1.137$.
+Note we need to manually create it by hand, as no syntax method is implemented (such methods are available in `Qadence` though).
 
 ```python exec="on" source="material-block" session="vqe"
 
