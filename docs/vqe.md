@@ -46,7 +46,7 @@ H2_hamiltonian = Observable([
 
 ## Ansatz
 
-As an ansatz, we use the hardware-efficient ansatz with $5$ layers applied on the initial state $| 0011 \rangle$.
+As an ansatz, we use the hardware-efficient ansatz[^3] with $5$ layers applied on the initial state $| 0011 \rangle$.
 
 ```python exec="on" source="material-block" session="vqe"
 
@@ -124,3 +124,4 @@ print(f"Time speedup: {time_nonjit / time_jit:.3f}")
 
 [^1]: [Tilly et al., The Variational Quantum Eigensolver: a review of methods and best practices (2022)](https://arxiv.org/abs/2111.05176)
 [^2]: [Pennylane, Quantum Datasets](https://docs.pennylane.ai/en/stable/introduction/data.html)
+[^3]: [Kandala et al., Hardware-efficient variational quantum eigensolver for small molecules and quantum magnets (2017)](https://doi.org/10.1038/nature23879)
