@@ -76,7 +76,7 @@ def optimize_step(param_vals: Array, opt_state: Array, grads: dict[str, Array]) 
     return param_vals, opt_state
 
 def loss_fn(param_vals: Array) -> Array:
-    """The loss function is simple the expectation value."""
+    """The loss function is the sum of all expectation value for the observable components."""
     values = dict(zip(ansatz.vparams, param_vals))
     return jax.numpy.sum(expectation(init_state, ansatz, observables=[H2_hamiltonian], values = values))
 
