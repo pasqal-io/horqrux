@@ -58,7 +58,7 @@ print("Number of variational parameters: ", ansatz.n_vparams) # markdown-exec: h
 
 ## Optimization
 
-We will optimize the variational parameters of our ansatz using the Adam optimizer. Below we show how to set up a train function.
+The objective here is to optimize the variational parameters of our ansatz using the standard Adam optimizer. Below we show how to set up a train function.
 We first consider the non-jitted version of the training function to compare later the timing with the jitted-version.
 
 ```python exec="on" source="material-block" session="vqe"
