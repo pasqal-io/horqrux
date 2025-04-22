@@ -3,8 +3,7 @@
 The default is `ad`.
 
 ### Automatic Differentiation (DiffMode.AD)
-The default differentation mode of `horqrux`, [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html).
-It uses the `jax` native automatic differentiation engine which tracks operations on `jax.Array` objects by constructing a computational graph to perform chain rules for derivatives calculations.
+The default differentation mode of `horqrux` uses [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html), the `jax` native automatic differentiation engine which tracks operations on `jax.Array` objects by constructing a computational graph to perform chain rules for derivatives calculations.
 
 ### Adjoint Differentiation (DiffMode.ADJOINT)
 The [adjoint differentiation mode](https://arxiv.org/abs/2009.02823) computes first-order gradients by only requiring at most three states in memory in `O(P)` time where `P` is the number of parameters in a circuit.
@@ -13,10 +12,10 @@ The [adjoint differentiation mode](https://arxiv.org/abs/2009.02823) computes fi
 The Generalized parameter shift rule (GPSR mode) is an extension of the well known [parameter shift rule (PSR)](https://arxiv.org/abs/1811.11184) algorithm [to arbitrary quantum operations](https://arxiv.org/abs/2108.01218). Indeed, PSR only works for quantum operations whose generator has a single gap in its eigenvalue spectrum, GPSR extending to multi-gap.
 
 !!! warning "Usage restrictions"
-    At the moment, circuits with one or more Scale and circuits with `HamiltonianEvolution` operations are not supported. 
+    At the moment, circuits with one or more Scale and circuits with `HamiltonianEvolution` operations are not supported.
     They should be handled differently as GPSR requires operations to be of the form presented below.
 
-For this, we define the differentiable function as quantum expectation value
+For this, we define the differentiable function as quantum expectation value:
 
 $$
 f(x) = \left\langle 0\right|\hat{U}^{\dagger}(x)\hat{C}\hat{U}(x)\left|0\right\rangle
@@ -43,6 +42,10 @@ Here $F_s=f(x+\delta_s)-f(x-\delta_s)$ denotes the difference between values of 
 
 
 ### Example
+
+Here we show an example of differentiating an expectation value via the three modes.
+Note that [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html) requires functions of Arrays.
+
 ```python exec="on" source="material-block" html="1"
 
 import jax
@@ -58,7 +61,9 @@ from horqrux.primitives.primitive import Z
 N_QUBITS = 2
 
 x = jax.random.uniform(jax.random.key(0), (2,))
-param_names = [param_name, param_name + "2"]
+
+param_prefix = "theta"
+param_names = [param_prefix, param_prefix + "2"]
 ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
 
 def values_to_dict(x):
@@ -83,5 +88,9 @@ def expectation_adjoint(x: Array) -> Array:
 d_ad = jax.grad(expectation_ad)
 d_gpsr = jax.grad(expectation_gpsr)
 d_adjoint = jax.grad(expectation_adjoint)
+
+grad_ad = expectation_ad(x)
+grad_gpsr = expectation_gpsr(x)
+grad_adjoint = expectation_adjoint(x)
 
 ```
