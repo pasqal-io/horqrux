@@ -93,6 +93,7 @@ def expectation(
     circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
+    values_observable: dict[str, float] | None = None,
     diff_mode: DiffMode = DiffMode.AD,
     n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),
@@ -105,6 +106,9 @@ def expectation(
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
+        values_observable (dict[str, float]): Parameter values for the observable only.
+            Useful for differentiation with respect to the observable parameters.
+            Differentiation is only possible with DiffMode.AD.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
         n_shots (int): Number of shots. Defaults to 0 for no shots.
         key (Any, optional): Random key. Defaults to jax.random.PRNGKey(0).
@@ -113,14 +117,19 @@ def expectation(
         Array: Expectation values.
     """
     if diff_mode == DiffMode.AD:
-        return ad_expectation(state, circuit, observables, values)
+        return ad_expectation(state, circuit, observables, values, values_observable)
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
-        return adjoint_expectation(state, circuit, observables, values)
+        if values_observable is None:
+            return adjoint_expectation(state, circuit, observables, values)
+        else:
+            raise NotImplementedError("ADJOINT does not support separate observable values")
     elif diff_mode == DiffMode.GPSR:
         if n_shots < 0:
             raise ValueError("The number of shots should be positive.")
+        if values_observable is not None:
+            raise NotImplementedError("GPSR does not support separate observable values")
         if n_shots == 0:
             return no_shots_fwd(
                 state=state,

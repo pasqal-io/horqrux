@@ -24,6 +24,7 @@ def _ad_expectation_single_observable(
     state: Any,
     observable: Observable,
     values: dict[str, float],
+    values_observable: dict[str, float] | None = None,
 ) -> Any:
     raise NotImplementedError("_ad_expectation_single_observable is not implemented")
 
@@ -33,10 +34,12 @@ def _(
     state: Array,
     observable: Observable,
     values: dict[str, float],
+    values_observable: dict[str, float] | None = None,
 ) -> Array:
+    values_observable = values_observable or values
     projected_state = observable.forward(
         state,
-        values,
+        values_observable,
     )
     return inner(state, projected_state).real
 
@@ -46,10 +49,12 @@ def _(
     state: BCOO,
     observable: Observable,
     values: dict[str, float],
+    values_observable: dict[str, float] | None = None,
 ) -> Array:
+    values_observable = values_observable or values
     projected_state = observable.forward(
         state,
-        values,
+        values_observable,
     )
     return real_sp(inner(state, projected_state))
 
@@ -59,9 +64,11 @@ def _(
     state: DensityMatrix,
     observable: Observable,
     values: dict[str, float],
+    values_observable: dict[str, float] | None = None,
 ) -> Array:
     n_qubits = num_qubits(state)
-    mat_obs = observable.tensor(values)
+    values_observable = values_observable or values
+    mat_obs = observable.tensor(values_observable)
     d = 2**n_qubits
     prod = apply_operator(state.array, mat_obs, observable.qubit_support, (None,)).reshape((d, d))
     return jnp.trace(prod, axis1=-2, axis2=-1).real
@@ -72,6 +79,7 @@ def ad_expectation(
     circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
+    values_observable: dict[str, float] | None = None,
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
        and compute the expectation given an observable.
@@ -81,6 +89,9 @@ def ad_expectation(
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
+        values_observable (dict[str, float]): Parameter values for the observable only.
+            Useful for differentiation with respect to the observable parameters.
+            Differentiation is only possible with DiffMode.AD.
 
     Returns:
         Array: Expectation values.
@@ -91,6 +102,7 @@ def ad_expectation(
                 apply_gates(state, list(iter(circuit)), values, OperationType.UNITARY),  # type: ignore[type-var]
                 observable,
                 values,
+                values_observable,
             ),
             observables,
         )
