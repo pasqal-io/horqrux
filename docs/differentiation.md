@@ -46,7 +46,7 @@ Here $F_s=f(x+\delta_s)-f(x-\delta_s)$ denotes the difference between values of 
 Here we show an example of differentiating an expectation value via the three modes.
 Note that [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html) requires functions of Arrays.
 
-```python exec="on" source="material-block" html="1"
+```python exec="on" source="material-block" html="1" session="diff"
 
 import jax
 import jax.numpy as jnp
@@ -89,8 +89,29 @@ d_ad = jax.grad(expectation_ad)
 d_gpsr = jax.grad(expectation_gpsr)
 d_adjoint = jax.grad(expectation_adjoint)
 
-grad_ad = expectation_ad(x)
-grad_gpsr = expectation_gpsr(x)
-grad_adjoint = expectation_adjoint(x)
+grad_ad = d_ad(x)
+grad_gpsr = d_gpsr(x)
+grad_adjoint = d_adjoint(x)
+print(f"Gradient: {grad_ad}") # markdown-exec: hide
+```
 
+### Differentiation of observable parameters
+
+With the automatic differentiation mode, one can evaluate gradients for the observable parameters as follows:
+
+```python exec="on" source="material-block" html="1" session="diff"
+
+from horqrux.primitives.parametric import RZ
+observables = [Observable([RZ(param_prefix + "_obs", 0)])]
+obsval = jax.random.uniform(jax.random.key(0), (1,))
+
+
+def expectation_separate_parameters(x: Array, y: Array) -> Array:
+    values = values_to_dict(x)
+    values_obs = {param_prefix + "_obs": y}
+    return expectation(state, circuit, observables, values, values_obs, diff_mode=DiffMode.AD).sum()
+
+dobs_ad = jax.grad(expectation_separate_parameters, argnums=1)
+grad_ad = dobs_ad(x, obsval)
+print(f"Gradient: {grad_ad}") # markdown-exec: hide
 ```
