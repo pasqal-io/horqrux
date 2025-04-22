@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any, Union
+from typing import Any
 
 import jax
 from jax import Array
@@ -93,7 +93,7 @@ def expectation(
     circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
-    values_observable: Union[dict[str, float], None] = None,
+    values_observable: dict[str, float] = dict(),
     diff_mode: DiffMode = DiffMode.AD,
     n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),
@@ -108,7 +108,7 @@ def expectation(
         values (dict[str, float]): Parameter values.
         values_observable (dict[str, float], optional): Parameter values for the observable only.
             Useful for differentiation with respect to the observable parameters.
-            Differentiation is only possible with DiffMode.AD.
+            Differentiation is only possible with DiffMode.AD. Defaults to empty dict.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
         n_shots (int): Number of shots. Defaults to 0 for no shots.
         key (Any, optional): Random key. Defaults to jax.random.PRNGKey(0).
