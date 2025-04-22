@@ -121,14 +121,15 @@ def expectation(
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
-        if values_observable is None:
-            return adjoint_expectation(state, circuit, observables, values)
-        else:
+        if bool(values_observable):
             raise NotImplementedError("ADJOINT does not support separate observable values")
+
+        return adjoint_expectation(state, circuit, observables, values)
+
     elif diff_mode == DiffMode.GPSR:
         if n_shots < 0:
             raise ValueError("The number of shots should be positive.")
-        if values_observable is not None:
+        if bool(values_observable):
             raise NotImplementedError("GPSR does not support separate observable values")
         if n_shots == 0:
             return no_shots_fwd(
