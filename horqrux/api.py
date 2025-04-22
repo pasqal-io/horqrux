@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any
+from typing import Any, Union
 
 import jax
 from jax import Array
@@ -93,7 +93,7 @@ def expectation(
     circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
-    values_observable: dict[str, float] | None = None,
+    values_observable: Union[dict[str, float], None] = None,
     diff_mode: DiffMode = DiffMode.AD,
     n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),

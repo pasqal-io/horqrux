@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any
+from typing import Any, Union
 
 import jax.numpy as jnp
 from jax import Array
@@ -24,7 +24,7 @@ def _ad_expectation_single_observable(
     state: Any,
     observable: Observable,
     values: dict[str, float],
-    values_observable: dict[str, float] | None = None,
+    values_observable: Union[dict[str, float], None] = None,
 ) -> Any:
     raise NotImplementedError("_ad_expectation_single_observable is not implemented")
 
@@ -34,7 +34,7 @@ def _(
     state: Array,
     observable: Observable,
     values: dict[str, float],
-    values_observable: dict[str, float] | None = None,
+    values_observable: Union[dict[str, float], None] = None,
 ) -> Array:
     values_observable = values_observable or values
     projected_state = observable.forward(
@@ -49,7 +49,7 @@ def _(
     state: BCOO,
     observable: Observable,
     values: dict[str, float],
-    values_observable: dict[str, float] | None = None,
+    values_observable: Union[dict[str, float], None] = None,
 ) -> Array:
     values_observable = values_observable or values
     projected_state = observable.forward(
@@ -64,7 +64,7 @@ def _(
     state: DensityMatrix,
     observable: Observable,
     values: dict[str, float],
-    values_observable: dict[str, float] | None = None,
+    values_observable: Union[dict[str, float], None] = None,
 ) -> Array:
     n_qubits = num_qubits(state)
     values_observable = values_observable or values
@@ -79,7 +79,7 @@ def ad_expectation(
     circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
-    values_observable: dict[str, float] | None = None,
+    values_observable: Union[dict[str, float], None] = None,
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
        and compute the expectation given an observable.
