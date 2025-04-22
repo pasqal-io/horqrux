@@ -36,7 +36,7 @@ def _(
     values: dict[str, float],
     values_observable: dict[str, float] = dict(),
 ) -> Array:
-    values_observable = values_observable or values
+    values_observable = values_observable if bool(values_observable) else values
     projected_state = observable.forward(
         state,
         values_observable,
@@ -51,7 +51,7 @@ def _(
     values: dict[str, float],
     values_observable: dict[str, float] = dict(),
 ) -> Array:
-    values_observable = values_observable or values
+    values_observable = values_observable if bool(values_observable) else values
     projected_state = observable.forward(
         state,
         values_observable,
@@ -67,7 +67,7 @@ def _(
     values_observable: dict[str, float] = dict(),
 ) -> Array:
     n_qubits = num_qubits(state)
-    values_observable = values_observable or values
+    values_observable = values_observable if bool(values_observable) else values
     mat_obs = observable.tensor(values_observable)
     d = 2**n_qubits
     prod = apply_operator(state.array, mat_obs, observable.qubit_support, (None,)).reshape((d, d))
