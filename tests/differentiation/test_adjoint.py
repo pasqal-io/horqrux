@@ -47,7 +47,7 @@ class TestAdjoint(chex.TestCase):
 
         with self.assertRaises(NotImplementedError):
             expectation(
-                state, circuit, observable, values, values_observable=values, diff_mode="adjoint"
+                state, circuit, observable, values, values_observables=values, diff_mode="adjoint"
             )
 
         @self.variant(static_argnums=(1,))

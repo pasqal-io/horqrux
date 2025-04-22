@@ -47,7 +47,7 @@ class GPSRTest(chex.TestCase):
         with self.assertRaises(NotImplementedError):
             values = values_to_dict(x)
             expectation(
-                state, circuit, observables, values, values_observable=values, diff_mode="gpsr"
+                state, circuit, observables, values, values_observables=values, diff_mode="gpsr"
             )
 
         @self.variant

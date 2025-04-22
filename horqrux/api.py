@@ -93,7 +93,7 @@ def expectation(
     circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
-    values_observable: dict[str, float] = dict(),
+    values_observables: dict[str, float] = dict(),
     diff_mode: DiffMode = DiffMode.AD,
     n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),
@@ -106,7 +106,7 @@ def expectation(
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
-        values_observable (dict[str, float], optional): Parameter values for the observable only.
+        values_observables (dict[str, float], optional): Parameter values for the observable only.
             Useful for differentiation with respect to the observable parameters.
             Differentiation is only possible with DiffMode.AD. Defaults to empty dict.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
@@ -117,11 +117,11 @@ def expectation(
         Array: Expectation values.
     """
     if diff_mode == DiffMode.AD:
-        return ad_expectation(state, circuit, observables, values, values_observable)
+        return ad_expectation(state, circuit, observables, values, values_observables)
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
-        if bool(values_observable):
+        if bool(values_observables):
             raise NotImplementedError("ADJOINT does not support separate observable values")
 
         return adjoint_expectation(state, circuit, observables, values)
@@ -129,7 +129,7 @@ def expectation(
     elif diff_mode == DiffMode.GPSR:
         if n_shots < 0:
             raise ValueError("The number of shots should be positive.")
-        if bool(values_observable):
+        if bool(values_observables):
             raise NotImplementedError("GPSR does not support separate observable values")
         if n_shots == 0:
             return no_shots_fwd(

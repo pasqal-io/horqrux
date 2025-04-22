@@ -97,7 +97,7 @@ print(f"Gradient: {grad_ad}") # markdown-exec: hide
 
 ### Differentiation of observable parameters
 
-With the automatic differentiation mode, one can evaluate gradients for the observable parameters as follows:
+With the automatic differentiation mode, one can evaluate gradients for the observable parameters by specifying the `values_observables` argument as follows:
 
 ```python exec="on" source="material-block" html="1" session="diff"
 
@@ -109,7 +109,7 @@ obsval = jax.random.uniform(jax.random.key(0), (1,))
 def expectation_separate_parameters(x: Array, y: Array) -> Array:
     values = values_to_dict(x)
     values_obs = {param_prefix + "_obs": y}
-    return expectation(state, circuit, observables, values, values_obs, diff_mode=DiffMode.AD).sum()
+    return expectation(state, circuit, observables, values, values_observables=values_obs, diff_mode=DiffMode.AD).sum()
 
 dobs_ad = jax.grad(expectation_separate_parameters, argnums=1)
 grad_ad = dobs_ad(x, obsval)

@@ -24,7 +24,7 @@ def _ad_expectation_single_observable(
     state: Any,
     observable: Observable,
     values: dict[str, float],
-    values_observable: dict[str, float] = dict(),
+    values_observables: dict[str, float] = dict(),
 ) -> Any:
     raise NotImplementedError("_ad_expectation_single_observable is not implemented")
 
@@ -34,12 +34,12 @@ def _(
     state: Array,
     observable: Observable,
     values: dict[str, float],
-    values_observable: dict[str, float] = dict(),
+    values_observables: dict[str, float] = dict(),
 ) -> Array:
-    values_observable = values_observable if bool(values_observable) else values
+    values_observables = values_observables if bool(values_observables) else values
     projected_state = observable.forward(
         state,
-        values_observable,
+        values_observables,
     )
     return inner(state, projected_state).real
 
@@ -49,12 +49,12 @@ def _(
     state: BCOO,
     observable: Observable,
     values: dict[str, float],
-    values_observable: dict[str, float] = dict(),
+    values_observables: dict[str, float] = dict(),
 ) -> Array:
-    values_observable = values_observable if bool(values_observable) else values
+    values_observables = values_observables if bool(values_observables) else values
     projected_state = observable.forward(
         state,
-        values_observable,
+        values_observables,
     )
     return real_sp(inner(state, projected_state))
 
@@ -64,11 +64,11 @@ def _(
     state: DensityMatrix,
     observable: Observable,
     values: dict[str, float],
-    values_observable: dict[str, float] = dict(),
+    values_observables: dict[str, float] = dict(),
 ) -> Array:
     n_qubits = num_qubits(state)
-    values_observable = values_observable if bool(values_observable) else values
-    mat_obs = observable.tensor(values_observable)
+    values_observables = values_observables if bool(values_observables) else values
+    mat_obs = observable.tensor(values_observables)
     d = 2**n_qubits
     prod = apply_operator(state.array, mat_obs, observable.qubit_support, (None,)).reshape((d, d))
     return jnp.trace(prod, axis1=-2, axis2=-1).real
@@ -79,7 +79,7 @@ def ad_expectation(
     circuit: OpSequence,
     observables: list[Observable],
     values: dict[str, float],
-    values_observable: dict[str, float] = dict(),
+    values_observables: dict[str, float] = dict(),
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
        and compute the expectation given an observable.
@@ -89,7 +89,7 @@ def ad_expectation(
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
-        values_observable (dict[str, float], optional): Parameter values for the observable only.
+        values_observables (dict[str, float], optional): Parameter values for the observable only.
             Useful for differentiation with respect to the observable parameters.
             Differentiation is only possible with DiffMode.AD. Defaults to empty dict.
 
@@ -102,7 +102,7 @@ def ad_expectation(
                 apply_gates(state, list(iter(circuit)), values, OperationType.UNITARY),  # type: ignore[type-var]
                 observable,
                 values,
-                values_observable,
+                values_observables,
             ),
             observables,
         )

@@ -35,7 +35,7 @@ class GPSRTest(chex.TestCase):
             if y is None:
                 return expectation(state, circuit, observables, values[0], diff_mode="ad")
             return expectation(
-                state, circuit, observables, values[0], values_observable=values[1], diff_mode="ad"
+                state, circuit, observables, values[0], values_observables=values[1], diff_mode="ad"
             )
 
         d_exact = jax.grad(lambda x: exp_fn(x).sum())(x)
