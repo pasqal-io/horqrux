@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import chex
 import jax
-import jax.numpy as jnp
 from jax import Array
-
-from absl.testing import parameterized
 
 from horqrux import expectation, random_state
 from horqrux.circuit import QuantumCircuit
@@ -22,12 +19,14 @@ class GPSRTest(chex.TestCase):
         param_names = [param_name, param_name + "2", param_name + "obs"]
         ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
 
-        def values_to_dict(x: Array, y: Array | None = None) -> dict[str, Array] | tuple[dict[str, Array]]:
+        def values_to_dict(
+            x: Array, y: Array | None = None
+        ) -> dict[str, Array] | tuple[dict[str, Array]]:
             if y is None:
                 return {param_names[0]: x[0], param_names[1]: x[1], param_names[2]: x[2]}
             else:
                 return {param_names[0]: x[0], param_names[1]: x[1]}, {param_names[2]: y}
-        
+
         circuit = QuantumCircuit(2, ops)
         observables = [Observable([RZ(param_name + "obs", 0)])]
         state = random_state(2)
@@ -37,7 +36,9 @@ class GPSRTest(chex.TestCase):
             values = values_to_dict(x, y)
             if y is None:
                 return expectation(state, circuit, observables, values, diff_mode="ad")
-            return expectation(state, circuit, observables, values[0], values_observable=values[1],diff_mode="ad")
+            return expectation(
+                state, circuit, observables, values[0], values_observable=values[1], diff_mode="ad"
+            )
 
         d_exact = jax.grad(lambda x: exp_fn(x).sum())(x)
 
