@@ -19,9 +19,9 @@ class GPSRTest(chex.TestCase):
         param_names = [param_name, param_name + "2", param_name + "obs"]
         ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
 
-        def values_to_dict(x: Array, y) -> dict[str, Array] | tuple[dict[str, Array]]:
+        def values_to_dict(x: Array, y) -> tuple[dict[str, Array]]:
             if y is None:
-                return {param_names[0]: x[0], param_names[1]: x[1], param_names[2]: x[2]}
+                return tuple({param_names[0]: x[0], param_names[1]: x[1], param_names[2]: x[2]})
             else:
                 return {param_names[0]: x[0], param_names[1]: x[1]}, {param_names[2]: y}
 
@@ -33,7 +33,7 @@ class GPSRTest(chex.TestCase):
         def exp_fn(x, y):
             values = values_to_dict(x, y)
             if y is None:
-                return expectation(state, circuit, observables, values, diff_mode="ad")
+                return expectation(state, circuit, observables, values[0], diff_mode="ad")
             return expectation(
                 state, circuit, observables, values[0], values_observable=values[1], diff_mode="ad"
             )
