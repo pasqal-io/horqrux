@@ -106,7 +106,7 @@ def expectation(
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
         values (dict[str, float]): Parameter values.
-        values_observable (dict[str, float]): Parameter values for the observable only.
+        values_observable (dict[str, float], optional): Parameter values for the observable only.
             Useful for differentiation with respect to the observable parameters.
             Differentiation is only possible with DiffMode.AD.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
