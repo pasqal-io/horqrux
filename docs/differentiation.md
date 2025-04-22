@@ -66,7 +66,7 @@ param_prefix = "theta"
 param_names = [param_prefix, param_prefix + "2"]
 ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
 
-def values_to_dict(x):
+def values_to_dict(x: Array) -> dict[str, Array]:
     return {param_names[0]: x[0], param_names[1]: x[1]}
 
 circuit = QuantumCircuit(2, ops)

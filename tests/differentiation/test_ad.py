@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Union
+
 import chex
 import jax
 from jax import Array
@@ -20,7 +22,7 @@ class GPSRTest(chex.TestCase):
         ops = [RX(param_names[0], 0), RX(param_names[1], 1)]
 
         def values_to_dict(
-            x: Array, y: Array | None = None
+            x: Array, y: Union[Array, None] = None
         ) -> dict[str, Array] | tuple[dict[str, Array]]:
             if y is None:
                 return {param_names[0]: x[0], param_names[1]: x[1], param_names[2]: x[2]}
@@ -32,7 +34,7 @@ class GPSRTest(chex.TestCase):
         state = random_state(2)
 
         @self.variant
-        def exp_fn(x, y: Array | None = None):
+        def exp_fn(x, y: Union[Array, None] = None):
             values = values_to_dict(x, y)
             if y is None:
                 return expectation(state, circuit, observables, values, diff_mode="ad")
