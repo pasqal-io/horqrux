@@ -44,6 +44,12 @@ class GPSRTest(chex.TestCase):
         observables = [Observable([Z(0)]), Observable([Z(1)])]
         state = random_state(N_QUBITS)
 
+        with self.assertRaises(NotImplementedError):
+            values = values_to_dict(x)
+            expectation(
+                state, circuit, observables, values, values_observable=values, diff_mode="gpsr"
+            )
+
         @self.variant
         def exact(x):
             values = values_to_dict(x)
