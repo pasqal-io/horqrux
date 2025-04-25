@@ -1,5 +1,7 @@
+## Differentiation
+
 `horqrux` also offers several differentiation modes to compute gradients which can be accessed through the
-`expectation` API. Simply pass one of three `DiffMode` options to the `diff_mode` argument.
+`expectation` API. It requires to pass one of the three `DiffMode` options to the `diff_mode` argument.
 The default is `ad`.
 
 ### Automatic Differentiation (DiffMode.AD)
@@ -9,10 +11,10 @@ The default differentation mode of `horqrux` uses [jax.grad](https://docs.jax.de
 The [adjoint differentiation mode](https://arxiv.org/abs/2009.02823) computes first-order gradients by only requiring at most three states in memory in `O(P)` time where `P` is the number of parameters in a circuit.
 
 ### Generalized Parameter-Shift rules (DiffMode.GPSR)
-The Generalized parameter shift rule (GPSR mode) is an extension of the well known [parameter shift rule (PSR)](https://arxiv.org/abs/1811.11184) algorithm [to arbitrary quantum operations](https://arxiv.org/abs/2108.01218). Indeed, PSR only works for quantum operations whose generator has a single gap in its eigenvalue spectrum, GPSR extending to multi-gap.
+The Generalized parameter shift rule (GPSR mode) is an extension of the well known [parameter shift rule (PSR)](https://arxiv.org/abs/1811.11184) algorithm [to arbitrary quantum operations](https://arxiv.org/abs/2108.01218). Indeed, PSR applies for quantum operations whose generator has a single gap in its eigenvalue spectrum. GPSR extends to multi-gap eigenvalued generators.
 
 !!! warning "Usage restrictions"
-    At the moment, circuits with one or more Scale and circuits with `HamiltonianEvolution` operations are not supported.
+    At the moment, circuits with one or more `Scale` and/or `HamiltonianEvolution` operations are not supported.
     They should be handled differently as GPSR requires operations to be of the form presented below.
 
 For this, we define the differentiable function as quantum expectation value:
@@ -41,10 +43,12 @@ F_{S} & =4\overset{S}{\underset{s=1}{\sum}}{\rm sin}\left(\frac{\delta_{M}\Delta
 Here $F_s=f(x+\delta_s)-f(x-\delta_s)$ denotes the difference between values of functions evaluated at shifted arguments $x\pm\delta_s$.
 
 
-### Example
+## Examples
 
-Here we show an example of differentiating an expectation value via the three modes.
-Note that [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html) requires functions of Arrays.
+### Circuit parameters differentiation
+
+We show below a code example with several differentiation methods for circuit parameters.
+Note that [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html) requires functions of `Array`.
 
 ```python exec="on" source="material-block" html="1" session="diff"
 
@@ -95,9 +99,9 @@ grad_adjoint = d_adjoint(x)
 print(f"Gradient: {grad_ad}") # markdown-exec: hide
 ```
 
-### Differentiation of observable parameters
+### Parametrized observable differentiation
 
-With the automatic differentiation mode, one can evaluate gradients for the observable parameters by specifying the `values_observables` argument as follows:
+To allow differentiating observable parameters only, we need to specify the `values` argument as a dictionary with two keys `circuit` and `observables`, each being a dictionary of corresponding parameters and values, as follows:
 
 ```python exec="on" source="material-block" html="1" session="diff"
 
@@ -107,9 +111,8 @@ obsval = jax.random.uniform(jax.random.key(0), (1,))
 
 
 def expectation_separate_parameters(x: Array, y: Array) -> Array:
-    values = values_to_dict(x)
-    values_obs = {param_prefix + "_obs": y}
-    return expectation(state, circuit, observables, values, values_observables=values_obs, diff_mode=DiffMode.AD).sum()
+    values = {"circuit": values_to_dict(x), "observables": {param_prefix + "_obs": y}}
+    return expectation(state, circuit, observables, values, diff_mode=DiffMode.AD).sum()
 
 dobs_ad = jax.grad(expectation_separate_parameters, argnums=1)
 grad_ad = dobs_ad(x, obsval)

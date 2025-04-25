@@ -45,11 +45,6 @@ class TestAdjoint(chex.TestCase):
         state = random_state(MAX_QUBITS)
         state_sparse = random_state(MAX_QUBITS, sparse=True)
 
-        with self.assertRaises(NotImplementedError):
-            expectation(
-                state, circuit, observable, values, values_observables=values, diff_mode="adjoint"
-            )
-
         @self.variant(static_argnums=(1,))
         def exp_fn(values: dict, diff_mode: DiffMode = "ad") -> Array:
             return expectation(state, circuit, observable, values, diff_mode).sum()

@@ -65,7 +65,7 @@ def adjoint_expectation(
     state: State,
     circuit: OpSequence,
     observables: list[Observable],
-    values: dict[str, float],
+    values: dict[str, float] | dict[str, dict[str, float]],
 ) -> Array:
     """Apply a sequence of adjoint operators to an input state given parameters 'values'
        and compute the expectation given an observable.
@@ -92,8 +92,7 @@ def expectation(
     state: State,
     circuit: OpSequence,
     observables: list[Observable],
-    values: dict[str, float],
-    values_observables: dict[str, float] = dict(),
+    values: dict[str, float] | dict[str, dict[str, float]],
     diff_mode: DiffMode = DiffMode.AD,
     n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),
@@ -105,10 +104,12 @@ def expectation(
         state (State): Input state vector or density matrix.
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
-        values (dict[str, float]): Parameter values.
-        values_observables (dict[str, float], optional): Parameter values for the observable only.
-            Useful for differentiation with respect to the observable parameters.
-            Differentiation is only possible with DiffMode.AD. Defaults to empty dict.
+        values (dict[str, float] | dict[str, dict[str, float]]): A dictionary
+            containing <'parameter_name': value> pairs
+            denoting the current parameter values for each parameter in `circuit`.
+            Note it can include also values for the observables, but differentiation will
+            not separate gradients.
+            To do so, we should provide values as a dict with two keys: `circuit` and `observables`, each a dict.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
         n_shots (int): Number of shots. Defaults to 0 for no shots.
         key (Any, optional): Random key. Defaults to jax.random.PRNGKey(0).
@@ -116,21 +117,18 @@ def expectation(
     Returns:
         Array: Expectation values.
     """
+
     if diff_mode == DiffMode.AD:
-        return ad_expectation(state, circuit, observables, values, values_observables)
+        return ad_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
-        if bool(values_observables):
-            raise NotImplementedError("ADJOINT does not support separate observable values")
 
         return adjoint_expectation(state, circuit, observables, values)
 
     elif diff_mode == DiffMode.GPSR:
         if n_shots < 0:
             raise ValueError("The number of shots should be positive.")
-        if bool(values_observables):
-            raise NotImplementedError("GPSR does not support separate observable values")
         if n_shots == 0:
             return no_shots_fwd(
                 state=state,
