@@ -65,7 +65,7 @@ def adjoint_expectation(
     state: State,
     circuit: OpSequence,
     observables: list[Observable],
-    values: dict[str, float] | dict[str, dict[str, float]],
+    values: dict | dict[str, float] | dict[str, dict[str, float]] = dict(),
 ) -> Array:
     """Apply a sequence of adjoint operators to an input state given parameters 'values'
        and compute the expectation given an observable.
@@ -74,7 +74,7 @@ def adjoint_expectation(
         state (State): Input state vector or density matrix.
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
-        values (dict[str, float]): Parameter values.
+        values (dict, dict[str, float] | dict[str, dict[str, float]], optional): Parameter values.
 
     Returns:
         Array: Expectation values.
@@ -92,7 +92,7 @@ def expectation(
     state: State,
     circuit: OpSequence,
     observables: list[Observable],
-    values: dict[str, float] | dict[str, dict[str, float]],
+    values: dict | dict[str, float] | dict[str, dict[str, float]] = dict(),
     diff_mode: DiffMode = DiffMode.AD,
     n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),
@@ -104,7 +104,7 @@ def expectation(
         state (State): Input state vector or density matrix.
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
-        values (dict[str, float] | dict[str, dict[str, float]]): A dictionary
+        values (dict[str, float] | dict[str, dict[str, float]], optional): A dictionary
             containing <'parameter_name': value> pairs
             denoting the current parameter values for each parameter in `circuit`.
             Note it can include also values for the observables, but differentiation will

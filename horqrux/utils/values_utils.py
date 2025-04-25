@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-from typing import Union
-from jax import Array
-from jax.typing import ArrayLike
 
-def _values_processing(
-    values: dict | None = None
-) -> tuple[dict[str, float], dict[str, float]]:
+def _values_processing(values: dict | None = None) -> tuple[dict[str, float], dict[str, float]]:
     """Process the parameter values."""
     values = values or dict()
     values_observables = values
