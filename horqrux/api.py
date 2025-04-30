@@ -65,7 +65,7 @@ def adjoint_expectation(
     state: State,
     circuit: OpSequence,
     observables: list[Observable],
-    values: dict[str, float],
+    values: dict | dict[str, float] | dict[str, dict[str, float]] = dict(),
 ) -> Array:
     """Apply a sequence of adjoint operators to an input state given parameters 'values'
        and compute the expectation given an observable.
@@ -74,7 +74,7 @@ def adjoint_expectation(
         state (State): Input state vector or density matrix.
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
-        values (dict[str, float]): Parameter values.
+        values (dict, dict[str, float] | dict[str, dict[str, float]], optional): Parameter values.
 
     Returns:
         Array: Expectation values.
@@ -92,7 +92,7 @@ def expectation(
     state: State,
     circuit: OpSequence,
     observables: list[Observable],
-    values: dict[str, float],
+    values: dict | dict[str, float] | dict[str, dict[str, float]] = dict(),
     diff_mode: DiffMode = DiffMode.AD,
     n_shots: int = 0,
     key: Any = jax.random.PRNGKey(0),
@@ -104,7 +104,12 @@ def expectation(
         state (State): Input state vector or density matrix.
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
-        values (dict[str, float]): Parameter values.
+        values (dict[str, float] | dict[str, dict[str, float]], optional): A dictionary
+            containing <'parameter_name': value> pairs
+            denoting the current parameter values for each parameter in `circuit`.
+            Note it can include also values for the observables, but differentiation will
+            not separate gradients.
+            To do so, we should provide values as a dict with two keys: `circuit` and `observables`, each a dict.
         diff_mode (DiffMode, optional): Differentiation mode. Defaults to DiffMode.AD.
         n_shots (int): Number of shots. Defaults to 0 for no shots.
         key (Any, optional): Random key. Defaults to jax.random.PRNGKey(0).
@@ -112,12 +117,15 @@ def expectation(
     Returns:
         Array: Expectation values.
     """
+
     if diff_mode == DiffMode.AD:
         return ad_expectation(state, circuit, observables, values)
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
+
         return adjoint_expectation(state, circuit, observables, values)
+
     elif diff_mode == DiffMode.GPSR:
         if n_shots < 0:
             raise ValueError("The number of shots should be positive.")

@@ -30,7 +30,10 @@ def __adjoint_expectation_single_observable(
 
 
 def adjoint_expectation(
-    state: Array, circuit: OpSequence, observable: Observable, values: dict[str, float]
+    state: Array,
+    circuit: OpSequence,
+    observable: Observable,
+    values: dict[str, float] | dict[str, dict[str, float]],
 ) -> Array:
     return ad_expectation(state, circuit, observable, values)  # type: ignore[arg-type]
 

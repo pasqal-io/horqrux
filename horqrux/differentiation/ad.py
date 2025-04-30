@@ -17,6 +17,7 @@ from horqrux.utils.operator_utils import (
     num_qubits,
 )
 from horqrux.utils.sparse_utils import real_sp, stack_sp
+from horqrux.utils.values_utils import _values_processing
 
 
 @singledispatch
@@ -71,7 +72,7 @@ def ad_expectation(
     state: State,
     circuit: OpSequence,
     observables: list[Observable],
-    values: dict[str, float],
+    values: dict[str, float] | dict[str, dict[str, float]],
 ) -> Array:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
        and compute the expectation given an observable.
@@ -80,17 +81,23 @@ def ad_expectation(
         state (State): Input state vector or density matrix.
         circuit (OpSequence): Sequence of gates.
         observables (list[Observable]): List of observables.
-        values (dict[str, float]): Parameter values.
+        values (dict[str, float] | dict[str, dict[str, float]]): Parameter values.
 
     Returns:
         Array: Expectation values.
     """
+    values_circuit, values_observables = _values_processing(values)
     outputs = list(
         map(
             lambda observable: _ad_expectation_single_observable(
-                apply_gates(state, list(iter(circuit)), values, OperationType.UNITARY),  # type: ignore[type-var]
+                apply_gates(
+                    state,
+                    list(iter(circuit)),  # type: ignore[type-var]
+                    values_circuit,
+                    OperationType.UNITARY,
+                ),
                 observable,
-                values,
+                values_observables,
             ),
             observables,
         )

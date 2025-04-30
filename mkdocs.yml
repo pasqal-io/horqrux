@@ -4,9 +4,11 @@ repo_name: "horqrux"
 
 nav:
   - horqrux in a nutshell: index.md
+  - API: api.md
   - Contribute: CONTRIBUTING.md
   - Code of Conduct: CODE_OF_CONDUCT.md
   - Advanced Features:
+    - Differentiation: differentiation.md
     - Variational quantum eigensolver: vqe.md
     - Function fitting and PDE solving with DQC: dqc.md
     - Noisy simulation: noise.md
