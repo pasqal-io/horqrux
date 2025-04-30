@@ -5,7 +5,7 @@
 The default is `ad`.
 
 ### Automatic Differentiation (DiffMode.AD)
-The default differentation mode of `horqrux` uses [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html), the `jax` native automatic differentiation engine which tracks operations on `jax.Array` objects by constructing a computational graph to perform chain rules for derivatives calculations.
+The default differentation mode of `horqrux` uses [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html), the `jax` native automatic differentiation engine which tracks operations on `jax.Array` objects by constructing a computational graph to perform chain rules for derivative calculations.
 
 ### Adjoint Differentiation (DiffMode.ADJOINT)
 The [adjoint differentiation mode](https://arxiv.org/abs/2009.02823) computes first-order gradients by only requiring at most three states in memory in `O(P)` time where `P` is the number of parameters in a circuit.
