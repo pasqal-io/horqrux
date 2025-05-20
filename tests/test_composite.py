@@ -155,6 +155,8 @@ def test_sequence_in_sequence() -> None:
     # test expectation
     obs = Observable([Z(0)])
     exp_seq = expectation(orig_state, seq, observables=[obs], values=values)
+    exp_sampling = expectation(orig_state, seq, observables=[obs], values=values, n_shots=100000)
+    assert jnp.allclose(exp_seq, exp_sampling, atol=1e-2)
 
     exp_qc2output = expectation(qc_output, qc, observables=[obs], values=values)
     assert jnp.allclose(exp_qc2output, exp_seq)

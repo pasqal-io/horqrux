@@ -138,8 +138,7 @@ def no_shots_fwd(
     return stack_sp(outputs)
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
-def finite_shots_fwd(
+def finite_shots(
     state: State,
     gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
@@ -167,6 +166,32 @@ def finite_shots_fwd(
         d = 2**n_qubits
         output_gates.array = output_gates.array.reshape((d, d))
     return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
+
+
+@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
+def finite_shots_fwd(
+    state: State,
+    gates: Union[Primitive, Iterable[Primitive]],
+    observables: list[Observable],
+    values: dict[str, float],
+    n_shots: int = 100,
+    key: Any = jax.random.PRNGKey(0),
+) -> Array:
+    """Run 'state' through a sequence of 'gates' given parameters 'values'
+    and compute the expectations using `n_shots` shots per observable.
+
+    Args:
+        state (State): Input state or density matrix.
+        gates (Union[Primitive, Iterable[Primitive]]): Sequence of gates.
+        observables (list[Observable]): List of observables.
+        values (dict[str, float]): Parameter values.
+        n_shots (int, optional): Number of shots. Defaults to 100.
+        key (Any, optional): Key for randomness. Defaults to jax.random.PRNGKey(0).
+
+    Returns:
+        Array: Expectation values.
+    """
+    return finite_shots(state, gates, observables, values, n_shots, key)
 
 
 @jax.vmap
