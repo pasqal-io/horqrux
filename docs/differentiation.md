@@ -7,8 +7,14 @@ The default is `ad`.
 ### Automatic Differentiation (DiffMode.AD)
 The default differentation mode of `horqrux` uses [jax.grad](https://docs.jax.dev/en/latest/_autosummary/jax.grad.html), the `jax` native automatic differentiation engine which tracks operations on `jax.Array` objects by constructing a computational graph to perform chain rules for derivative calculations.
 
+!!! warning "Using shots"
+    When using shots, automatic differentiation does not apply as sampling break the computational graph.
+
 ### Adjoint Differentiation (DiffMode.ADJOINT)
 The [adjoint differentiation mode](https://arxiv.org/abs/2009.02823) computes first-order gradients by only requiring at most three states in memory in `O(P)` time where `P` is the number of parameters in a circuit.
+
+!!! warning "Using shots"
+    Adjoint differentiation does not support shots.
 
 ### Generalized Parameter-Shift rules (DiffMode.GPSR)
 The Generalized parameter shift rule (GPSR mode) is an extension of the well known [parameter shift rule (PSR)](https://arxiv.org/abs/1811.11184) algorithm [to arbitrary quantum operations](https://arxiv.org/abs/2108.01218). Indeed, PSR applies for quantum operations whose generator has a single gap in its eigenvalue spectrum. GPSR extends to multi-gap eigenvalued generators.
@@ -16,6 +22,7 @@ The Generalized parameter shift rule (GPSR mode) is an extension of the well kno
 !!! warning "Usage restrictions"
     At the moment, circuits with one or more `Scale` and/or `HamiltonianEvolution` operations are not supported.
     They should be handled differently as GPSR requires operations to be of the form presented below.
+    Note also that jitting works but is extremely slow. We plan to solve this soon.
 
 For this, we define the differentiable function as quantum expectation value:
 
