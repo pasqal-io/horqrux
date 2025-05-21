@@ -9,7 +9,8 @@ from jax import Array
 from horqrux.composite import Observable, OpSequence
 from horqrux.differentiation.ad import ad_expectation
 from horqrux.differentiation.adjoint import adjoint_expectation as apply_adjoint
-from horqrux.differentiation.gpsr import finite_shots, finite_shots_fwd, no_shots_fwd
+from horqrux.differentiation.gpsr import finite_shots_fwd, no_shots_fwd
+from horqrux.shots import finite_shots
 from horqrux.utils.operator_utils import (
     DensityMatrix,
     DiffMode,
@@ -88,6 +89,23 @@ def adjoint_expectation(
     return stack_sp(outputs)
 
 
+# def circuit_psr_compatible(
+#     circuit: OpSequence, values: dict | dict[str, float] | dict[str, dict[str, float]] = dict()
+# ) -> bool:
+#     values_circuit, _ = _values_processing(values)
+#     val_keys = values_circuit.keys()
+#     ops = list(iter(circuit))
+#     if not isinstance(ops, Primitive):
+#         gate_names = extract_gate_names(ops)
+#         if len(gate_names) > len(values_circuit.keys()):
+#             param_to_gates_indices = prepare_param_gates_seq(val_keys, ops)
+
+#             # repeated case
+#             if max(map(len, param_to_gates_indices.values())) > 1:  # type: ignore[arg-type]
+#                 return False
+#     return True
+
+
 def expectation(
     state: State,
     circuit: OpSequence,
@@ -157,3 +175,5 @@ def expectation(
                 n_shots=n_shots,
                 key=key,
             )
+    else:
+        raise ValueError(f"Differentiation mode {diff_mode} is not supported.")

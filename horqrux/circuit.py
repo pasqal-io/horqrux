@@ -7,7 +7,7 @@ from uuid import uuid4
 from jax.tree_util import register_pytree_node_class
 
 from horqrux.composite.sequence import OpSequence
-from horqrux.primitives.parametric import RX, RY, Parametric
+from horqrux.primitives.parametric import RX, RY
 from horqrux.primitives.primitive import NOT, Primitive
 
 
@@ -30,16 +30,6 @@ class QuantumCircuit(OpSequence):
         super().__init__(list(operations))  # type:ignore[arg-type]
         self.n_qubits = n_qubits
         self.fparams = fparams
-
-    @property
-    def param_names(self) -> list[str]:
-        """List of parameters of the circuit.
-            Composed of variational and feature map parameters.
-
-        Returns:
-            list[str]: Names of parameters.
-        """
-        return [str(op.param) for op in self.operations if isinstance(op, Parametric)]
 
     @property
     def vparams(self) -> list[str]:
