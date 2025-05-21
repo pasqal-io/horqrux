@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
+from functools import partial
 from operator import is_not
-from typing import Any, Iterable, Union
+from typing import Any, Iterable
 
-import jax
 import jax.numpy as jnp
-from jax import Array, random
-from jax.experimental import checkify
+from jax import Array
 
-from horqrux.apply import apply_gates
-from horqrux.composite import Observable
-from horqrux.differentiation.ad import _ad_expectation_single_observable
 from horqrux.primitives import Parametric, Primitive
-from horqrux.utils.operator_utils import DensityMatrix, State, expand_operator, num_qubits
-from horqrux.utils.sparse_utils import stack_sp
+
 
 def to_shift(gate: Parametric, shift_value: float) -> Any:
     """Create the shifted gate for PSR.

@@ -9,12 +9,17 @@ from jax import Array
 
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
+from horqrux.differentiation.ad import _ad_expectation_single_observable
+from horqrux.differentiation.gpsr.gpsr_utils import (
+    alter_gate_sequence,
+    extract_gate_names,
+    initialize_gpsr_ingredients,
+    prepare_param_gates_seq,
+    spectral_gap_from_gates,
+)
 from horqrux.primitives import Primitive
 from horqrux.utils.operator_utils import State
 from horqrux.utils.sparse_utils import stack_sp
-
-from horqrux.differentiation.ad import _ad_expectation_single_observable
-from horqrux.differentiation.gpsr.gpsr_utils import initialize_gpsr_ingredients, extract_gate_names, prepare_param_gates_seq, alter_gate_sequence, spectral_gap_from_gates
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
@@ -47,6 +52,7 @@ def no_shots_fwd(
         )
     )
     return stack_sp(outputs)
+
 
 @no_shots_fwd.defjvp
 def no_shots_fwd_jvp(

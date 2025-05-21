@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from functools import partial
 from typing import Any, Iterable, Union
 
@@ -6,13 +7,17 @@ import jax
 import jax.numpy as jnp
 from jax import Array, random
 
-from horqrux.apply import apply_gates
 from horqrux.composite import Observable
-from horqrux.primitives import Parametric, Primitive
-from horqrux.utils.operator_utils import DensityMatrix, State, num_qubits
-
-from horqrux.differentiation.gpsr.gpsr_utils import initialize_gpsr_ingredients, extract_gate_names, prepare_param_gates_seq, alter_gate_sequence, spectral_gap_from_gates
-from horqrux.shots import eigen_sample, finite_shots
+from horqrux.differentiation.gpsr.gpsr_utils import (
+    alter_gate_sequence,
+    extract_gate_names,
+    initialize_gpsr_ingredients,
+    prepare_param_gates_seq,
+    spectral_gap_from_gates,
+)
+from horqrux.primitives import Primitive
+from horqrux.shots import finite_shots
+from horqrux.utils.operator_utils import State
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))

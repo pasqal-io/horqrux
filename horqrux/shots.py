@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
-from operator import is_not
+from functools import singledispatch
 from typing import Any, Iterable, Union
 
 import jax
 import jax.numpy as jnp
-from jax import Array, random
+from jax import Array
 from jax.experimental import checkify
 
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
-from horqrux.differentiation.ad import _ad_expectation_single_observable
-from horqrux.primitives import Parametric, Primitive
+from horqrux.primitives import Primitive
 from horqrux.utils.operator_utils import DensityMatrix, State, expand_operator, num_qubits
-from horqrux.utils.sparse_utils import stack_sp
+
 
 @singledispatch
 def eigen_probabilities(state: Any, eigvecs: Array) -> Array:
