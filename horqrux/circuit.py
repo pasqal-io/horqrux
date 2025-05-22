@@ -32,13 +32,13 @@ class QuantumCircuit(OpSequence):
         self.fparams = fparams
 
     @property
-    def vparams(self) -> list[str]:
+    def vparams(self) -> set[str]:
         """List of variational parameters of the circuit.
 
         Returns:
             list[str]: Names of variational parameters.
         """
-        return [name for name in self.param_names if name not in self.fparams]
+        return set([name for name in self.param_names if name not in self.fparams])
 
     @property
     def n_vparams(self) -> int:
