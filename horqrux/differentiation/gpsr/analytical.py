@@ -22,8 +22,7 @@ from horqrux.utils.operator_utils import State
 from horqrux.utils.sparse_utils import stack_sp
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
-def no_shots_fwd(
+def no_shots(
     state: State,
     gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
@@ -54,6 +53,110 @@ def no_shots_fwd(
     return stack_sp(outputs)
 
 
+jitted_no_shots = jax.jit(no_shots)
+
+
+def no_shots_bwd(
+    state: State,
+    gates: Union[Primitive, Iterable[Primitive]],
+    observables: list[Observable],
+    values: dict[str, float],
+) -> Array:
+    """Compute the gradient using the GPSR algorithm.
+    This function is efficient when used in a
+    training loop using the jitted version
+    of the `no_shots` function
+    (that is the `horqrux.differentiation.gpsr.jitted_no_shots`).
+
+    There is also a jvp function `no_shots_fwd`compatible with `jax.grad`
+    but compilation time are long when using `jax.jit`.
+
+    Args:
+        state (State): Input state or density matrix.
+        gates (Union[Primitive, Iterable[Primitive]]): Sequence of gates.
+        observables (list[Observable]): List of observables.
+        values (dict[str, float]): Parameter values.
+
+    Returns:
+        Array: Gradients via the GPSR algorithm.
+    """
+    val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
+
+    def jvp_component(param_name: str) -> Array:
+        up_val = values.copy()
+        up_val[param_name] = up_val[param_name] + shift
+        f_up = jitted_no_shots(state, gates, observables, up_val)
+        down_val = values.copy()
+        down_val[param_name] = down_val[param_name] - shift
+        f_down = jitted_no_shots(state, gates, observables, down_val)
+        grad = (
+            spectral_gap[param_name]
+            * (f_up - f_down)
+            / (4.0 * jnp.sin(spectral_gap[param_name] * shift / 2.0))
+        )
+        return grad
+
+    jvp_caller = jvp_component
+    if not isinstance(gates, Primitive):
+        gate_names = extract_gate_names(gates)
+        if len(gate_names) > len(val_keys):
+            param_to_gates_indices = prepare_param_gates_seq(val_keys, gates)
+            # repeated case
+            if max(map(len, param_to_gates_indices.values())) > 1:  # type: ignore[arg-type]
+
+                def jvp_component_repeated_param(param_name: str) -> Array:
+                    shift_gates = param_to_gates_indices[param_name]
+
+                    def shift_jvp(ind: int) -> Array:
+                        spectral_gap = gates[ind].spectral_gap  # type: ignore[index]
+                        gates_up = alter_gate_sequence(gates, ind, shift)
+                        f_up = jitted_no_shots(state, gates_up, observables, values)
+                        gates_down = alter_gate_sequence(gates, ind, -shift)
+                        f_down = jitted_no_shots(state, gates_down, observables, values)
+                        return (
+                            spectral_gap
+                            * (f_up - f_down)
+                            / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+                        )
+
+                    return sum(shift_jvp(shift_ind) for shift_ind in shift_gates)
+
+                jvp_caller = jvp_component_repeated_param
+            else:
+                spectral_gap = spectral_gap_from_gates(param_to_gates_indices, val_keys)
+
+    jvp = jnp.stack([jvp_caller(param) for param in val_keys]).sum(axis=-1)
+    return jvp
+
+
+@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
+def no_shots_fwd(
+    state: State,
+    gates: Union[Primitive, Iterable[Primitive]],
+    observables: list[Observable],
+    values: dict[str, float],
+) -> Array:
+    """Run 'state' through a sequence of 'gates' given parameters 'values'
+    and compute the expectations analytically.
+
+    This is compatible with `jax.grad`as we use the `jax.custom_jvp` for
+    setting a custom differentiation rule to this function.
+
+    Note though we de not recommend using `jax.jit` with it as compilation
+    time is very long.
+
+    Args:
+        state (State): Input state or density matrix.
+        gates (Union[Primitive, Iterable[Primitive]]): Sequence of gates.
+        observables (list[Observable]): List of observables.
+        values (dict[str, float]): Parameter values.
+
+    Returns:
+        Array: Expectation values.
+    """
+    return no_shots(state, gates, observables, values)
+
+
 @no_shots_fwd.defjvp
 def no_shots_fwd_jvp(
     state: Array,
@@ -62,6 +165,20 @@ def no_shots_fwd_jvp(
     primals: tuple[dict[str, float]],
     tangents: tuple[dict[str, float]],
 ) -> Array:
+    """Jvp version for `no_shots_fwd`.
+
+    Args:
+        state (Array): Input state or density matrix.
+        gates (Union[Primitive, Iterable[Primitive]]): sequence of gates.
+        observable (list[Observable]): List of observables.
+        primals (tuple[dict[str, Array]]): Values we are differentiating over.
+            Jax-specific syntax argument.
+        tangents (tuple[dict[str, Array]]): Bases for differentiation.
+            Jax-specific syntax argument.
+
+    Returns:
+        tuple[Array, Array]: Forward eveluation and gradient
+    """
     values = primals[0]
     tangent_dict = tangents[0]
 
