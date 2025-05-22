@@ -6,7 +6,6 @@ from typing import Any, Iterable, Union
 import jax
 import jax.numpy as jnp
 from jax import Array, random
-from jax.experimental.sparse import BCOO
 
 from horqrux.composite import Observable
 from horqrux.differentiation.gpsr.gpsr_utils import (
@@ -17,9 +16,8 @@ from horqrux.differentiation.gpsr.gpsr_utils import (
 )
 from horqrux.primitives import Primitive
 from horqrux.shots import finite_shots
-from horqrux.utils.conversion import to_sparse
 from horqrux.utils.operator_utils import State
-from horqrux.utils.sparse_utils import stack_sp, sum_sp
+from horqrux.utils.sparse_utils import stack_sp
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
@@ -117,19 +115,12 @@ def finite_shots_jvp(
     spectral_gap_array = stack_sp(list(spectral_gap.values()))
     tangent_array = stack_sp(list(tangent_dict.values())).reshape((-1, 1))
     keys = random.split(key, len(values))
-
-    init = jnp.zeros(fwd.shape)
-    shifts = shift * jnp.eye(len(val_keys), dtype=values_array.dtype)
-    if isinstance(fwd, BCOO):
-        init = to_sparse(init)
-        shifts = to_sparse(shifts)
-
     pytree_scan = {
-        "shift": shifts,
+        "shift": shift * jnp.eye(len(val_keys), dtype=values_array.dtype),
         "spectral_gap": spectral_gap_array,
         "key": keys,
     }
 
-    _, grads = jax.lax.scan(jvp_caller, init, pytree_scan)
-    jvp = sum_sp(stack_sp(grads) * tangent_array, axis=0)
+    _, grads = jax.lax.scan(jvp_caller, jnp.zeros(fwd.shape), pytree_scan)
+    jvp = (stack_sp(grads) * tangent_array).sum(axis=0)
     return fwd, jvp.reshape(fwd.shape)
