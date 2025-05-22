@@ -47,7 +47,7 @@ class QuantumCircuit(OpSequence):
         Returns:
             int: Number of variational parameters.
         """
-        return len(self.param_names) - len(self.fparams)
+        return len(self.vparams)
 
     def tree_flatten(self) -> tuple:
         children = (
