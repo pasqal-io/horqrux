@@ -57,7 +57,7 @@ print("Number of variational parameters: ", ansatz.n_vparams) # markdown-exec: h
 
 ```
 
-## Optimization
+## Optimization with automatic differentiation
 
 The objective here is to optimize the variational parameters of our ansatz using the standard Adam optimizer. Below we show how to set up a train function.
 We first consider the non-jitted version of the training function to compare later the timing with the jitted-version.
@@ -121,6 +121,70 @@ time_jit = end_jit - start_jit
 print(f"Time speedup: {time_nonjit / time_jit:.3f}")
 
 ```
+
+## Optimization with parameter-shift rule
+
+When using parameter shift rule, we recommend using the functions:
+
+- `horqrux.differentiation.gpsr.jitted_no_shots` and `horqrux.differentiation.gpsr.jitted_finite_shots` as forward methods
+- `horqrux.differentiation.gpsr.no_shots_bwd` and `horqrux.differentiation.gpsr.finite_shots_bwd` as backward methods.
+
+While we have available `jax.custom_jvp` functions via the `expectation` method, compilation times are extremely long
+so we recommend using the functions above.
+
+Let us show how to use them for our example:
+
+```python exec="on" source="material-block" session="vqe"
+from horqrux.differentiation.gpsr.analytical import jitted_no_shots, no_shots_bwd
+
+
+# Create random initial values for the parameters
+key = jax.random.PRNGKey(42)
+init_param_vals = jax.random.uniform(key, shape=(ansatz.n_vparams,))
+LEARNING_RATE = 0.01
+N_EPOCHS = 50
+
+optimizer = optax.adam(learning_rate=LEARNING_RATE)
+ansatz_ops = list(iter(ansatz))
+
+def optimize_step(param_vals: Array, opt_state: Array, grads: dict[str, Array]) -> tuple:
+    updates, opt_state = optimizer.update(grads, opt_state, param_vals)
+    param_vals = optax.apply_updates(param_vals, updates)
+    return param_vals, opt_state
+
+def loss_fn(param_vals: Array) -> Array:
+    """The loss function is the sum of all expectation value for the observable components."""
+    values = dict(zip(ansatz.vparams, param_vals))
+    return jitted_no_shots(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values).sum()
+
+def bwd_loss_fn(param_vals: Array) -> Array:
+    """The backward returns directly the gradient vector via GPSR and `jitted_no_shots`."""
+    values = dict(zip(ansatz.vparams, param_vals))
+    return no_shots_bwd(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values)
+
+def train_step(i: int, param_vals_opt_state: tuple) -> tuple:
+    param_vals, opt_state = param_vals_opt_state
+    grads = bwd_loss_fn(param_vals)
+    return optimize_step(param_vals, opt_state, grads)
+
+# set initial parameters and the state of the optimizer
+param_vals = init_param_vals.clone()
+opt_state = optimizer.init(init_param_vals)
+
+def train_unjitted(param_vals, opt_state):
+    for i in range(0, N_EPOCHS):
+        param_vals, opt_state = train_step(i, (param_vals, opt_state))
+    return param_vals, opt_state
+
+start = time.time()
+param_vals, opt_state = train_unjitted(param_vals, opt_state)
+end = time.time()
+time_GPSR = end - start
+
+print(f"Final loss: {loss_fn(param_vals):.3f}") # markdown-exec: hide
+
+```
+
 
 
 [^1]: [Tilly et al., The Variational Quantum Eigensolver: a review of methods and best practices (2022)](https://arxiv.org/abs/2111.05176)
