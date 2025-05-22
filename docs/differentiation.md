@@ -13,8 +13,8 @@ The default differentation mode of `horqrux` uses [jax.grad](https://docs.jax.de
 ### Adjoint Differentiation (DiffMode.ADJOINT)
 The [adjoint differentiation mode](https://arxiv.org/abs/2009.02823) computes first-order gradients by only requiring at most three states in memory in `O(P)` time where `P` is the number of parameters in a circuit.
 
-!!! warning "Using shots"
-    Adjoint differentiation does not support shots.
+!!! warning "Usage restrictions"
+    Adjoint differentiation does not support shots or density matrix inputs.
 
 ### Generalized Parameter-Shift rules (DiffMode.GPSR)
 The Generalized parameter shift rule (GPSR mode) is an extension of the well known [parameter shift rule (PSR)](https://arxiv.org/abs/1811.11184) algorithm [to arbitrary quantum operations](https://arxiv.org/abs/2108.01218). Indeed, PSR applies for quantum operations whose generator has a single gap in its eigenvalue spectrum. GPSR extends to multi-gap eigenvalued generators.
@@ -23,6 +23,11 @@ The Generalized parameter shift rule (GPSR mode) is an extension of the well kno
     At the moment, circuits with one or more `Scale` and/or `HamiltonianEvolution` operations are not supported.
     They should be handled differently as GPSR requires operations to be of the form presented below.
     Note also that jitting works but is extremely slow. We plan to solve this soon.
+    In the meantime, when performing training loops,
+    you can rely on using the GPSR functions not relying on `jax.custom_jvp`:
+    `horqrux.differentiation.gpsr.no_shots_bwd` and `horqrux.differentiation.gpsr.finite_shots_bwd`
+    relying on `horqrux.differentiation.gpsr.jitted_no_shots` and `horqrux.differentiation.gpsr.jitted_finite_shots` calls.
+
 
 For this, we define the differentiable function as quantum expectation value:
 
