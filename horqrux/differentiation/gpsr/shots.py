@@ -19,7 +19,7 @@ from horqrux.primitives import Primitive
 from horqrux.shots import finite_shots
 from horqrux.utils.operator_utils import State
 
-jitted_finite_shots = jax.jit(finite_shots)
+jitted_finite_shots = jax.jit(finite_shots, static_argnums=(4,))
 
 
 def finite_shots_bwd(
@@ -55,10 +55,10 @@ def finite_shots_bwd(
         up_key, down_key = random.split(key)
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
-        f_up = finite_shots_fwd(state, gates, observables, up_val, n_shots, up_key)
+        f_up = jitted_finite_shots(state, gates, observables, up_val, n_shots, up_key)
         down_val = values.copy()
         down_val[param_name] = down_val[param_name] - shift
-        f_down = finite_shots_fwd(state, gates, observables, down_val, n_shots, down_key)
+        f_down = jitted_finite_shots(state, gates, observables, down_val, n_shots, down_key)
         grad = (
             spectral_gap[param_name]
             * (f_up - f_down)
@@ -83,11 +83,11 @@ def finite_shots_bwd(
                         up_key, down_key = random.split(key)
                         spectral_gap = gates[ind].spectral_gap  # type: ignore[index]
                         gates_up = alter_gate_sequence(gates, ind, shift)  # type: ignore[arg-type]
-                        f_up = finite_shots_fwd(
+                        f_up = jitted_finite_shots(
                             state, gates_up, observables, values, n_shots, up_key
                         )
                         gates_down = alter_gate_sequence(gates, ind, -shift)  # type: ignore[arg-type]
-                        f_down = finite_shots_fwd(
+                        f_down = jitted_finite_shots(
                             state, gates_down, observables, values, n_shots, down_key
                         )
                         return (
