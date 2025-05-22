@@ -192,7 +192,6 @@ key = jax.random.PRNGKey(42)
 init_param_vals = jax.random.uniform(key, shape=(ansatz.n_vparams,))
 
 optimizer = optax.adam(learning_rate=LEARNING_RATE)
-N_EPOCHS = 10
 
 def optimize_step(param_vals: Array, opt_state: Array, grads: dict[str, Array]) -> tuple:
     updates, opt_state = optimizer.update(grads, opt_state, param_vals)
