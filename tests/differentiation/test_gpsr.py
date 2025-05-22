@@ -172,5 +172,6 @@ class GPSRTest(chex.TestCase):
         verify_arrays(exp_gpsr, exp_gpsr_sparse.todense())
 
         # test gradients raise errors for sparse
-        with self.assertRaises(NotImplementedError):
+        # due to scan not supporting BCOO
+        with self.assertRaises(AssertionError):
             jax.experimental.sparse.grad(lambda x: exact_gpsr_sparse(x).sum())(x)
