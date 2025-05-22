@@ -6,6 +6,7 @@ from typing import Iterable, Union
 import jax
 import jax.numpy as jnp
 from jax import Array
+from jax.experimental.sparse import BCOO
 
 from horqrux.apply import apply_gates
 from horqrux.composite import Observable
@@ -17,8 +18,9 @@ from horqrux.differentiation.gpsr.gpsr_utils import (
     spectral_gap_from_gates,
 )
 from horqrux.primitives import Primitive
+from horqrux.utils.conversion import to_sparse
 from horqrux.utils.operator_utils import State
-from horqrux.utils.sparse_utils import stack_sp
+from horqrux.utils.sparse_utils import stack_sp, sum_sp
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
@@ -86,7 +88,7 @@ def no_shots_fwd_jvp(
     fwd = no_shots_fwd(state, gates, observable, values)
 
     val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
-    values_array = jnp.stack(list(values.values()))
+    values_array = stack_sp(list(values.values()))
 
     def values_to_dict(x: Array) -> dict[str, Array]:
         return dict(zip(val_keys, x))
@@ -113,14 +115,19 @@ def no_shots_fwd_jvp(
                 raise NotImplementedError("Repeated case not implemented yet")
             else:
                 spectral_gap = spectral_gap_from_gates(param_to_gates_indices, val_keys)
+    init = jnp.zeros(fwd.shape)
+    shifts = shift * jnp.eye(len(val_keys), dtype=values_array.dtype)
+    if isinstance(fwd, BCOO):
+        init = to_sparse(init)
+        shifts = to_sparse(shifts)
 
-    spectral_gap_array = jnp.stack(list(spectral_gap.values()))
-    tangent_array = jnp.stack(list(tangent_dict.values()))
+    spectral_gap_array = stack_sp(list(spectral_gap.values()))
+    tangent_array = stack_sp(list(tangent_dict.values())).reshape((-1, 1))
     pytree_scan = {
-        "shift": shift * jnp.eye(len(val_keys), dtype=values_array.dtype),
+        "shift": shifts,
         "spectral_gap": spectral_gap_array,
     }
 
-    _, grads = jax.lax.scan(jvp_caller, jnp.zeros(1), pytree_scan)
-    jvp = jnp.sum(jnp.stack(grads) * tangent_array.reshape(grads.shape))
+    _, grads = jax.lax.scan(jvp_caller, init, pytree_scan)
+    jvp = sum_sp(stack_sp(grads) * tangent_array, axis=0)
     return fwd, jvp.reshape(fwd.shape)

@@ -12,6 +12,7 @@ from horqrux.apply import apply_gates
 from horqrux.composite import Observable
 from horqrux.primitives import Primitive
 from horqrux.utils.operator_utils import DensityMatrix, State, expand_operator, num_qubits
+from horqrux.utils.sparse_utils import stack_sp
 
 
 @singledispatch
@@ -97,7 +98,7 @@ def eigen_sample(
             observables,
         )
     )
-    eigs = jax.vmap(jnp.linalg.eigh)(jnp.stack(mat_obs))
+    eigs = jax.vmap(jnp.linalg.eigh)(stack_sp(mat_obs))
     eigvecs, eigvals = align_eigenvectors(eigs.eigenvalues, eigs.eigenvectors)
     probs = eigen_probabilities(state, eigvecs)
     return jax.random.choice(key=key, a=eigvals, p=probs, shape=(n_shots,)).mean(axis=0)
