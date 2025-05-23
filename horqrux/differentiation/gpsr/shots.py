@@ -101,9 +101,7 @@ def finite_shots_bwd(
                     )
 
             else:
-                spectral_gap = spectral_gap_from_gates(
-                    param_to_gates_indices, val_keys
-                )
+                spectral_gap = spectral_gap_from_gates(param_to_gates_indices, val_keys)
 
             jvp_caller = jvp_component_repeated_param
     jvp = jnp.stack([jvp_caller(param, key) for param, key in params_with_keys]).sum(axis=-1)
