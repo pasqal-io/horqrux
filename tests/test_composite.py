@@ -140,6 +140,7 @@ def test_sequence_in_sequence() -> None:
     }
     orig_state = random_state(MAX_QUBITS)
     qc = QuantumCircuit(2, ops)
+    assert qc.n_vparams == len(values)
     qc_output = qc(orig_state, values)
     qc2output = qc(qc_output, values)
 
@@ -149,12 +150,15 @@ def test_sequence_in_sequence() -> None:
     assert jnp.allclose(qc2output, qc_in_qc_output)
 
     seq = OpSequence([qc, qc])
+    assert seq.n_vparams == len(values)
     seq_output = seq(orig_state, values)
     assert jnp.allclose(qc2output, seq_output)
 
     # test expectation
     obs = Observable([Z(0)])
     exp_seq = expectation(orig_state, seq, observables=[obs], values=values)
+    exp_sampling = expectation(orig_state, seq, observables=[obs], values=values, n_shots=100000)
+    assert jnp.allclose(exp_seq, exp_sampling, atol=1e-2)
 
     exp_qc2output = expectation(qc_output, qc, observables=[obs], values=values)
     assert jnp.allclose(exp_qc2output, exp_seq)

@@ -7,7 +7,7 @@ from uuid import uuid4
 from jax.tree_util import register_pytree_node_class
 
 from horqrux.composite.sequence import OpSequence
-from horqrux.primitives.parametric import RX, RY, Parametric
+from horqrux.primitives.parametric import RX, RY
 from horqrux.primitives.primitive import NOT, Primitive
 
 
@@ -32,23 +32,13 @@ class QuantumCircuit(OpSequence):
         self.fparams = fparams
 
     @property
-    def param_names(self) -> list[str]:
-        """List of parameters of the circuit.
-            Composed of variational and feature map parameters.
-
-        Returns:
-            list[str]: Names of parameters.
-        """
-        return [str(op.param) for op in self.operations if isinstance(op, Parametric)]
-
-    @property
-    def vparams(self) -> list[str]:
+    def vparams(self) -> set[str]:
         """List of variational parameters of the circuit.
 
         Returns:
             list[str]: Names of variational parameters.
         """
-        return [name for name in self.param_names if name not in self.fparams]
+        return set([name for name in self.param_names if name not in self.fparams])
 
     @property
     def n_vparams(self) -> int:
@@ -57,7 +47,7 @@ class QuantumCircuit(OpSequence):
         Returns:
             int: Number of variational parameters.
         """
-        return len(self.param_names) - len(self.fparams)
+        return len(self.vparams)
 
     def tree_flatten(self) -> tuple:
         children = (

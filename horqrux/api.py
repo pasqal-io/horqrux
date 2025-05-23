@@ -10,6 +10,7 @@ from horqrux.composite import Observable, OpSequence
 from horqrux.differentiation.ad import ad_expectation
 from horqrux.differentiation.adjoint import adjoint_expectation as apply_adjoint
 from horqrux.differentiation.gpsr import finite_shots_fwd, no_shots_fwd
+from horqrux.shots import finite_shots
 from horqrux.utils.operator_utils import (
     DensityMatrix,
     DiffMode,
@@ -119,7 +120,19 @@ def expectation(
     """
 
     if diff_mode == DiffMode.AD:
-        return ad_expectation(state, circuit, observables, values)
+        if n_shots < 0:
+            raise ValueError("The number of shots should be positive.")
+        if n_shots == 0:
+            return ad_expectation(state, circuit, observables, values)
+        else:
+            return finite_shots(
+                state=state,
+                gates=list(iter(circuit)),  # type: ignore[type-var]
+                observables=observables,
+                values=values,  # type: ignore[arg-type]
+                n_shots=n_shots,
+                key=key,
+            )
     elif diff_mode == DiffMode.ADJOINT:
         if isinstance(state, DensityMatrix):
             raise TypeError("Adjoint does not support density matrices.")
@@ -145,3 +158,5 @@ def expectation(
                 n_shots=n_shots,
                 key=key,
             )
+    else:
+        raise ValueError(f"Differentiation mode {diff_mode} is not supported.")
