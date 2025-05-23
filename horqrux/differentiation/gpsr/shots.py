@@ -101,7 +101,7 @@ def finite_shots_bwd(
                     )
 
             else:
-                spectral_gap = spectral_gap = spectral_gap_from_gates(
+                spectral_gap = spectral_gap_from_gates(
                     param_to_gates_indices, val_keys
                 )
 
