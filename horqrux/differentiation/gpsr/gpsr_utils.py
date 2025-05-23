@@ -156,4 +156,6 @@ def create_renamed_operators(
     for gate in gates:
         if gate.is_parametric and gate.param in param_names:  # type: ignore[arg-type, attr-defined]
             new_ops += [new_named_parametric(gate)]
+        else:
+            new_ops += [gate]
     return new_ops
