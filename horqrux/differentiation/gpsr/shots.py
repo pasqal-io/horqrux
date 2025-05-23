@@ -142,10 +142,9 @@ def finite_shots_jvp(
     if values_map:
         # need to remap to original parameter names
         grad_dict = dict(zip(values.keys(), grads))
-        grads_legit_dict: dict = dict.fromkeys(legit_val_keys, list())
-        for temp_name, g in grad_dict.items():
-            grads_legit_dict[values_map[temp_name]].append(g)
-        grads_legit_dict = {k: stack_sp(v).sum(axis=0) for k, v in grads_legit_dict.items()}
-        grads = tuple(grads_legit_dict[name] for name in legit_val_keys)
+        grads_legit_dict: dict = {name: list() for name in legit_val_keys}
+        for temp_name in grad_dict.keys():
+            grads_legit_dict[values_map[temp_name]].append(grad_dict[temp_name])
+        grads = tuple(stack_sp(grads_legit_dict[name]).sum(axis=0) for name in legit_val_keys)
     jvp = (stack_sp(grads) * tangent_array).sum(axis=0)
     return fwd, jvp.reshape(fwd.shape)
