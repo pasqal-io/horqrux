@@ -9,6 +9,7 @@ from jax import Array, random
 
 from horqrux.composite import Observable
 from horqrux.differentiation.gpsr.gpsr_utils import (
+    create_renamed_operators,
     extract_gate_names,
     initialize_gpsr_ingredients,
     prepare_param_gates_seq,
@@ -80,14 +81,43 @@ def finite_shots_jvp(
     """
     values = primals[0]
     tangent_dict = tangents[0]
+    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
 
-    val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
+    legit_val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
+    values_map = None
+
+    if not isinstance(gates, Primitive):
+        gate_names = extract_gate_names(gates)
+        if len(gate_names) > len(legit_val_keys):
+            param_to_gates_indices = prepare_param_gates_seq(legit_val_keys, gates)
+            # repeated case
+            if max(map(len, param_to_gates_indices.values())) > 1:  # type: ignore[arg-type]
+                # use temporary gates and values to make use of scan
+                gates = create_renamed_operators(gates, legit_val_keys)  # type: ignore[index]
+                values_map = {
+                    gates[ind].param: pname  # type: ignore[index]
+                    for pname in legit_val_keys
+                    for ind in param_to_gates_indices[pname]
+                }
+                values = {
+                    temp_name: values[values_map[temp_name]] for temp_name in values_map.keys()
+                }
+                spectral_gap = {
+                    temp_name: gates[ind].spectral_gap  # type: ignore[index]
+                    for temp_name in values_map.keys()
+                    for ind in param_to_gates_indices[values_map[temp_name]]
+                }
+
+            else:
+                spectral_gap = spectral_gap_from_gates(param_to_gates_indices, legit_val_keys)
+
     values_array = stack_sp(list(values.values()))
+    vals_to_dict = values.keys()
 
     def values_to_dict(x: Array) -> dict[str, Array]:
-        return dict(zip(val_keys, x))
+        return dict(zip(vals_to_dict, x))
 
-    def jvp_scan_norepeat(carry_grad: Array, pytree_ind_param: dict[str, Array]) -> Array:
+    def jvp_caller(carry_grad: Array, pytree_ind_param: dict[str, Array]) -> Array:
         key = pytree_ind_param["key"]
         up_key, down_key = random.split(key)
         shift_vector = pytree_ind_param["shift"]
@@ -99,28 +129,23 @@ def finite_shots_jvp(
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
         return carry_grad + grad, grad
 
-    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
-    jvp_caller = jvp_scan_norepeat
-    if not isinstance(gates, Primitive):
-        gate_names = extract_gate_names(gates)
-        if len(gate_names) > len(val_keys):
-            param_to_gates_indices = prepare_param_gates_seq(val_keys, gates)
-            # repeated case
-            if max(map(len, param_to_gates_indices.values())) > 1:  # type: ignore[arg-type]
-                raise NotImplementedError("Repeated case not implemented yet")
-
-            else:
-                spectral_gap = spectral_gap_from_gates(param_to_gates_indices, val_keys)
-
     spectral_gap_array = stack_sp(list(spectral_gap.values()))
     tangent_array = stack_sp(list(tangent_dict.values())).reshape((-1, 1))
     keys = random.split(key, len(values))
     pytree_scan = {
-        "shift": shift * jnp.eye(len(val_keys), dtype=values_array.dtype),
+        "shift": shift * jnp.eye(len(legit_val_keys), dtype=values_array.dtype),
         "spectral_gap": spectral_gap_array,
         "key": keys,
     }
 
     _, grads = jax.lax.scan(jvp_caller, jnp.zeros(fwd.shape), pytree_scan)
+    if values_map:
+        # need to remap to original parameter names
+        grad_dict = dict(zip(values.keys(), grads))
+        grads_legit_dict: dict = dict.fromkeys(legit_val_keys, list())
+        for temp_name, g in grad_dict.items():
+            grads_legit_dict[values_map[temp_name]].append(g)
+        grads_legit_dict = {k: stack_sp(v).sum(axis=0) for k, v in grads_legit_dict.items()}
+        grads = tuple(grads_legit_dict[name] for name in legit_val_keys)
     jvp = (stack_sp(grads) * tangent_array).sum(axis=0)
     return fwd, jvp.reshape(fwd.shape)
