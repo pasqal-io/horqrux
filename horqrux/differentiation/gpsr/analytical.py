@@ -114,6 +114,8 @@ def no_shots_fwd_jvp(
                 spectral_gap = spectral_gap_from_gates(param_to_gates_indices, legit_val_keys)
 
     values_array = stack_sp(list(values.values()))
+    if values_array.shape[-1] == 1:
+        values_array = values_array.squeeze(-1)
     vals_to_dict = values.keys()
 
     def values_to_dict(x: Array) -> dict[str, Array]:

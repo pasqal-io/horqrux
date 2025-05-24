@@ -112,6 +112,8 @@ def finite_shots_jvp(
                 spectral_gap = spectral_gap_from_gates(param_to_gates_indices, legit_val_keys)
 
     values_array = stack_sp(list(values.values()))
+    if values_array.shape[-1] == 1:
+        values_array = values_array.squeeze(-1)
     vals_to_dict = values.keys()
 
     def values_to_dict(x: Array) -> dict[str, Array]:
@@ -131,9 +133,9 @@ def finite_shots_jvp(
 
     spectral_gap_array = stack_sp(list(spectral_gap.values()))
     tangent_array = stack_sp(list(tangent_dict.values())).reshape((-1, 1))
-    keys = random.split(key, len(values))
+    keys = random.split(key, len(vals_to_dict))
     pytree_scan = {
-        "shift": shift * jnp.eye(len(legit_val_keys), dtype=values_array.dtype),
+        "shift": shift * jnp.eye(len(vals_to_dict), dtype=values_array.dtype),
         "spectral_gap": spectral_gap_array,
         "key": keys,
     }
