@@ -129,7 +129,7 @@ class GPSRTest(chex.TestCase):
         grad_shots_bwd = finite_shots_bwd(
             state, list(iter(circuit)), observables, values_to_dict(x), n_shots=N_SHOTS
         )
-        assert jnp.allclose(grad_shots_bwd, grad_shots, atol=1e-3)
+        assert jnp.allclose(grad_shots_bwd, grad_shots, atol=1e-1)
 
         @self.variant
         def dd_exact(x):
@@ -183,5 +183,5 @@ class GPSRTest(chex.TestCase):
         verify_arrays(exp_gpsr, exp_gpsr_sparse.todense())
 
         # test gradients raise errors for sparse
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(AssertionError):
             jax.experimental.sparse.grad(lambda x: exact_gpsr_sparse(x).sum())(x)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from operator import is_not
 from typing import Any, Iterable
+from uuid import uuid4
 
 import jax.numpy as jnp
 from jax import Array
@@ -113,3 +114,48 @@ def spectral_gap_from_gates(
         dict[str, Array]: Parameter names mapped with the spectral gap.
     """
     return {param: param_to_gates_indices[param][0].spectral_gap for param in param_names}
+
+
+def new_named_parametric(gate: Primitive) -> Parametric:
+    """Create a new Parametric with a different name for GPSR with repeated parameters.
+
+    Args:
+        gate (Parametric): Gate input.
+
+    Returns:
+        Parametric: New gate with different name.
+    """
+    children, aux_data = gate.tree_flatten()
+    new_name = str(uuid4())
+    new_gate: Parametric = Parametric.tree_unflatten(
+        aux_data[:-2]
+        + (
+            new_name,
+            aux_data[-1],
+        ),
+        children,
+    )
+    return new_gate
+
+
+def create_renamed_operators(
+    gates: Iterable[Primitive], param_names: Iterable[str]
+) -> Iterable[Primitive]:
+    """Create new quantum operations with renamed parameters.
+
+    This is for GPSR with repeated parameters.
+
+    Args:
+        gates (Iterable[Primitive]): Original gates.
+        param_names (Iterable[str]): Original aprameter names.
+
+    Returns:
+        Iterable[Primitive]: New gates.
+    """
+    new_ops: list = []
+    for gate in gates:
+        if gate.is_parametric and gate.param in param_names:  # type: ignore[arg-type, attr-defined]
+            new_ops += [new_named_parametric(gate)]
+        else:
+            new_ops += [gate]
+    return new_ops
