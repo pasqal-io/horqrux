@@ -23,7 +23,7 @@ from horqrux.utils.operator_utils import State
 from horqrux.utils.sparse_utils import stack_sp
 
 
-def no_shots(
+def analytical_expectation(
     state: State,
     gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
@@ -54,10 +54,10 @@ def no_shots(
     return stack_sp(outputs)
 
 
-jitted_no_shots = jax.jit(no_shots)
+jitted_analytical_exp = jax.jit(analytical_expectation)
 
 
-def no_shots_bwd(
+def analytical_gpsr_bwd(
     state: State,
     gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
@@ -67,10 +67,10 @@ def no_shots_bwd(
     This function is efficient when used in a
     training loop using the jitted version
     of the `no_shots` function
-    (that is the `horqrux.differentiation.gpsr.jitted_no_shots`).
+    (that is the `horqrux.differentiation.gpsr.jitted_analytical_exp`).
 
     There is also a jvp function `no_shots_fwd`compatible with `jax.grad`
-    but compilation time are long when using `jax.jit`.
+    but this function may be faster when using `jax.jit`.
 
     Args:
         state (State): Input state or density matrix.
@@ -86,10 +86,10 @@ def no_shots_bwd(
     def jvp_component(param_name: str) -> Array:
         up_val = values.copy()
         up_val[param_name] = up_val[param_name] + shift
-        f_up = jitted_no_shots(state, gates, observables, up_val)
+        f_up = jitted_analytical_exp(state, gates, observables, up_val)
         down_val = values.copy()
         down_val[param_name] = down_val[param_name] - shift
-        f_down = jitted_no_shots(state, gates, observables, down_val)
+        f_down = jitted_analytical_exp(state, gates, observables, down_val)
         grad = (
             spectral_gap[param_name]
             * (f_up - f_down)
@@ -111,9 +111,9 @@ def no_shots_bwd(
                     def shift_jvp(ind: int) -> Array:
                         spectral_gap = gates[ind].spectral_gap  # type: ignore[index]
                         gates_up = alter_gate_sequence(gates, ind, shift)
-                        f_up = jitted_no_shots(state, gates_up, observables, values)
+                        f_up = jitted_analytical_exp(state, gates_up, observables, values)
                         gates_down = alter_gate_sequence(gates, ind, -shift)
-                        f_down = jitted_no_shots(state, gates_down, observables, values)
+                        f_down = jitted_analytical_exp(state, gates_down, observables, values)
                         return (
                             spectral_gap
                             * (f_up - f_down)
@@ -131,7 +131,7 @@ def no_shots_bwd(
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
-def no_shots_fwd(
+def analytical_gpsr_fwd(
     state: State,
     gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
@@ -155,18 +155,18 @@ def no_shots_fwd(
     Returns:
         Array: Expectation values.
     """
-    return no_shots(state, gates, observables, values)
+    return analytical_expectation(state, gates, observables, values)
 
 
-@no_shots_fwd.defjvp
-def no_shots_fwd_jvp(
+@analytical_gpsr_fwd.defjvp
+def analytical_gpsr_jvp(
     state: Array,
     gates: Union[Primitive, Iterable[Primitive]],
     observable: list[Observable],
     primals: tuple[dict[str, float]],
     tangents: tuple[dict[str, float]],
 ) -> Array:
-    """Jvp version for `no_shots_fwd`.
+    """Jvp version for `analytical_gpsr_fwd`.
 
     Args:
         state (Array): Input state or density matrix.
@@ -182,7 +182,7 @@ def no_shots_fwd_jvp(
     """
     values = primals[0]
     tangent_dict = tangents[0]
-    fwd = no_shots_fwd(state, gates, observable, values)
+    fwd = analytical_gpsr_fwd(state, gates, observable, values)
 
     legit_val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
     values_map = None
@@ -223,9 +223,9 @@ def no_shots_fwd_jvp(
         shift_vector = pytree_ind_param["shift"]
         spectral_gap = pytree_ind_param["spectral_gap"]
         up_val = values_to_dict(values_array + shift_vector)
-        f_up = no_shots_fwd(state, gates, observable, up_val)
+        f_up = analytical_gpsr_fwd(state, gates, observable, up_val)
         down_val = values_to_dict(values_array - shift_vector)
-        f_down = no_shots_fwd(state, gates, observable, down_val)
+        f_down = analytical_gpsr_fwd(state, gates, observable, down_val)
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
         return carry_grad + grad, grad
 

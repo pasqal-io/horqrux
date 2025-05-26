@@ -24,7 +24,7 @@ from horqrux.utils.sparse_utils import stack_sp
 jitted_finite_shots = jax.jit(finite_shots, static_argnums=(4,))
 
 
-def finite_shots_bwd(
+def finite_shots_gpsr_backward(
     state: State,
     gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
@@ -40,7 +40,7 @@ def finite_shots_bwd(
     (that is the `horqrux.differentiation.gpsr.jitted_finite_shots`).
 
     There is also a jvp function `finite_shots_fwd`compatible with `jax.grad`
-    but compilation time are long when using `jax.jit`.
+    but this function may be faster when using `jax.jit`.
 
     Args:
         state (State): Input state or density matrix.

@@ -126,17 +126,17 @@ print(f"Time speedup: {time_nonjit / time_jit:.3f}")
 
 When using parameter shift rule (PSR), we can either use the same `expectation` using `diff_mode=horqrux.DiffMode.GPSR` or the functions:
 
-- `horqrux.differentiation.gpsr.jitted_no_shots` and `horqrux.differentiation.gpsr.jitted_finite_shots` as forward methods
-- `horqrux.differentiation.gpsr.no_shots_bwd` and `horqrux.differentiation.gpsr.finite_shots_bwd` as backward methods.
+- `horqrux.differentiation.gpsr.jitted_analytical_exp` and `horqrux.differentiation.gpsr.jitted_finite_shots` as forward methods
+- `horqrux.differentiation.gpsr.analytical_gpsr_bwd` and `horqrux.differentiation.gpsr.finite_shots_gpsr_backward` as backward methods.
 
 Depending on the case, either way may be faster but the with the `expectation` we can obtain higher-order derivatives.
 
 ### Analytical
 
-Let us rewrite our example using `jitted_no_shots` and `no_shots_bwd` for the analytical version of PSR:
+Let us rewrite our example using `jitted_no_shots` and `analytical_gpsr_bwd` for the analytical version of PSR:
 
 ```python exec="on" source="material-block" session="vqe"
-from horqrux.differentiation.gpsr import jitted_no_shots, no_shots_bwd
+from horqrux.differentiation.gpsr import jitted_no_shots, analytical_gpsr_bwd
 
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
@@ -158,7 +158,7 @@ def loss_fn(param_vals: Array) -> Array:
 def bwd_loss_fn(param_vals: Array) -> Array:
     """The backward returns directly the gradient vector via GPSR and `jitted_no_shots`."""
     values = dict(zip(ansatz.vparams, param_vals))
-    return no_shots_bwd(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values)
+    return analytical_gpsr_bwd(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values)
 
 def train_step(i: int, param_vals_opt_state: tuple) -> tuple:
     param_vals, opt_state = param_vals_opt_state
@@ -180,10 +180,10 @@ print(f"Final loss: {loss_fn(param_vals):.3f}") # markdown-exec: hide
 
 ### With shots
 
-Let us rewrite our example using `jitted_finite_shots` and `finite_shots_bwd` for the shot-based version of PSR:
+Let us rewrite our example using `jitted_finite_shots` and `finite_shots_gpsr_backward` for the shot-based version of PSR:
 
 ```python exec="on" source="material-block" session="vqe"
-from horqrux.differentiation.gpsr import jitted_finite_shots, finite_shots_bwd
+from horqrux.differentiation.gpsr import jitted_finite_shots, finite_shots_gpsr_backward
 
 
 # Create random initial values for the parameters
@@ -205,7 +205,7 @@ def loss_fn(param_vals: Array, key: jax.random.PRNGKey) -> Array:
 def bwd_loss_fn(param_vals: Array, key: jax.random.PRNGKey) -> Array:
     """The backward returns directly the gradient vector via GPSR and `jitted_no_shots`."""
     values = dict(zip(ansatz.vparams, param_vals))
-    return finite_shots_bwd(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values, n_shots=10000, key=key)
+    return finite_shots_gpsr_backward(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values, n_shots=10000, key=key)
 
 def train_step(i: int, param_vals_opt_state: tuple) -> tuple:
     param_vals, opt_state = param_vals_opt_state

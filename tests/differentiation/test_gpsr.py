@@ -8,7 +8,7 @@ from absl.testing import parameterized
 from horqrux import expectation, random_state, run
 from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
-from horqrux.differentiation.gpsr import finite_shots_bwd, no_shots_bwd
+from horqrux.differentiation.gpsr import analytical_gpsr_bwd, finite_shots_gpsr_backward
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
 from horqrux.utils.conversion import to_sparse
@@ -119,14 +119,16 @@ class GPSRTest(chex.TestCase):
         assert jnp.allclose(grad_backprop, grad_gpsr, atol=GPSR_ATOL)
 
         # Check bwd method
-        grad_gpsr_bwd = no_shots_bwd(state, list(iter(circuit)), observables, values_to_dict(x))
+        grad_gpsr_bwd = analytical_gpsr_bwd(
+            state, list(iter(circuit)), observables, values_to_dict(x)
+        )
         assert jnp.allclose(grad_gpsr_bwd, grad_gpsr, atol=1e-3)
 
         grad_shots = d_shots(x)
         assert jnp.allclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)
 
         # Check bwd method
-        grad_shots_bwd = finite_shots_bwd(
+        grad_shots_bwd = finite_shots_gpsr_backward(
             state, list(iter(circuit)), observables, values_to_dict(x), n_shots=N_SHOTS
         )
         assert jnp.allclose(grad_shots_bwd, grad_shots, atol=1e-1)
