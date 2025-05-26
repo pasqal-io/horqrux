@@ -133,10 +133,10 @@ Depending on the case, either way may be faster but the with the `expectation` w
 
 ### Analytical
 
-Let us rewrite our example using `jitted_no_shots` and `analytical_gpsr_bwd` for the analytical version of PSR:
+Let us rewrite our example using `jitted_analytical_exp` and `analytical_gpsr_bwd` for the analytical version of PSR:
 
 ```python exec="on" source="material-block" session="vqe"
-from horqrux.differentiation.gpsr import jitted_no_shots, analytical_gpsr_bwd
+from horqrux.differentiation.gpsr import jitted_analytical_exp, analytical_gpsr_bwd
 
 # Create random initial values for the parameters
 key = jax.random.PRNGKey(42)
@@ -153,10 +153,10 @@ def optimize_step(param_vals: Array, opt_state: Array, grads: dict[str, Array]) 
 def loss_fn(param_vals: Array) -> Array:
     """The loss function is the sum of all expectation value for the observable components."""
     values = dict(zip(ansatz.vparams, param_vals))
-    return jitted_no_shots(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values).sum()
+    return jitted_analytical_exp(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values).sum()
 
 def bwd_loss_fn(param_vals: Array) -> Array:
-    """The backward returns directly the gradient vector via GPSR and `jitted_no_shots`."""
+    """The backward returns directly the gradient vector via GPSR and `jitted_analytical_exp`."""
     values = dict(zip(ansatz.vparams, param_vals))
     return analytical_gpsr_bwd(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values)
 
@@ -203,7 +203,6 @@ def loss_fn(param_vals: Array, key: jax.random.PRNGKey) -> Array:
     return jitted_finite_shots(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values, n_shots=10000, key=key).sum()
 
 def bwd_loss_fn(param_vals: Array, key: jax.random.PRNGKey) -> Array:
-    """The backward returns directly the gradient vector via GPSR and `jitted_no_shots`."""
     values = dict(zip(ansatz.vparams, param_vals))
     return finite_shots_gpsr_backward(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values, n_shots=10000, key=key)
 
@@ -225,7 +224,7 @@ param_vals, opt_state = train_unjitted(param_vals, opt_state)
 
 def analytical_expectation(param_vals: Array) -> Array:
     values = dict(zip(ansatz.vparams, param_vals))
-    return jitted_no_shots(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values).sum()
+    return jitted_analytical_exp(init_state, ansatz_ops, observables=[H2_hamiltonian], values=values).sum()
 
 print(f"Final loss: {analytical_expectation(param_vals):.3f}") # markdown-exec: hide
 ```
