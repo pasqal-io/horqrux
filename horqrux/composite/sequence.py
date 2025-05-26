@@ -68,3 +68,24 @@ class OpSequence:
         # Iterate through the operations and flatten
         for operation in self.operations:
             yield from flatten(operation)
+
+    @property
+    def param_names(self) -> set[str]:
+        """List of parameters of the circuit.
+            Composed of variational and feature map parameters.
+
+        Returns:
+            set[str]: Names of parameters.
+        """
+        from horqrux.primitives import Parametric
+
+        return set([str(op.param) for op in list(iter(self)) if isinstance(op, Parametric)])  # type: ignore[type-var]
+
+    @property
+    def n_vparams(self) -> int:
+        """Number of variational parameters.
+
+        Returns:
+            int: Number of variational parameters.
+        """
+        return len(self.param_names)

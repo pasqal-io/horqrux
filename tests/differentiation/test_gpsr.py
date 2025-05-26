@@ -8,6 +8,7 @@ from absl.testing import parameterized
 from horqrux import expectation, random_state, run
 from horqrux.circuit import QuantumCircuit
 from horqrux.composite import Observable
+from horqrux.differentiation.gpsr import analytical_gpsr_bwd, finite_shots_gpsr_backward
 from horqrux.primitives.parametric import RX
 from horqrux.primitives.primitive import Z
 from horqrux.utils.conversion import to_sparse
@@ -117,9 +118,20 @@ class GPSRTest(chex.TestCase):
         grad_gpsr = d_gpsr(x)
         assert jnp.allclose(grad_backprop, grad_gpsr, atol=GPSR_ATOL)
 
-        grad_shots = d_shots(x)
+        # Check bwd method
+        grad_gpsr_bwd = analytical_gpsr_bwd(
+            state, list(iter(circuit)), observables, values_to_dict(x)
+        )
+        assert jnp.allclose(grad_gpsr_bwd, grad_gpsr, atol=1e-3)
 
+        grad_shots = d_shots(x)
         assert jnp.allclose(grad_backprop, grad_shots, atol=SHOTS_ATOL)
+
+        # Check bwd method
+        grad_shots_bwd = finite_shots_gpsr_backward(
+            state, list(iter(circuit)), observables, values_to_dict(x), n_shots=N_SHOTS
+        )
+        assert jnp.allclose(grad_shots_bwd, grad_shots, atol=1e-1)
 
         @self.variant
         def dd_exact(x):
@@ -173,5 +185,5 @@ class GPSRTest(chex.TestCase):
         verify_arrays(exp_gpsr, exp_gpsr_sparse.todense())
 
         # test gradients raise errors for sparse
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(AssertionError):
             jax.experimental.sparse.grad(lambda x: exact_gpsr_sparse(x).sum())(x)

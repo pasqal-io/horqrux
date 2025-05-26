@@ -11,7 +11,7 @@ from horqrux.primitives.parametric import RX, RZ
 from tests.utils import verify_arrays
 
 
-class GPSRTest(chex.TestCase):
+class ADTest(chex.TestCase):
     @chex.variants(with_jit=True, without_jit=True)
     def test_ad_obs(self) -> None:
         param_name = "theta"
