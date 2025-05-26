@@ -23,14 +23,6 @@ The Generalized parameter shift rule (GPSR mode) is an extension of the well kno
     At the moment, circuits with one or more `Scale` and/or `HamiltonianEvolution` operations are not supported.
     They should be handled differently as GPSR requires operations to be of the form presented below.
 
-!!! warning "Jitting"
-    Note also that jitting works but is extremely slow. We plan to solve this soon.
-    In the meantime, when performing training loops,
-    you can rely on using the GPSR functions not relying on `jax.custom_jvp`:
-    `horqrux.differentiation.gpsr.no_shots_bwd` and `horqrux.differentiation.gpsr.finite_shots_bwd`
-    relying on `horqrux.differentiation.gpsr.jitted_no_shots` and `horqrux.differentiation.gpsr.jitted_finite_shots` calls.
-    Check [our tutorial on the variational quantum eigensolver for examples of usage](vqe.md).
-
 For this, we define the differentiable function as quantum expectation value:
 
 $$

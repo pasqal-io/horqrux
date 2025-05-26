@@ -124,13 +124,12 @@ print(f"Time speedup: {time_nonjit / time_jit:.3f}")
 
 ## Optimization with parameter-shift rule
 
-When using parameter shift rule (PSR), we recommend using the functions:
+When using parameter shift rule (PSR), we can either use the same `expectation` using `diff_mode=horqrux.DiffMode.GPSR` or the functions:
 
 - `horqrux.differentiation.gpsr.jitted_no_shots` and `horqrux.differentiation.gpsr.jitted_finite_shots` as forward methods
 - `horqrux.differentiation.gpsr.no_shots_bwd` and `horqrux.differentiation.gpsr.finite_shots_bwd` as backward methods.
 
-While we have available `jax.custom_jvp` functions via the `expectation` method, compilation times are extremely long
-so we recommend using the functions above.
+Depending on the case, either way may be faster but the with the `expectation` we can obtain higher-order derivatives.
 
 ### Analytical
 
