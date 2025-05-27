@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import partial
 from typing import Iterable, Union
 
 import jax
@@ -41,6 +40,7 @@ def analytical_expectation(
     Returns:
         Array: Expectation values.
     """
+    # jax.debug.print("🤯 analyical {y} 🤯", y=values)
     outputs = list(
         map(
             lambda observable: _ad_expectation_single_observable(
@@ -130,13 +130,22 @@ def analytical_gpsr_bwd(
     return jvp
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2))
-def analytical_gpsr_fwd(
+@jax.custom_vjp
+def vjp_analytical_gpsr(
     state: State,
     gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
     values: dict[str, float],
 ) -> Array:
+    return analytical_expectation(state, gates, observables, values)
+
+
+def analytical_gpsr_fwd(
+    state: State,
+    gates: Union[Primitive, Iterable[Primitive]],
+    observables: list[Observable],
+    values: dict[str, float],
+) -> tuple:
     """Run 'state' through a sequence of 'gates' given parameters 'values'
     and compute the expectations analytically.
 
@@ -155,35 +164,32 @@ def analytical_gpsr_fwd(
     Returns:
         Array: Expectation values.
     """
-    return analytical_expectation(state, gates, observables, values)
+    return analytical_expectation(state, gates, observables, values), (
+        state,
+        gates,
+        observables,
+        values,
+    )
 
 
-@analytical_gpsr_fwd.defjvp
-def analytical_gpsr_jvp(
-    state: Array,
-    gates: Union[Primitive, Iterable[Primitive]],
-    observable: list[Observable],
-    primals: tuple[dict[str, float]],
-    tangents: tuple[dict[str, float]],
-) -> Array:
-    """Jvp version for `analytical_gpsr_fwd`.
+def analytical_gpsr_bwd(
+    res: tuple[
+        Array, Union[Primitive, Iterable[Primitive]], list[Observable], tuple[dict[str, float]]
+    ],
+    tangent_array: Array,
+) -> tuple:
+    """Backward version for `analytical_gpsr_fwd`.
 
     Args:
         state (Array): Input state or density matrix.
         gates (Union[Primitive, Iterable[Primitive]]): sequence of gates.
-        observable (list[Observable]): List of observables.
-        primals (tuple[dict[str, Array]]): Values we are differentiating over.
-            Jax-specific syntax argument.
-        tangents (tuple[dict[str, Array]]): Bases for differentiation.
-            Jax-specific syntax argument.
+        observables (list[Observable]): List of observables.
+        values (tuple[dict[str, Array]]): Values we are differentiating over.
 
     Returns:
         tuple[Array, Array]: Forward eveluation and gradient
     """
-    values = primals[0]
-    tangent_dict = tangents[0]
-    fwd = analytical_gpsr_fwd(state, gates, observable, values)
-
+    state, gates, observables, values = res
     legit_val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
     values_map = None
 
@@ -222,27 +228,31 @@ def analytical_gpsr_jvp(
     def jvp_caller(carry_grad: Array, pytree_ind_param: dict[str, Array]) -> tuple[Array, Array]:
         shift_vector = pytree_ind_param["shift"]
         spectral_gap = pytree_ind_param["spectral_gap"]
+        # jax.debug.print("🤯 anal shift_vector {y} 🤯", y=shift_vector)
         up_val = values_to_dict(values_array + shift_vector)
-        f_up = analytical_gpsr_fwd(state, gates, observable, up_val)
+        f_up = analytical_gpsr_fwd(state, gates, observables, up_val)[0]
         down_val = values_to_dict(values_array - shift_vector)
-        f_down = analytical_gpsr_fwd(state, gates, observable, down_val)
+        f_down = analytical_gpsr_fwd(state, gates, observables, down_val)[0]
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+        # jax.debug.print("🤯 anal grad {y} 🤯", y=grad)
         return carry_grad + grad, grad
 
     spectral_gap_array = stack_sp(list(spectral_gap.values()))
-    tangent_array = stack_sp(list(tangent_dict.values())).reshape((-1, 1))
     pytree_scan = {
         "shift": shift * jnp.eye(len(vals_to_dict), dtype=values_array.dtype),
         "spectral_gap": spectral_gap_array,
     }
 
-    _, grads = jax.lax.scan(jvp_caller, jnp.zeros(fwd.shape), pytree_scan)
+    _, grads = jax.lax.scan(jvp_caller, jnp.zeros((len(observables),)), pytree_scan)
     if values_map:
         # need to remap to original parameter names
         grad_dict = dict(zip(values.keys(), grads))
         grads_legit_dict: dict = {name: list() for name in legit_val_keys}
         for temp_name in grad_dict.keys():
             grads_legit_dict[values_map[temp_name]].append(grad_dict[temp_name])
-        grads = tuple(stack_sp(grads_legit_dict[name]).sum(axis=0) for name in legit_val_keys)
-    jvp = (stack_sp(grads) * tangent_array).sum(axis=0)
-    return fwd, jvp.reshape(fwd.shape)
+        grads = tuple(stack_sp(grads_legit_dict[name]) for name in legit_val_keys)
+    jvp = (stack_sp(grads) * tangent_array).reshape(-1)
+    return (None, None, None, dict(zip(legit_val_keys, jvp)))
+
+
+vjp_analytical_gpsr.defvjp(analytical_gpsr_fwd, analytical_gpsr_bwd)

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import partial
 from typing import Any, Iterable, Union
 
 import jax
@@ -110,8 +109,8 @@ def finite_shots_gpsr_backward(
     return jvp
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 1, 2, 4, 5))
-def finite_shots_fwd(
+@jax.custom_vjp
+def finite_shots_gpsr(
     state: State,
     gates: Union[Primitive, Iterable[Primitive]],
     observables: list[Observable],
@@ -142,22 +141,31 @@ def finite_shots_fwd(
     return finite_shots(state, gates, observables, values, n_shots, key)
 
 
-@finite_shots_fwd.defjvp
-def finite_shots_jvp(
-    state: Array,
+def finite_shots_fwd(
+    state: State,
     gates: Union[Primitive, Iterable[Primitive]],
-    observable: list[Observable],
-    n_shots: int,
-    key: Array,
-    primals: tuple[dict[str, Array]],
-    tangents: tuple[dict[str, Array]],
-) -> tuple[Array, Array]:
+    observables: list[Observable],
+    values: dict[str, float],
+    n_shots: int = 100,
+    key: Any = jax.random.PRNGKey(0),
+) -> tuple:
+    return finite_shots(state, gates, observables, values, n_shots, key), (
+        state,
+        gates,
+        observables,
+        values,
+        n_shots,
+        key,
+    )
+
+
+def finite_shots_vjp_bwd(res: tuple, tangent_array: Array) -> tuple:
     """Jvp version for `finite_shots_fwd`.
 
     Args:
         state (Array): Input state or density matrix.
         gates (Union[Primitive, Iterable[Primitive]]): sequence of gates.
-        observable (list[Observable]): List of observables.
+        observables (list[Observable]): List of observables.
         n_shots (int): Number of shots.
         key (Array): Key for randomness.
         primals (tuple[dict[str, Array]]): Values we are differentiating over.
@@ -168,10 +176,7 @@ def finite_shots_jvp(
     Returns:
         tuple[Array, Array]: Forward eveluation and gradient
     """
-    values = primals[0]
-    tangent_dict = tangents[0]
-    fwd = finite_shots_fwd(state, gates, observable, values, n_shots, key)
-
+    state, gates, observables, values, n_shots, key = res
     legit_val_keys, spectral_gap, shift = initialize_gpsr_ingredients(values)
     values_map = None
 
@@ -213,15 +218,17 @@ def finite_shots_jvp(
         up_key, down_key = random.split(key)
         shift_vector = pytree_ind_param["shift"]
         spectral_gap = pytree_ind_param["spectral_gap"]
+        # jax.debug.print("🤯 shot shift_vector {y} 🤯", y=shift_vector)
         up_val = values_to_dict(values_array + shift_vector)
-        f_up = finite_shots_fwd(state, gates, observable, up_val, n_shots, up_key)
+        f_up = finite_shots_fwd(state, gates, observables, up_val, n_shots, up_key)[0]
         down_val = values_to_dict(values_array - shift_vector)
-        f_down = finite_shots_fwd(state, gates, observable, down_val, n_shots, down_key)
+        f_down = finite_shots_fwd(state, gates, observables, down_val, n_shots, down_key)[0]
+
         grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
+        # jax.debug.print("🤯 grad shift_vector {y} 🤯", y=grad)
         return carry_grad + grad, grad
 
     spectral_gap_array = stack_sp(list(spectral_gap.values()))
-    tangent_array = stack_sp(list(tangent_dict.values())).reshape((-1, 1))
     keys = random.split(key, len(vals_to_dict))
     pytree_scan = {
         "shift": shift * jnp.eye(len(vals_to_dict), dtype=values_array.dtype),
@@ -229,13 +236,22 @@ def finite_shots_jvp(
         "key": keys,
     }
 
-    _, grads = jax.lax.scan(jvp_caller, jnp.zeros(fwd.shape), pytree_scan)
+    _, grads = jax.lax.scan(
+        jvp_caller,
+        jnp.zeros(
+            len(observables),
+        ),
+        pytree_scan,
+    )
     if values_map:
         # need to remap to original parameter names
         grad_dict = dict(zip(values.keys(), grads))
         grads_legit_dict: dict = {name: list() for name in legit_val_keys}
         for temp_name in grad_dict.keys():
             grads_legit_dict[values_map[temp_name]].append(grad_dict[temp_name])
-        grads = tuple(stack_sp(grads_legit_dict[name]).sum(axis=0) for name in legit_val_keys)
-    jvp = (stack_sp(grads) * tangent_array).sum(axis=0)
-    return fwd, jvp.reshape(fwd.shape)
+        grads = tuple(stack_sp(grads_legit_dict[name]) for name in legit_val_keys)
+    jvp = (stack_sp(grads)).reshape(-1)
+    return (None, None, None, dict(zip(legit_val_keys, jvp)), None, None)
+
+
+finite_shots_gpsr.defvjp(finite_shots_fwd, finite_shots_vjp_bwd)

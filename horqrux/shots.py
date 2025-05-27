@@ -176,6 +176,7 @@ def finite_shots(
     Returns:
         Array: Expectation values.
     """
+    # jax.debug.print("🤯 shot {y} 🤯", y=values)
     output_gates = apply_gates(state, gates, values)
     n_qubits = num_qubits(output_gates)
     if isinstance(state, DensityMatrix):
