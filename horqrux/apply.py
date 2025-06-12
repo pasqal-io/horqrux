@@ -19,7 +19,9 @@ from horqrux.utils.operator_utils import (
     _controlled,
     _dagger,
     density_mat,
+    expand_operator,
     is_controlled,
+    num_qubits,
     permute_basis,
 )
 
@@ -266,8 +268,11 @@ def apply_operator_with_noise(
     if noise is None:
         return state_gate
     else:
-        kraus_ops = jnp.stack(tuple(reduce(add, tuple(n.kraus for n in noise))))
-        output_dm = apply_kraus_sum(kraus_ops, state_gate.array, target)
+        output_dm = state_gate
+        full_support = tuple(range(num_qubits(state_gate)))
+        for n in noise:
+            kraus_ops = jnp.stack(list(expand_operator(k, target, full_support) for k in n.kraus))
+            output_dm = apply_kraus_sum(kraus_ops, output_dm.array, full_support)
         return output_dm
 
 
