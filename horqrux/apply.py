@@ -10,7 +10,7 @@ import numpy as np
 from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 
-from horqrux.noise import DigitalNoiseInstance, NoiseProtocol
+from horqrux.noise import NoiseProtocol
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import (
     DensityMatrix,
@@ -19,7 +19,9 @@ from horqrux.utils.operator_utils import (
     _controlled,
     _dagger,
     density_mat,
+    expand_operator,
     is_controlled,
+    num_qubits,
     permute_basis,
 )
 
@@ -195,15 +197,17 @@ def apply_kraus_operator(
     state_dims: tuple[int, ...] = target
     n_qubits = int(np.log2(kraus.size))
     kraus = kraus.reshape((2,) * n_qubits)
-    op_dims = tuple(np.arange(kraus.ndim // 2, kraus.ndim, dtype=int))
-
-    array = jnp.tensordot(a=kraus, b=array, axes=(op_dims, state_dims))
+    op_out_dims = tuple(np.arange(kraus.ndim // 2, kraus.ndim, dtype=int))
+    op_in_dims = tuple(np.arange(0, kraus.ndim // 2, dtype=int))
     new_state_dims = tuple(range(len(state_dims)))
+
     array = jnp.moveaxis(a=array, source=new_state_dims, destination=state_dims)
+    array = jnp.tensordot(a=kraus, b=array, axes=(op_out_dims, new_state_dims))
 
-    array = jnp.tensordot(a=kraus, b=_dagger(array), axes=(op_dims, state_dims))
     array = _dagger(array)
-
+    array = jnp.tensordot(a=kraus, b=array, axes=(op_out_dims, op_in_dims))
+    array = _dagger(array)
+    array = jnp.moveaxis(a=array, source=state_dims, destination=new_state_dims)
     return array
 
 
@@ -224,7 +228,6 @@ def apply_kraus_sum(
     Returns:
         DensityMatrix: Output density matrix.
     """
-
     apply_one_kraus = jax.vmap(
         partial(
             apply_kraus_operator,
@@ -235,30 +238,6 @@ def apply_kraus_sum(
     kraus_evol = apply_one_kraus(kraus_ops)
     output_dm = jnp.sum(kraus_evol, 0)
     return DensityMatrix(output_dm)
-
-
-def filter_noise(noise: NoiseProtocol) -> NoiseProtocol:
-    """Return None when all numbers in `error_probability` equal zero.
-
-    Args:
-        noise (NoiseProtocol): Noise instance.
-
-    Returns:
-        NoiseProtocol: Filtered noise from instances
-            when all numbers in`error_probability` equal zero.
-    """
-    if noise is None:
-        return noise
-
-    def check_zero_proba(digital_noise: DigitalNoiseInstance) -> bool:
-        if isinstance(digital_noise.error_probability, float):
-            return digital_noise.error_probability != 0
-        return all(p != 0 for p in digital_noise.error_probability)
-
-    nonzero_noise = tuple(filter(lambda digital_noise: check_zero_proba(digital_noise), noise))
-    if not nonzero_noise:
-        return None
-    return nonzero_noise
 
 
 def apply_operator_with_noise(
@@ -286,12 +265,14 @@ def apply_operator_with_noise(
         Array: Output state or density matrix.
     """
     state_gate = apply_operator(state, operator, target, control)
-    noise = filter_noise(noise)
     if noise is None:
         return state_gate
     else:
-        kraus_ops = jnp.stack(tuple(reduce(add, tuple(n.kraus for n in noise))))
-        output_dm = apply_kraus_sum(kraus_ops, state_gate.array, target)
+        output_dm = state_gate
+        full_support = tuple(range(num_qubits(state_gate)))
+        for n in noise:
+            kraus_ops = jnp.stack(list(expand_operator(k, target, full_support) for k in n.kraus))
+            output_dm = apply_kraus_sum(kraus_ops, output_dm.array, full_support)
         return output_dm
 
 
