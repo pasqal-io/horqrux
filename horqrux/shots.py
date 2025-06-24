@@ -178,7 +178,7 @@ def finite_shots(
     """
     output_gates = apply_gates(state, gates, values)
     n_qubits = num_qubits(output_gates)
-    if isinstance(state, DensityMatrix):
+    if isinstance(output_gates, DensityMatrix):
         d = 2**n_qubits
         output_gates.array = output_gates.array.reshape((d, d))
     return eigen_sample(output_gates, observables, values, n_qubits, n_shots, key)
