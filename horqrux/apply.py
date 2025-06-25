@@ -369,7 +369,10 @@ def prepare_sequence_reduce(
     if isinstance(gate, Primitive):
         operator_fn = getattr(gate, op_type)
         operator, target, control = (operator_fn(values),), gate.target, gate.control
-        noise += [gate.noise]
+        if gate.noise:
+            operator += (gate.noise,)
+            target += target
+            control += control
     else:
         if group_gates:
             gate = group_by_index(gate)
@@ -380,6 +383,21 @@ def prepare_sequence_reduce(
         # merge when no noise is present
         if (noise == [None] * len(noise)) and merge_ops:
             operator, target, control = merge_operators(operator, target, control)
+        else:
+            ops_plus_noisy = list()
+            targets = list()
+            controls = list()
+            for op, n, t, c in zip(operator, noise, target, control):
+                if n is None:
+                    ops_plus_noisy.append(op)
+                    targets.append(t)
+                    controls.append(c)
+                else:
+                    ops_plus_noisy.extend([op, n])
+                    targets.extend([t, t])
+                    controls.extend([c, c])
+            return tuple(ops_plus_noisy), tuple(targets), tuple(controls)
+
 
     return operator, target, control, noise
 
