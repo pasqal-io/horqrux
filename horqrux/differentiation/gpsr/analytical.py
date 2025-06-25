@@ -212,37 +212,38 @@ def analytical_gpsr_jvp(
                 spectral_gap = spectral_gap_from_gates(param_to_gates_indices, legit_val_keys)
 
     values_array = stack_sp(list(values.values()))
-    if values_array.shape[-1] == 1:
-        values_array = values_array.squeeze(-1)
     vals_to_dict = values.keys()
 
     def values_to_dict(x: Array) -> dict[str, Array]:
         return dict(zip(vals_to_dict, x))
 
-    def jvp_caller(carry_grad: Array, pytree_ind_param: dict[str, Array]) -> tuple[Array, Array]:
-        shift_vector = pytree_ind_param["shift"]
-        spectral_gap = pytree_ind_param["spectral_gap"]
-        up_val = values_to_dict(values_array + shift_vector)
-        f_up = analytical_gpsr_fwd(state, gates, observable, up_val)
-        down_val = values_to_dict(values_array - shift_vector)
-        f_down = analytical_gpsr_fwd(state, gates, observable, down_val)
-        grad = spectral_gap * (f_up - f_down) / (4.0 * jnp.sin(spectral_gap * shift / 2.0))
-        return carry_grad + grad, grad
-
-    spectral_gap_array = stack_sp(list(spectral_gap.values()))
+    spectral_gap_array = stack_sp(list(spectral_gap.values())).reshape((-1, 1))
     tangent_array = stack_sp(list(tangent_dict.values())).reshape((-1, 1))
-    pytree_scan = {
-        "shift": shift * jnp.eye(len(vals_to_dict), dtype=values_array.dtype),
-        "spectral_gap": spectral_gap_array,
-    }
+    shift_matrix = shift * jnp.eye(len(vals_to_dict), dtype=values_array.dtype)
 
-    _, grads = jax.lax.scan(jvp_caller, jnp.zeros(fwd.shape), pytree_scan)
+    values_up = values_array + shift_matrix
+    values_down = values_array - shift_matrix
+
+    @jax.vmap
+    def eval_single_shift(vals):
+        vals_dict = values_to_dict(vals)
+        return analytical_gpsr_fwd(state, gates, observable, vals_dict)
+    
+    f_up = eval_single_shift(values_up)
+    f_down = eval_single_shift(values_down)
+
+    grads = spectral_gap_array * (f_up - f_down) / (
+        4.0 * jnp.sin(spectral_gap_array * shift / 2.0)
+    )
+
     if values_map:
-        # need to remap to original parameter names
         grad_dict = dict(zip(values.keys(), grads))
-        grads_legit_dict: dict = {name: list() for name in legit_val_keys}
+        grads_legit_dict = {name: list() for name in legit_val_keys}
         for temp_name in grad_dict.keys():
             grads_legit_dict[values_map[temp_name]].append(grad_dict[temp_name])
-        grads = tuple(stack_sp(grads_legit_dict[name]).sum(axis=0) for name in legit_val_keys)
-    jvp = (stack_sp(grads) * tangent_array).sum(axis=0)
+        grads = jnp.stack([
+            jnp.stack(grads_legit_dict[name]).sum(axis=0) 
+            for name in legit_val_keys
+        ])
+    jvp = (grads * tangent_array).sum(axis=0)
     return fwd, jvp.reshape(fwd.shape)

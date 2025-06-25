@@ -67,6 +67,7 @@ def hea(
     n_layers: int,
     rot_fns: list[Callable] = [RX, RY, RX],
     variational_param_prefix: str = "v_",
+    noise: tuple | None = None,
 ) -> list[Primitive]:
     """Hardware-efficient ansatz; A helper function to generate a sequence of rotations followed
     by a global entangling operation.
@@ -87,7 +88,7 @@ def hea(
     for _ in range(n_layers):
         for i in range(n_qubits):
             ops = [
-                fn(variational_param_prefix + str(uuid4()), qubit)
+                fn(variational_param_prefix + str(uuid4()), qubit, noise=noise)
                 for fn, qubit in zip(rot_fns, [i for _ in range(len(rot_fns))])
             ]
             param_names += [op.param for op in ops]

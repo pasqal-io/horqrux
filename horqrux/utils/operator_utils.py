@@ -45,6 +45,9 @@ class DensityMatrix:
     def tree_unflatten(cls, aux_data: Any, children: Any) -> Any:
         return cls(*children, *aux_data)
 
+    def __add__(self, other: DensityMatrix) -> DensityMatrix:
+        return DensityMatrix(self.array + other.array)
+
 
 State = Union[ArrayLike, DensityMatrix]
 
