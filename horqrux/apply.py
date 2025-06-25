@@ -179,6 +179,20 @@ def _(
     return DensityMatrix(out_state)
 
 
+@apply_operator.register
+def _(
+    state: DensityMatrix,
+    operator: tuple[Array],
+    target: tuple[int, ...],
+    control: tuple[Union[int, None], ...],
+) -> Array:
+    state = state
+    full_support = tuple(range(num_qubits(state)))
+    kraus_ops = jnp.stack(list(expand_operator(k, target, full_support) for k in operator))
+    state = apply_kraus_sum(kraus_ops, state.array, full_support)
+    return state
+
+
 def apply_kraus_operator(
     kraus: Array,
     array: Array,
@@ -370,7 +384,8 @@ def prepare_sequence_reduce(
         operator_fn = getattr(gate, op_type)
         operator, target, control = (operator_fn(values),), gate.target, gate.control
         if gate.noise:
-            operator += (gate.noise,)
+            noise.append(gate.noise)
+            operator += (gate.noise.kraus,)
             target += target
             control += control
     else:
@@ -393,10 +408,15 @@ def prepare_sequence_reduce(
                     targets.append(t)
                     controls.append(c)
                 else:
-                    ops_plus_noisy.extend([op, n])
-                    targets.extend([t, t])
-                    controls.extend([c, c])
-            return tuple(ops_plus_noisy), tuple(targets), tuple(controls)
+                    ops_plus_noisy.extend([op])
+                    targets.extend([t,])
+                    controls.extend([c,])
+                    for single_n in n:
+                        ops_plus_noisy.extend([single_n.kraus])
+                        targets.extend([t,])
+                        controls.extend([c,])
+
+            return tuple(ops_plus_noisy), tuple(targets), tuple(controls), noise
 
 
     return operator, target, control, noise
@@ -431,17 +451,11 @@ def _(
     has_noise = noise != [None] * len(noise)
     if has_noise:
         state = density_mat(state)
-        output_state = reduce(
-            lambda state, gate: apply_operator_with_noise(state, *gate),
-            zip(operator, target, control, noise),
-            state,
-        )
-    else:
-        output_state = reduce(
-            lambda state, gate: apply_operator(state, *gate),
-            zip(operator, target, control),
-            state,
-        )
+    output_state = reduce(
+        lambda state, gate: apply_operator(state, *gate),
+        zip(operator, target, control),
+        state,
+    )
     return output_state
 
 
@@ -504,12 +518,12 @@ def _(
     Returns:
         Array or density matrix after applying 'gate'.
     """
-    operator, target, control, noise = prepare_sequence_reduce(
+    operator, target, control, _ = prepare_sequence_reduce(
         gate, values, op_type, group_gates, merge_ops
     )
     output_state = reduce(
-        lambda state, gate: apply_operator_with_noise(state, *gate),
-        zip(operator, target, control, noise),
+        lambda state, gate: apply_operator(state, *gate),
+        zip(operator, target, control),
         state,
     )
     return output_state
