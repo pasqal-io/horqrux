@@ -9,6 +9,8 @@ authors = [
     { name = "Gert-Jan Both" , email = "gert-jan.both@pasqal.com" },
     { name = "Dominik Seitz", email = "dominik.seitz@pasqal.com" },
     { name = "Charles Moussa", email = "charles.moussa@pasqal.com" },
+    { name = "Igor Sokolov", email = "igor.sokolov@pasqal.com" },
+    { name = "João Moutinho", email = "joao.moutinho@pasqal.com" },
 ]
 requires-python = ">=3.8"
 license = {text = "Apache 2.0"}
