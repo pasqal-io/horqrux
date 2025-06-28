@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Union
+from typing import Any, Callable, Union, Iterable
 
 from jax import Array
 from jax.tree_util import register_pytree_node_class
@@ -61,6 +61,9 @@ class DigitalNoiseInstance:
     def kraus(self) -> tuple[Array, ...]:
         kraus_fn: Callable[..., tuple[Array, ...]] = PROTOCOL_TO_KRAUS_FN[self.type]
         return kraus_fn(error_probability=self.error_probability)
+    
+    def __iter__(self) -> Iterable[DigitalNoiseInstance]:
+        return iter((self,))
 
     def __repr__(self) -> str:
         return self.type + f"(p={self.error_probability})"

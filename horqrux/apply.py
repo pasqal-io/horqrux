@@ -10,7 +10,7 @@ import numpy as np
 from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 
-from horqrux.noise import NoiseProtocol
+from horqrux.noise import NoiseProtocol, DigitalNoiseInstance
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import (
     DensityMatrix,
@@ -29,7 +29,7 @@ from horqrux.utils.operator_utils import (
 @singledispatch
 def apply_operator(
     state: Any,
-    operator: Array,
+    operator: Any,
     target: tuple[int, ...],
     control: tuple[Union[int, None], ...],
 ) -> Any:
@@ -37,7 +37,7 @@ def apply_operator(
 
     Args:
         state (Any): Array to operate on.
-        operator (Array): Array to contract over 'state'.
+        operator (Any): Operator to contract over 'state'.
         target (tuple[int, ...]): tuple of target qubits on which to apply the 'operator' to.
         control (tuple[int  |  None, ...]): tuple of control qubits.
 
@@ -47,7 +47,7 @@ def apply_operator(
     Returns:
         Array: The output of the application of the operator.
     """
-    raise NotImplementedError("apply_operator is not implemented")
+    raise NotImplementedError(f"apply_operator is not implemented for state and operator types {(type(state), type(operator))}")
 
 
 @apply_operator.register
@@ -154,6 +154,7 @@ def _(
     Returns:
         Density matrix after applying 'operator'.
     """
+    print("noiseless op", operator, target, control)
     state_dims: tuple[int, ...] = target
     if is_controlled(control):
         operator = _controlled(operator, len(control))
@@ -178,20 +179,19 @@ def _(
     out_state = permute_basis(out_state, support_perm, True)
     return DensityMatrix(out_state)
 
-
 @apply_operator.register
 def _(
     state: DensityMatrix,
-    operator: tuple[Array],
+    operator: DigitalNoiseInstance,
     target: tuple[int, ...],
     control: tuple[Union[int, None], ...],
-) -> Array:
+) -> DensityMatrix:
+    print("noisy op", type(operator), target, control)
     state = state
     full_support = tuple(range(num_qubits(state)))
     kraus_ops = jnp.stack(list(expand_operator(k, target, full_support) for k in operator))
     state = apply_kraus_sum(kraus_ops, state.array, full_support)
     return state
-
 
 def apply_kraus_operator(
     kraus: Array,
@@ -362,7 +362,7 @@ def prepare_sequence_reduce(
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
-) -> tuple[tuple[Array, ...], tuple, tuple, list[NoiseProtocol]]:
+) -> tuple[tuple, tuple, tuple, list[NoiseProtocol]]:
     """Prepare the tuples to be used when applying operations.
 
     Args:
@@ -385,7 +385,7 @@ def prepare_sequence_reduce(
         operator, target, control = (operator_fn(values),), gate.target, gate.control
         if gate.noise:
             noise.append(gate.noise)
-            operator += (gate.noise.kraus,)
+            operator += (gate.noise,)
             target += target
             control += control
     else:
@@ -408,13 +408,13 @@ def prepare_sequence_reduce(
                     targets.append(t)
                     controls.append(c)
                 else:
-                    ops_plus_noisy.extend([op])
-                    targets.extend([t,])
-                    controls.extend([c,])
+                    ops_plus_noisy.append(op)
+                    targets.append(t)
+                    controls.append(c)
                     for single_n in n:
-                        ops_plus_noisy.extend([single_n.kraus])
-                        targets.extend([t,])
-                        controls.extend([c,])
+                        ops_plus_noisy.append(single_n)
+                        targets.append(t)
+                        controls.append(None)
 
             return tuple(ops_plus_noisy), tuple(targets), tuple(controls), noise
 
@@ -518,12 +518,12 @@ def _(
     Returns:
         Array or density matrix after applying 'gate'.
     """
-    operator, target, control, _ = prepare_sequence_reduce(
+    operator, target, control, noise = prepare_sequence_reduce(
         gate, values, op_type, group_gates, merge_ops
     )
     output_state = reduce(
         lambda state, gate: apply_operator(state, *gate),
-        zip(operator, target, control),
+        zip(operator, target, control, noise),
         state,
     )
     return output_state

@@ -156,7 +156,7 @@ class Primitive:
         return False
 
     def __repr__(self) -> str:
-        return self.name + f"(target={self.target}, control={self.control})"
+        return self.name + f"(target={self.target}, control={self.control}, noise={self.noise})"
 
 
 def I(
