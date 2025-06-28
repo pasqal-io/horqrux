@@ -87,7 +87,10 @@ class Parametric(Primitive):
     def __repr__(self) -> str:
         return (
             self.name
-            + f"(target={self.target}, control={self.control}, param={self.param}, shift={self.shift}, noise={self.noise})"
+            + f"(target={self.target}, control={self.control}, param={self.param}, shift={self.shift}"
+            + f", noise={self.noise})"
+            if self.noise is not None
+            else ""
         )
 
     @cached_property

@@ -10,7 +10,7 @@ import numpy as np
 from jax import Array
 from jax.experimental.sparse import BCOO, sparsify
 
-from horqrux.noise import NoiseProtocol, DigitalNoiseInstance
+from horqrux.noise import DigitalNoiseInstance, NoiseProtocol
 from horqrux.primitives.primitive import Primitive
 from horqrux.utils.operator_utils import (
     DensityMatrix,
@@ -47,7 +47,9 @@ def apply_operator(
     Returns:
         Array: The output of the application of the operator.
     """
-    raise NotImplementedError(f"apply_operator is not implemented for state and operator types {(type(state), type(operator))}")
+    raise NotImplementedError(
+        f"apply_operator is not implemented for state and operator types {(type(state), type(operator))}"
+    )
 
 
 @apply_operator.register
@@ -179,6 +181,7 @@ def _(
     out_state = permute_basis(out_state, support_perm, True)
     return DensityMatrix(out_state)
 
+
 @apply_operator.register
 def _(
     state: DensityMatrix,
@@ -189,9 +192,10 @@ def _(
     print("noisy op", type(operator), target, control)
     state = state
     full_support = tuple(range(num_qubits(state)))
-    kraus_ops = jnp.stack(list(expand_operator(k, target, full_support) for k in operator))
+    kraus_ops = jnp.stack(list(expand_operator(k, target, full_support) for k in operator.kraus))
     state = apply_kraus_sum(kraus_ops, state.array, full_support)
     return state
+
 
 def apply_kraus_operator(
     kraus: Array,
@@ -362,7 +366,7 @@ def prepare_sequence_reduce(
     op_type: OperationType = OperationType.UNITARY,
     group_gates: bool = False,  # Defaulting to False since this can be performed once before circuit execution
     merge_ops: bool = True,
-) -> tuple[tuple, tuple, tuple, list[NoiseProtocol]]:
+) -> tuple[tuple, tuple, tuple, list]:
     """Prepare the tuples to be used when applying operations.
 
     Args:
@@ -387,7 +391,7 @@ def prepare_sequence_reduce(
             noise.append(gate.noise)
             operator += (gate.noise,)
             target += target
-            control += control
+            control += (None,)
     else:
         if group_gates:
             gate = group_by_index(gate)
@@ -417,7 +421,6 @@ def prepare_sequence_reduce(
                         controls.append(None)
 
             return tuple(ops_plus_noisy), tuple(targets), tuple(controls), noise
-
 
     return operator, target, control, noise
 
@@ -523,7 +526,7 @@ def _(
     )
     output_state = reduce(
         lambda state, gate: apply_operator(state, *gate),
-        zip(operator, target, control, noise),
+        zip(operator, target, control),
         state,
     )
     return output_state
